@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Periodic Table</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0a0a1a;
+    color: #e0e0f0;
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: 1.8rem;
+    letter-spacing: 4px;
+    margin-bottom: 16px;
+    color: #c0c8ff;
+    text-transform: uppercase;
+  }
+
+  #controls {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  #search {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid #444;
+    background: #1a1a2e;
+    color: #e0e0f0;
+    font-size: 0.9rem;
+    width: 220px;
+    outline: none;
+  }
+  #search:focus { border-color: #7080ff; }
+
+  .filter-btn {
+    padding: 6px 14px;
+    border-radius: 16px;
+    border: 1px solid #444;
+    background: #1a1a2e;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 0.78rem;
+    transition: all 0.2s;
+  }
+  .filter-btn:hover, .filter-btn.active { border-color: #7080ff; color: #fff; background: #2a2a4e; }
+
+  #table-wrapper {
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  #periodic-table {
+    display: grid;
+    grid-template-columns: repeat(18, 54px);
+    grid-template-rows: repeat(10, 54px);
+    gap: 3px;
+    width: fit-content;
+    margin-left: max(0px, calc(50% - 670.5px)); /* centers table+gap+panel as one block */
+    margin-right: auto;
+    padding-top: 10px;
+  }
+
+  .element {
+    width: 54px;
+    height: 54px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+    position: relative;
+    user-select: none;
+  }
+
+  .element:hover {
+    transform: scale(1.18);
+    z-index: 10;
+    box-shadow: 0 0 18px rgba(120,140,255,0.6);
+    border-color: rgba(255,255,255,0.5);
+  }
+
+  .element.dimmed { opacity: 0.15; }
+  .element.highlighted { opacity: 1; transform: scale(1.05); }
+
+  .el-number { font-size: 0.55rem; color: rgba(255,255,255,0.6); align-self: flex-start; padding-left: 4px; line-height: 1; }
+  .el-symbol { font-size: 1.1rem; font-weight: 700; line-height: 1; }
+  .el-name   { font-size: 0.53rem; color: rgba(255,255,255,0.75); margin-top: 1px; }
+  .el-mass   { font-size: 0.50rem; color: rgba(255,255,255,0.5); }
+
+  /* Category colors */
+  .alkali-metal       { background: linear-gradient(135deg,#7b1f1f,#a33030); }
+  .alkaline-earth     { background: linear-gradient(135deg,#7b4a1f,#a36530); }
+  .transition-metal   { background: linear-gradient(135deg,#1f4a7b,#2d6ea3); }
+  .post-transition    { background: linear-gradient(135deg,#1f7b5a,#2da37d); }
+  .metalloid          { background: linear-gradient(135deg,#5a1f7b,#7d2da3); }
+  .nonmetal           { background: linear-gradient(135deg,#1f7b2a,#2da33a); }
+  .halogen            { background: linear-gradient(135deg,#7b7b1f,#a3a32d); }
+  .noble-gas          { background: linear-gradient(135deg,#1f6b7b,#2d8fa3); }
+  .lanthanide         { background: linear-gradient(135deg,#6b1f5a,#8f2d7d); }
+  .actinide           { background: linear-gradient(135deg,#4a1f6b,#6b2d8f); }
+  .unknown            { background: linear-gradient(135deg,#3a3a3a,#555); }
+
+  /* Legend */
+  #legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin: 14px auto;
+    max-width: 900px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: #bbb;
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .legend-item:hover { border-color: #666; }
+  .legend-item.active-legend { border-color: #aaa; background: rgba(255,255,255,0.08); }
+  .legend-swatch {
+    width: 14px; height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* Modal overlay — hidden, kept for click-outside close on small screens */
+  #modal-overlay { display: none; }
+
+  /* Info panel */
+  #info-panel {
+    position: fixed;
+    right: 20px;
+    width: 300px;
+    overflow-y: auto;
+    border-radius: 16px;
+    padding: 25px 24px 5px; /* top: 14px base + 11px (54/5 = 1/5 element box) */
+    display: none;
+    z-index: 100;
+    box-shadow: 0 16px 60px rgba(0,0,0,0.5);
+    font-family: 'Segoe UI', monospace;
+  }
+  #info-panel.visible { display: block; }
+
+  @media (max-width: 1200px) {
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 99;
+      backdrop-filter: blur(2px);
+    }
+    #modal-overlay.visible { display: block; }
+    #info-panel {
+      right: 50%;
+      top: auto;
+      bottom: 16px;
+      transform: translateX(50%);
+      width: 92vw;
+      max-width: 360px;
+    }
+  }
+
+  #info-symbol {
+    font-size: 3.6rem;
+    font-weight: 900;
+    text-align: center;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  #info-name {
+    text-align: center;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 2px;
+  }
+  #info-category {
+    text-align: center;
+    font-size: 0.63rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* Two stat boxes */
+  #info-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .stat-box {
+    border-radius: 8px;
+    padding: 7px 10px;
+    background: rgba(255,255,255,0.55);
+    border: 1px solid rgba(0,0,0,0.07);
+  }
+  .stat-label {
+    font-size: 0.58rem;
+    color: #666;
+    margin-bottom: 2px;
+    font-family: 'Segoe UI', monospace;
+  }
+  .stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  /* Detail rows */
+  #info-details { margin-bottom: 12px; }
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.67rem;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+    color: #666;
+    font-family: 'Segoe UI', monospace;
+  }
+  .info-row:last-child { border-bottom: none; }
+  .info-row span:last-child {
+    font-weight: 700;
+    color: #111;
+    text-align: right;
+    max-width: 180px;
+  }
+
+
+  /* Series labels */
+  .series-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    color: #666;
+    font-style: italic;
+  }
+
+  /* Light/dark toggle */
+  #theme-toggle {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    z-index: 200;
+    background: #1a1a2e;
+    border: 1px solid #444;
+    border-radius: 20px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #ccc;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
+    user-select: none;
+  }
+  #theme-toggle:hover { border-color: #7080ff; color: #fff; }
+
+  /* ── Light mode element color overrides ── */
+  body.light .alkali-metal     { background: linear-gradient(135deg,#c47070,#d48888); }
+  body.light .alkaline-earth   { background: linear-gradient(135deg,#c49060,#d4a878); }
+  body.light .transition-metal { background: linear-gradient(135deg,#6080b8,#7898cc); }
+  body.light .post-transition  { background: linear-gradient(135deg,#4aa888,#60bca0); }
+  body.light .metalloid        { background: linear-gradient(135deg,#9060b8,#a878cc); }
+  body.light .nonmetal         { background: linear-gradient(135deg,#52a85e,#68bc74); }
+  body.light .halogen          { background: linear-gradient(135deg,#b0a830,#c4bc48); }
+  body.light .noble-gas        { background: linear-gradient(135deg,#3898b0,#50b0c8); }
+  body.light .lanthanide       { background: linear-gradient(135deg,#b05898,#c470b0); }
+  body.light .actinide         { background: linear-gradient(135deg,#7858b8,#9070cc); }
+  body.light .unknown          { background: linear-gradient(135deg,#888898,#9898a8); }
+
+  /* ── Light mode overrides ── */
+  body.light {
+    background: #eceef5;
+    color: #1a1a2e;
+  }
+  body.light h1 { color: #3040a0; }
+  body.light #search {
+    background: #fff;
+    color: #1a1a2e;
+    border-color: #bbc;
+  }
+  body.light #search:focus { border-color: #5060d0; }
+  body.light .filter-btn {
+    background: #fff;
+    color: #444;
+    border-color: #bbc;
+  }
+  body.light .filter-btn:hover,
+  body.light .filter-btn.active {
+    background: #dde0f8;
+    color: #1a1a2e;
+    border-color: #5060d0;
+  }
+  body.light .legend-item { color: #444; }
+  body.light .legend-item:hover { border-color: #999; }
+  body.light .series-label { color: #888; }
+  body.light #theme-toggle {
+    background: #fff;
+    border-color: #bbc;
+    color: #444;
+  }
+  body.light #theme-toggle:hover { border-color: #5060d0; color: #1a1a2e; }
+
+</style>
+</head>
+<body>
+
+<button id="theme-toggle">🌙</button>
+
+<div id="page-header">
+<h1>Periodic Table of Elements</h1>
+
+<div id="controls">
+  <input type="text" id="search" placeholder="Search element or symbol..." />
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="solid">Solid</button>
+  <button class="filter-btn" data-filter="liquid">Liquid</button>
+  <button class="filter-btn" data-filter="gas">Gas</button>
+</div>
+
+<div id="legend"></div>
+</div>
+
+<div id="table-wrapper">
+  <div id="periodic-table"></div>
+</div>
+
+<div id="modal-overlay"></div>
+
+<div id="info-panel">
+  <div id="info-symbol"></div>
+  <div id="info-name"></div>
+  <div id="info-category"></div>
+  <div id="info-stats">
+    <div class="stat-box">
+      <div class="stat-label">Atomic Number</div>
+      <div class="stat-value" id="stat-number"></div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Atomic Mass</div>
+      <div class="stat-value" id="stat-mass"></div>
+    </div>
+  </div>
+  <div id="info-details"></div>
+</div>
+
+<script>
+const CATEGORIES = {
+  'alkali-metal':     { label: 'Alkali Metal',       color: '#c0392b', rgb: [192,57,43]   },
+  'alkaline-earth':   { label: 'Alkaline Earth',     color: '#d35400', rgb: [211,84,0]    },
+  'transition-metal': { label: 'Transition Metal',   color: '#2471a3', rgb: [36,113,163]  },
+  'post-transition':  { label: 'Post-Transition',    color: '#1e8449', rgb: [30,132,73]   },
+  'metalloid':        { label: 'Metalloid',          color: '#7d3c98', rgb: [125,60,152]  },
+  'nonmetal':         { label: 'Nonmetal',           color: '#1a7a37', rgb: [26,122,55]   },
+  'halogen':          { label: 'Halogen',            color: '#b7950b', rgb: [183,149,11]  },
+  'noble-gas':        { label: 'Noble Gas',          color: '#148f77', rgb: [20,143,119]  },
+  'lanthanide':       { label: 'Lanthanide',         color: '#7d3c98', rgb: [125,60,152]  },
+  'actinide':         { label: 'Actinide',           color: '#5b2c6f', rgb: [91,44,111]   },
+  'unknown':          { label: 'Unknown',            color: '#616a6b', rgb: [97,106,107]  },
+};
+
+// [atomic#, symbol, name, mass, category, group, period, phase, electron_config, electronegativity, discovered]
+const ELEMENTS = [
+  [1,'H','Hydrogen',1.008,'nonmetal',1,1,'Gas','1s¹',2.20,1766],
+  [2,'He','Helium',4.003,'noble-gas',18,1,'Gas','1s²',null,1895],
+  [3,'Li','Lithium',6.941,'alkali-metal',1,2,'Solid','[He] 2s¹',0.98,1817],
+  [4,'Be','Beryllium',9.012,'alkaline-earth',2,2,'Solid','[He] 2s²',1.57,1798],
+  [5,'B','Boron',10.811,'metalloid',13,2,'Solid','[He] 2s² 2p¹',2.04,1808],
+  [6,'C','Carbon',12.011,'nonmetal',14,2,'Solid','[He] 2s² 2p²',2.55,'Ancient'],
+  [7,'N','Nitrogen',14.007,'nonmetal',15,2,'Gas','[He] 2s² 2p³',3.04,1772],
+  [8,'O','Oxygen',15.999,'nonmetal',16,2,'Gas','[He] 2s² 2p⁴',3.44,1774],
+  [9,'F','Fluorine',18.998,'halogen',17,2,'Gas','[He] 2s² 2p⁵',3.98,1886],
+  [10,'Ne','Neon',20.180,'noble-gas',18,2,'Gas','[He] 2s² 2p⁶',null,1898],
+  [11,'Na','Sodium',22.990,'alkali-metal',1,3,'Solid','[Ne] 3s¹',0.93,1807],
+  [12,'Mg','Magnesium',24.305,'alkaline-earth',2,3,'Solid','[Ne] 3s²',1.31,1755],
+  [13,'Al','Aluminum',26.982,'post-transition',13,3,'Solid','[Ne] 3s² 3p¹',1.61,1825],
+  [14,'Si','Silicon',28.086,'metalloid',14,3,'Solid','[Ne] 3s² 3p²',1.90,1824],
+  [15,'P','Phosphorus',30.974,'nonmetal',15,3,'Solid','[Ne] 3s² 3p³',2.19,1669],
+  [16,'S','Sulfur',32.065,'nonmetal',16,3,'Solid','[Ne] 3s² 3p⁴',2.58,'Ancient'],
+  [17,'Cl','Chlorine',35.453,'halogen',17,3,'Gas','[Ne] 3s² 3p⁵',3.16,1774],
+  [18,'Ar','Argon',39.948,'noble-gas',18,3,'Gas','[Ne] 3s² 3p⁶',null,1894],
+  [19,'K','Potassium',39.098,'alkali-metal',1,4,'Solid','[Ar] 4s¹',0.82,1807],
+  [20,'Ca','Calcium',40.078,'alkaline-earth',2,4,'Solid','[Ar] 4s²',1.00,1808],
+  [21,'Sc','Scandium',44.956,'transition-metal',3,4,'Solid','[Ar] 3d¹ 4s²',1.36,1879],
+  [22,'Ti','Titanium',47.867,'transition-metal',4,4,'Solid','[Ar] 3d² 4s²',1.54,1791],
+  [23,'V','Vanadium',50.942,'transition-metal',5,4,'Solid','[Ar] 3d³ 4s²',1.63,1801],
+  [24,'Cr','Chromium',51.996,'transition-metal',6,4,'Solid','[Ar] 3d⁵ 4s¹',1.66,1798],
+  [25,'Mn','Manganese',54.938,'transition-metal',7,4,'Solid','[Ar] 3d⁵ 4s²',1.55,1774],
+  [26,'Fe','Iron',55.845,'transition-metal',8,4,'Solid','[Ar] 3d⁶ 4s²',1.83,'Ancient'],
+  [27,'Co','Cobalt',58.933,'transition-metal',9,4,'Solid','[Ar] 3d⁷ 4s²',1.88,1735],
+  [28,'Ni','Nickel',58.693,'transition-metal',10,4,'Solid','[Ar] 3d⁸ 4s²',1.91,1751],
+  [29,'Cu','Copper',63.546,'transition-metal',11,4,'Solid','[Ar] 3d¹⁰ 4s¹',1.90,'Ancient'],
+  [30,'Zn','Zinc',65.38,'transition-metal',12,4,'Solid','[Ar] 3d¹⁰ 4s²',1.65,'Ancient'],
+  [31,'Ga','Gallium',69.723,'post-transition',13,4,'Solid','[Ar] 3d¹⁰ 4s² 4p¹',1.81,1875],
+  [32,'Ge','Germanium',72.630,'metalloid',14,4,'Solid','[Ar] 3d¹⁰ 4s² 4p²',2.01,1886],
+  [33,'As','Arsenic',74.922,'metalloid',15,4,'Solid','[Ar] 3d¹⁰ 4s² 4p³',2.18,'Ancient'],
+  [34,'Se','Selenium',78.971,'nonmetal',16,4,'Solid','[Ar] 3d¹⁰ 4s² 4p⁴',2.55,1817],
+  [35,'Br','Bromine',79.904,'halogen',17,4,'Liquid','[Ar] 3d¹⁰ 4s² 4p⁵',2.96,1826],
+  [36,'Kr','Krypton',83.798,'noble-gas',18,4,'Gas','[Ar] 3d¹⁰ 4s² 4p⁶',3.00,1898],
+  [37,'Rb','Rubidium',85.468,'alkali-metal',1,5,'Solid','[Kr] 5s¹',0.82,1861],
+  [38,'Sr','Strontium',87.62,'alkaline-earth',2,5,'Solid','[Kr] 5s²',0.95,1790],
+  [39,'Y','Yttrium',88.906,'transition-metal',3,5,'Solid','[Kr] 4d¹ 5s²',1.22,1794],
+  [40,'Zr','Zirconium',91.224,'transition-metal',4,5,'Solid','[Kr] 4d² 5s²',1.33,1789],
+  [41,'Nb','Niobium',92.906,'transition-metal',5,5,'Solid','[Kr] 4d⁴ 5s¹',1.60,1801],
+  [42,'Mo','Molybdenum',95.96,'transition-metal',6,5,'Solid','[Kr] 4d⁵ 5s¹',2.16,1778],
+  [43,'Tc','Technetium',98,'transition-metal',7,5,'Solid','[Kr] 4d⁵ 5s²',1.90,1937],
+  [44,'Ru','Ruthenium',101.07,'transition-metal',8,5,'Solid','[Kr] 4d⁷ 5s¹',2.20,1844],
+  [45,'Rh','Rhodium',102.906,'transition-metal',9,5,'Solid','[Kr] 4d⁸ 5s¹',2.28,1803],
+  [46,'Pd','Palladium',106.42,'transition-metal',10,5,'Solid','[Kr] 4d¹⁰',2.20,1803],
+  [47,'Ag','Silver',107.868,'transition-metal',11,5,'Solid','[Kr] 4d¹⁰ 5s¹',1.93,'Ancient'],
+  [48,'Cd','Cadmium',112.411,'transition-metal',12,5,'Solid','[Kr] 4d¹⁰ 5s²',1.69,1817],
+  [49,'In','Indium',114.818,'post-transition',13,5,'Solid','[Kr] 4d¹⁰ 5s² 5p¹',1.78,1863],
+  [50,'Sn','Tin',118.710,'post-transition',14,5,'Solid','[Kr] 4d¹⁰ 5s² 5p²',1.96,'Ancient'],
+  [51,'Sb','Antimony',121.760,'metalloid',15,5,'Solid','[Kr] 4d¹⁰ 5s² 5p³',2.05,'Ancient'],
+  [52,'Te','Tellurium',127.60,'metalloid',16,5,'Solid','[Kr] 4d¹⁰ 5s² 5p⁴',2.10,1782],
+  [53,'I','Iodine',126.904,'halogen',17,5,'Solid','[Kr] 4d¹⁰ 5s² 5p⁵',2.66,1811],
+  [54,'Xe','Xenon',131.293,'noble-gas',18,5,'Gas','[Kr] 4d¹⁰ 5s² 5p⁶',2.60,1898],
+  [55,'Cs','Cesium',132.905,'alkali-metal',1,6,'Solid','[Xe] 6s¹',0.79,1860],
+  [56,'Ba','Barium',137.327,'alkaline-earth',2,6,'Solid','[Xe] 6s²',0.89,1808],
+  [57,'La','Lanthanum',138.905,'lanthanide',3,6,'Solid','[Xe] 5d¹ 6s²',1.10,1839],
+  [58,'Ce','Cerium',140.116,'lanthanide',4,9,'Solid','[Xe] 4f¹ 5d¹ 6s²',1.12,1803],
+  [59,'Pr','Praseodymium',140.908,'lanthanide',5,9,'Solid','[Xe] 4f³ 6s²',1.13,1885],
+  [60,'Nd','Neodymium',144.242,'lanthanide',6,9,'Solid','[Xe] 4f⁴ 6s²',1.14,1885],
+  [61,'Pm','Promethium',145,'lanthanide',7,9,'Solid','[Xe] 4f⁵ 6s²',1.13,1945],
+  [62,'Sm','Samarium',150.36,'lanthanide',8,9,'Solid','[Xe] 4f⁶ 6s²',1.17,1879],
+  [63,'Eu','Europium',151.964,'lanthanide',9,9,'Solid','[Xe] 4f⁷ 6s²',1.20,1901],
+  [64,'Gd','Gadolinium',157.25,'lanthanide',10,9,'Solid','[Xe] 4f⁷ 5d¹ 6s²',1.20,1880],
+  [65,'Tb','Terbium',158.925,'lanthanide',11,9,'Solid','[Xe] 4f⁹ 6s²',1.10,1843],
+  [66,'Dy','Dysprosium',162.500,'lanthanide',12,9,'Solid','[Xe] 4f¹⁰ 6s²',1.22,1886],
+  [67,'Ho','Holmium',164.930,'lanthanide',13,9,'Solid','[Xe] 4f¹¹ 6s²',1.23,1878],
+  [68,'Er','Erbium',167.259,'lanthanide',14,9,'Solid','[Xe] 4f¹² 6s²',1.24,1843],
+  [69,'Tm','Thulium',168.934,'lanthanide',15,9,'Solid','[Xe] 4f¹³ 6s²',1.25,1879],
+  [70,'Yb','Ytterbium',173.054,'lanthanide',16,9,'Solid','[Xe] 4f¹⁴ 6s²',1.10,1878],
+  [71,'Lu','Lutetium',174.967,'lanthanide',17,9,'Solid','[Xe] 4f¹⁴ 5d¹ 6s²',1.27,1907],
+  [72,'Hf','Hafnium',178.49,'transition-metal',4,6,'Solid','[Xe] 4f¹⁴ 5d² 6s²',1.30,1923],
+  [73,'Ta','Tantalum',180.948,'transition-metal',5,6,'Solid','[Xe] 4f¹⁴ 5d³ 6s²',1.50,1802],
+  [74,'W','Tungsten',183.84,'transition-metal',6,6,'Solid','[Xe] 4f¹⁴ 5d⁴ 6s²',2.36,1783],
+  [75,'Re','Rhenium',186.207,'transition-metal',7,6,'Solid','[Xe] 4f¹⁴ 5d⁵ 6s²',1.90,1925],
+  [76,'Os','Osmium',190.23,'transition-metal',8,6,'Solid','[Xe] 4f¹⁴ 5d⁶ 6s²',2.20,1803],
+  [77,'Ir','Iridium',192.217,'transition-metal',9,6,'Solid','[Xe] 4f¹⁴ 5d⁷ 6s²',2.20,1803],
+  [78,'Pt','Platinum',195.084,'transition-metal',10,6,'Solid','[Xe] 4f¹⁴ 5d⁹ 6s¹',2.28,1735],
+  [79,'Au','Gold',196.967,'transition-metal',11,6,'Solid','[Xe] 4f¹⁴ 5d¹⁰ 6s¹',2.54,'Ancient'],
+  [80,'Hg','Mercury',200.592,'transition-metal',12,6,'Liquid','[Xe] 4f¹⁴ 5d¹⁰ 6s²',2.00,'Ancient'],
+  [81,'Tl','Thallium',204.383,'post-transition',13,6,'Solid','[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p¹',1.62,1861],
+  [82,'Pb','Lead',207.2,'post-transition',14,6,'Solid','[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p²',2.33,'Ancient'],
+  [83,'Bi','Bismuth',208.980,'post-transition',15,6,'Solid','[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p³',2.02,'Ancient'],
+  [84,'Po','Polonium',209,'metalloid',16,6,'Solid','[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁴',2.00,1898],
+  [85,'At','Astatine',210,'halogen',17,6,'Solid','[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁵',2.20,1940],
+  [86,'Rn','Radon',222,'noble-gas',18,6,'Gas','[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁶',2.20,1900],
+  [87,'Fr','Francium',223,'alkali-metal',1,7,'Solid','[Rn] 7s¹',0.70,1939],
+  [88,'Ra','Radium',226,'alkaline-earth',2,7,'Solid','[Rn] 7s²',0.90,1898],
+  [89,'Ac','Actinium',227,'actinide',3,7,'Solid','[Rn] 6d¹ 7s²',1.10,1899],
+  [90,'Th','Thorium',232.038,'actinide',4,10,'Solid','[Rn] 6d² 7s²',1.30,1829],
+  [91,'Pa','Protactinium',231.036,'actinide',5,10,'Solid','[Rn] 5f² 6d¹ 7s²',1.50,1913],
+  [92,'U','Uranium',238.029,'actinide',6,10,'Solid','[Rn] 5f³ 6d¹ 7s²',1.38,1789],
+  [93,'Np','Neptunium',237,'actinide',7,10,'Solid','[Rn] 5f⁴ 6d¹ 7s²',1.36,1940],
+  [94,'Pu','Plutonium',244,'actinide',8,10,'Solid','[Rn] 5f⁶ 7s²',1.28,1940],
+  [95,'Am','Americium',243,'actinide',9,10,'Solid','[Rn] 5f⁷ 7s²',1.13,1944],
+  [96,'Cm','Curium',247,'actinide',10,10,'Solid','[Rn] 5f⁷ 6d¹ 7s²',1.28,1944],
+  [97,'Bk','Berkelium',247,'actinide',11,10,'Solid','[Rn] 5f⁹ 7s²',1.30,1949],
+  [98,'Cf','Californium',251,'actinide',12,10,'Solid','[Rn] 5f¹⁰ 7s²',1.30,1950],
+  [99,'Es','Einsteinium',252,'actinide',13,10,'Solid','[Rn] 5f¹¹ 7s²',1.30,1952],
+  [100,'Fm','Fermium',257,'actinide',14,10,'Solid','[Rn] 5f¹² 7s²',1.30,1952],
+  [101,'Md','Mendelevium',258,'actinide',15,10,'Solid','[Rn] 5f¹³ 7s²',1.30,1955],
+  [102,'No','Nobelium',259,'actinide',16,10,'Solid','[Rn] 5f¹⁴ 7s²',1.30,1958],
+  [103,'Lr','Lawrencium',266,'actinide',17,10,'Solid','[Rn] 5f¹⁴ 7s² 7p¹',1.30,1961],
+  [104,'Rf','Rutherfordium',267,'transition-metal',4,7,'Solid','[Rn] 5f¹⁴ 6d² 7s²',null,1969],
+  [105,'Db','Dubnium',268,'transition-metal',5,7,'Solid','[Rn] 5f¹⁴ 6d³ 7s²',null,1970],
+  [106,'Sg','Seaborgium',271,'transition-metal',6,7,'Solid','[Rn] 5f¹⁴ 6d⁴ 7s²',null,1974],
+  [107,'Bh','Bohrium',270,'transition-metal',7,7,'Solid','[Rn] 5f¹⁴ 6d⁵ 7s²',null,1981],
+  [108,'Hs','Hassium',277,'transition-metal',8,7,'Solid','[Rn] 5f¹⁴ 6d⁶ 7s²',null,1984],
+  [109,'Mt','Meitnerium',278,'unknown',9,7,'Solid','[Rn] 5f¹⁴ 6d⁷ 7s²',null,1982],
+  [110,'Ds','Darmstadtium',281,'unknown',10,7,'Solid','[Rn] 5f¹⁴ 6d⁹ 7s¹',null,1994],
+  [111,'Rg','Roentgenium',282,'unknown',11,7,'Solid','[Rn] 5f¹⁴ 6d¹⁰ 7s¹',null,1994],
+  [112,'Cn','Copernicium',285,'transition-metal',12,7,'Liquid','[Rn] 5f¹⁴ 6d¹⁰ 7s²',null,1996],
+  [113,'Nh','Nihonium',286,'unknown',13,7,'Solid','[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p¹',null,2004],
+  [114,'Fl','Flerovium',289,'unknown',14,7,'Solid','[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p²',null,1999],
+  [115,'Mc','Moscovium',290,'unknown',15,7,'Solid','[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p³',null,2003],
+  [116,'Lv','Livermorium',293,'unknown',16,7,'Solid','[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁴',null,2000],
+  [117,'Ts','Tennessine',294,'unknown',17,7,'Solid','[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁵',null,2010],
+  [118,'Og','Oganesson',294,'unknown',18,7,'Gas','[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁶',null,2002],
+];
+
+// Extended data: melt(°C), boil(°C), density(g/cm³), discoverer, fun fact,
+// ox=oxidation states, ie1=1st ionization energy(kJ/mol), ea=electron affinity(kJ/mol),
+// rad=covalent radius(pm), crystal=crystal structure, mag=magnetic ordering
+// tc=thermal conductivity(W/m·K), ΔHfus=heat of fusion(kJ/mol), ΔHvap=heat of vaporization(kJ/mol)
+const EXTRA = {
+  1:  { melt:-259.16, boil:-252.88, density:0.00009,  by:'Henry Cavendish',              fact:'The most abundant element in the universe — about 75% of all normal matter by mass.',                                         ox:'+1, −1',      ie1:1312,  ea:72.8,  rad:31,  crystal:'Hexagonal',     mag:'DM',  tc:0.18,    hfus:0.12,  hvap:0.45  },
+  2:  { melt:-272.2,  boil:-268.93, density:0.000164, by:'Janssen & Lockyer',             fact:'First discovered outside Earth, detected in the Sun\'s spectrum before ever found on our planet.',                             ox:'0',           ie1:2372,  ea:0,     rad:28,  crystal:'HCP',           mag:'DM',  tc:0.15,    hfus:null,  hvap:0.08  },
+  3:  { melt:180.54,  boil:1342,    density:0.534,    by:'Johan Arfvedson',               fact:'The lightest metal and least dense solid element — it can actually float on water.',                                           ox:'+1',          ie1:520,   ea:59.6,  rad:128, crystal:'BCC',           mag:'PM',  tc:85,      hfus:3.0,   hvap:147   },
+  4:  { melt:1287,    boil:2468,    density:1.85,     by:'Louis Vauquelin',               fact:'One of the stiffest metals: its elastic modulus is like steel but 6× lighter.',                                               ox:'+2',          ie1:900,   ea:0,     rad:96,  crystal:'HCP',           mag:'DM',  tc:200,     hfus:12.2,  hvap:292   },
+  5:  { melt:2077,    boil:4000,    density:2.34,     by:'Gay-Lussac & Thenard',          fact:'Boron carbide is one of the hardest materials known, used in tank armor and bulletproof vests.',                               ox:'+3',          ie1:801,   ea:26.7,  rad:84,  crystal:'Rhombohedral',  mag:'DM',  tc:27,      hfus:50.2,  hvap:508   },
+  6:  { melt:3550,    boil:4027,    density:2.267,    by:'Ancient',                       fact:'The basis of all known life on Earth — carbon can form more compounds than any other element.',                                ox:'+4, −4',      ie1:1086,  ea:122,   rad:77,  crystal:'Diamond cubic', mag:'DM',  tc:140,     hfus:117,   hvap:715   },
+  7:  { melt:-210.01, boil:-195.79, density:0.00125,  by:'Daniel Rutherford',             fact:'Makes up 78% of Earth\'s atmosphere, yet most organisms cannot use it directly.',                                             ox:'+5 to −3',    ie1:1402,  ea:-7,    rad:71,  crystal:'HCP',           mag:'DM',  tc:0.026,   hfus:0.36,  hvap:2.79  },
+  8:  { melt:-218.79, boil:-182.96, density:0.00143,  by:'Carl Scheele',                  fact:'Responsible for the blue color of liquid oxygen and the rusty red color of Mars.',                                             ox:'−2, −1',      ie1:1314,  ea:141,   rad:66,  crystal:'Cubic',         mag:'PM',  tc:0.027,   hfus:0.44,  hvap:3.41  },
+  9:  { melt:-219.67, boil:-188.11, density:0.00170,  by:'Henri Moissan',                 fact:'The most electronegative and reactive of all elements — it can even ignite water.',                                           ox:'−1',          ie1:1681,  ea:328,   rad:64,  crystal:'Monoclinic',    mag:'DM',  tc:0.028,   hfus:0.51,  hvap:3.27  },
+  10: { melt:-248.59, boil:-246.05, density:0.000900, by:'Ramsay & Travers',              fact:'"Neon" signs actually glow in many colors — only pure neon gives the classic orange-red.',                                    ox:'0',           ie1:2081,  ea:0,     rad:58,  crystal:'FCC',           mag:'DM',  tc:0.049,   hfus:0.34,  hvap:1.71  },
+  11: { melt:97.72,   boil:883,     density:0.971,    by:'Humphry Davy',                  fact:'Sodium explodes violently on contact with water, producing hydrogen gas and heat.',                                            ox:'+1',          ie1:496,   ea:52.8,  rad:166, crystal:'BCC',           mag:'PM',  tc:142,     hfus:2.60,  hvap:97.7  },
+  12: { melt:650,     boil:1090,    density:1.738,    by:'Humphry Davy',                  fact:'The human body contains about 25 g of magnesium, essential for over 300 enzyme reactions.',                                   ox:'+2',          ie1:738,   ea:0,     rad:141, crystal:'HCP',           mag:'PM',  tc:156,     hfus:8.48,  hvap:128   },
+  13: { melt:660.32,  boil:2519,    density:2.698,    by:'Hans Christian Ørsted',         fact:'Once more valuable than gold — Napoleon III served honored guests with aluminum cutlery.',                                    ox:'+3',          ie1:578,   ea:42.5,  rad:121, crystal:'FCC',           mag:'PM',  tc:237,     hfus:10.7,  hvap:284   },
+  14: { melt:1414,    boil:3265,    density:2.329,    by:'Jöns Jacob Berzelius',          fact:'The backbone of modern electronics — nearly all computer chips are made from silicon.',                                       ox:'+4, −4',      ie1:787,   ea:134,   rad:111, crystal:'Diamond cubic', mag:'DM',  tc:149,     hfus:50.2,  hvap:359   },
+  15: { melt:44.15,   boil:280.5,   density:1.823,    by:'Hennig Brand',                  fact:'White phosphorus glows in the dark due to slow oxidation — "phosphorus" means "light-bearer".',                              ox:'+5, +3, −3',  ie1:1012,  ea:72,    rad:107, crystal:'Monoclinic',    mag:'DM',  tc:0.24,    hfus:0.66,  hvap:12.4  },
+  16: { melt:115.21,  boil:444.72,  density:2.07,     by:'Ancient',                       fact:'Known as "brimstone" in ancient times; responsible for the smell of rotten eggs.',                                            ox:'+6, −2',      ie1:1000,  ea:200,   rad:105, crystal:'Orthorhombic',  mag:'DM',  tc:0.27,    hfus:1.73,  hvap:9.80  },
+  17: { melt:-101.5,  boil:-34.04,  density:0.00321,  by:'Carl Scheele',                  fact:'Chlorine was the first chemical weapon deployed in WWI at the Battle of Ypres in 1915.',                                     ox:'+7, −1',      ie1:1251,  ea:349,   rad:102, crystal:'Orthorhombic',  mag:'DM',  tc:0.0089,  hfus:3.20,  hvap:10.2  },
+  18: { melt:-189.35, boil:-185.85, density:0.00178,  by:'Lord Rayleigh & Ramsay',        fact:'Argon makes up about 1% of Earth\'s atmosphere and is used to fill incandescent light bulbs.',                               ox:'0',           ie1:1521,  ea:0,     rad:106, crystal:'FCC',           mag:'DM',  tc:0.018,   hfus:1.18,  hvap:6.43  },
+  19: { melt:63.38,   boil:759,     density:0.862,    by:'Humphry Davy',                  fact:'So reactive it must be stored under mineral oil to prevent it catching fire in air.',                                         ox:'+1',          ie1:419,   ea:48.4,  rad:203, crystal:'BCC',           mag:'PM',  tc:102,     hfus:2.33,  hvap:79.1  },
+  20: { melt:842,     boil:1484,    density:1.55,     by:'Humphry Davy',                  fact:'An adult human body contains about 1 kg of calcium, almost all in bones and teeth.',                                          ox:'+2',          ie1:590,   ea:2.4,   rad:176, crystal:'FCC',           mag:'DM',  tc:201,     hfus:8.54,  hvap:155   },
+  21: { melt:1541,    boil:2836,    density:2.985,    by:'Lars Fredrik Nilson',            fact:'Predicted by Mendeleev as "eka-boron" years before its actual discovery in 1879.',                                            ox:'+3',          ie1:633,   ea:18.1,  rad:170, crystal:'HCP',           mag:'PM',  tc:16,      hfus:14.1,  hvap:333   },
+  22: { melt:1668,    boil:3287,    density:4.506,    by:'William Gregor',                 fact:'As strong as steel but 45% lighter, and biocompatible — ideal for surgical implants.',                                        ox:'+4, +3, +2',  ie1:659,   ea:7.6,   rad:160, crystal:'HCP',           mag:'PM',  tc:22,      hfus:14.1,  hvap:425   },
+  23: { melt:1910,    boil:3407,    density:6.0,      by:'Andrés Manuel del Río',          fact:'A tiny amount of vanadium added to steel dramatically increases its strength and toughness.',                                 ox:'+5 to +2',    ie1:651,   ea:50.6,  rad:153, crystal:'BCC',           mag:'PM',  tc:31,      hfus:21.5,  hvap:444   },
+  24: { melt:1907,    boil:2671,    density:7.15,     by:'Louis Nicolas Vauquelin',        fact:'Chromium gives rubies their red color and emeralds their green color.',                                                       ox:'+6, +3, +2',  ie1:653,   ea:64.3,  rad:139, crystal:'BCC',           mag:'AFM', tc:94,      hfus:21.0,  hvap:339   },
+  25: { melt:1246,    boil:2061,    density:7.21,     by:'Johann Gahn',                    fact:'Without manganese, steel becomes brittle and breaks easily when hot.',                                                        ox:'+7, +4, +2',  ie1:717,   ea:0,     rad:161, crystal:'Cubic',         mag:'AFM', tc:7.8,     hfus:12.9,  hvap:226   },
+  26: { melt:1538,    boil:2861,    density:7.874,    by:'Ancient',                        fact:'Iron is the most abundant element by mass in Earth, forming the core of our planet.',                                         ox:'+3, +2',      ie1:763,   ea:15.7,  rad:152, crystal:'BCC',           mag:'FM',  tc:80,      hfus:13.8,  hvap:347   },
+  27: { melt:1495,    boil:2927,    density:8.90,     by:'Georg Brandt',                   fact:'Cobalt-60 is widely used in cancer radiotherapy and as a food irradiation source.',                                           ox:'+3, +2',      ie1:760,   ea:63.7,  rad:150, crystal:'HCP',           mag:'FM',  tc:100,     hfus:16.2,  hvap:375   },
+  28: { melt:1455,    boil:2913,    density:8.908,    by:'Axel Fredrik Cronstedt',         fact:'Nickel is a key component of stainless steel and is used in over 300,000 different alloys.',                                 ox:'+2, +3',      ie1:737,   ea:112,   rad:149, crystal:'FCC',           mag:'FM',  tc:91,      hfus:17.5,  hvap:379   },
+  29: { melt:1084.62, boil:2562,    density:8.96,     by:'Ancient',                        fact:'Copper was the first metal worked by humans — the Copper Age preceded the Bronze Age.',                                       ox:'+2, +1',      ie1:746,   ea:118.4, rad:145, crystal:'FCC',           mag:'DM',  tc:401,     hfus:13.1,  hvap:300   },
+  30: { melt:419.53,  boil:907,     density:7.133,    by:'Ancient',                        fact:'Zinc deficiency affects about 2 billion people worldwide.',                                                                   ox:'+2',          ie1:906,   ea:0,     rad:142, crystal:'HCP',           mag:'DM',  tc:116,     hfus:7.32,  hvap:115   },
+  31: { melt:29.76,   boil:2229,    density:5.91,     by:'Paul E. Lecoq de Boisbaudran',   fact:'Gallium melts just above room temperature — it will literally melt in the palm of your hand.',                               ox:'+3',          ie1:579,   ea:28.9,  rad:136, crystal:'Orthorhombic',  mag:'DM',  tc:29,      hfus:5.59,  hvap:256   },
+  32: { melt:938.25,  boil:2833,    density:5.323,    by:'Clemens Winkler',                fact:'Predicted by Mendeleev as "eka-silicon" years before Winkler discovered it in 1886.',                                        ox:'+4, +2',      ie1:762,   ea:119,   rad:122, crystal:'Diamond cubic', mag:'DM',  tc:60,      hfus:36.9,  hvap:334   },
+  33: { melt:817,     boil:614,     density:5.727,    by:'Ancient',                        fact:'Arsenic compounds were the first effective treatment for syphilis, developed in 1909.',                                       ox:'+5, +3, −3',  ie1:947,   ea:78,    rad:119, crystal:'Rhombohedral',  mag:'DM',  tc:50,      hfus:27.7,  hvap:32.4  },
+  34: { melt:220.8,   boil:685,     density:4.81,     by:'Jöns Jacob Berzelius',           fact:'Essential for human health but toxic in large amounts — the margin is just 10×.',                                            ox:'+6, −2',      ie1:941,   ea:195,   rad:120, crystal:'Monoclinic',    mag:'DM',  tc:0.52,    hfus:6.69,  hvap:26.3  },
+  35: { melt:-7.2,    boil:58.8,    density:3.12,     by:'Antoine Jérôme Balard',          fact:'One of only two elements that are liquid at room temperature (the other being mercury).',                                    ox:'+5, −1',      ie1:1140,  ea:324.6, rad:120, crystal:'Orthorhombic',  mag:'DM',  tc:0.12,    hfus:10.6,  hvap:29.9  },
+  36: { melt:-157.36, boil:-153.22, density:0.00374,  by:'William Ramsay',                 fact:'Krypton fluoride lasers are used in LASIK eye surgery to precisely reshape the cornea.',                                     ox:'0',           ie1:1351,  ea:0,     rad:116, crystal:'FCC',           mag:'DM',  tc:0.0094,  hfus:1.64,  hvap:9.08  },
+  37: { melt:39.31,   boil:688,     density:1.532,    by:'Robert Bunsen',                  fact:'Rubidium clocks are the most common type of atomic clock, used in GPS satellites.',                                           ox:'+1',          ie1:403,   ea:46.9,  rad:220, crystal:'BCC',           mag:'PM',  tc:58,      hfus:2.19,  hvap:75.8  },
+  38: { melt:777,     boil:1382,    density:2.64,     by:'William Cruickshank',             fact:'Strontium salts produce the brilliant red color in fireworks and emergency flares.',                                          ox:'+2',          ie1:550,   ea:5.0,   rad:195, crystal:'FCC',           mag:'PM',  tc:35,      hfus:8.0,   hvap:141   },
+  39: { melt:1526,    boil:3336,    density:4.472,    by:'Johan Gadolin',                   fact:'Used in LED lights and displays; named after the town of Ytterby, Sweden.',                                                   ox:'+3',          ie1:600,   ea:29.6,  rad:190, crystal:'HCP',           mag:'PM',  tc:17,      hfus:11.4,  hvap:363   },
+  40: { melt:1855,    boil:4409,    density:6.511,    by:'Martin H. Klaproth',              fact:'Highly corrosion-resistant; used as cladding for nuclear fuel rods.',                                                        ox:'+4',          ie1:640,   ea:41.1,  rad:175, crystal:'HCP',           mag:'PM',  tc:23,      hfus:21.0,  hvap:573   },
+  41: { melt:2477,    boil:4744,    density:8.57,     by:'Charles Hatchett',                fact:'Used in superconducting magnets for MRI machines and particle accelerators.',                                                ox:'+5, +3',      ie1:652,   ea:86.1,  rad:164, crystal:'BCC',           mag:'PM',  tc:54,      hfus:30.0,  hvap:696   },
+  42: { melt:2623,    boil:4639,    density:10.28,    by:'Carl Scheele',                    fact:'Has the 6th highest melting point of any element; also vital to plant nutrition.',                                           ox:'+6, +4, +2',  ie1:684,   ea:72.1,  rad:154, crystal:'BCC',           mag:'PM',  tc:139,     hfus:37.5,  hvap:598   },
+  43: { melt:2157,    boil:4265,    density:11,       by:'Perrier & Segrè',                 fact:'The lightest element with no stable isotopes; Tc-99m is the most widely used medical radioisotope.',                        ox:'+7, +4',      ie1:702,   ea:53,    rad:147, crystal:'HCP',           mag:'PM',  tc:51,      hfus:33.3,  hvap:585   },
+  44: { melt:2334,    boil:4150,    density:12.37,    by:'Karl Ernst Claus',                fact:'Adding a small amount of ruthenium can boost the hardness of platinum alloys by 100×.',                                     ox:'+3, +4',      ie1:710,   ea:101.3, rad:146, crystal:'HCP',           mag:'PM',  tc:117,     hfus:38.6,  hvap:591   },
+  45: { melt:1964,    boil:3695,    density:12.41,    by:'William Hyde Wollaston',           fact:'The most expensive precious metal — briefly worth 14× the price of gold in 2021.',                                         ox:'+3',          ie1:720,   ea:109.7, rad:142, crystal:'FCC',           mag:'PM',  tc:150,     hfus:26.6,  hvap:494   },
+  46: { melt:1554.9,  boil:2963,    density:12.023,   by:'William Hyde Wollaston',           fact:'Can absorb up to 900 times its own volume of hydrogen gas at room temperature.',                                           ox:'+4, +2',      ie1:804,   ea:54.2,  rad:139, crystal:'FCC',           mag:'DM',  tc:72,      hfus:16.7,  hvap:362   },
+  47: { melt:961.78,  boil:2162,    density:10.49,    by:'Ancient',                          fact:'Silver has the highest electrical and thermal conductivity of all metals.',                                                  ox:'+1',          ie1:731,   ea:125.6, rad:145, crystal:'FCC',           mag:'DM',  tc:429,     hfus:11.3,  hvap:255   },
+  48: { melt:321.07,  boil:767,     density:8.65,     by:'K.S.L. Hermann',                   fact:'The first quantum dots were made of cadmium selenide — they glow brilliantly under UV light.',                            ox:'+2',          ie1:868,   ea:0,     rad:144, crystal:'HCP',           mag:'DM',  tc:97,      hfus:6.21,  hvap:100   },
+  49: { melt:156.6,   boil:2072,    density:7.31,     by:'Ferdinand Reich',                  fact:'Indium tin oxide is the transparent conductor on every touchscreen and LCD display.',                                       ox:'+3',          ie1:558,   ea:28.9,  rad:142, crystal:'Tetragonal',    mag:'DM',  tc:82,      hfus:3.28,  hvap:232   },
+  50: { melt:231.93,  boil:2602,    density:7.265,    by:'Ancient',                           fact:'"Tin pest" causes tin to crumble into gray powder below 13°C — dooming Napoleon\'s army in Russia.',                   ox:'+4, +2',      ie1:709,   ea:107.3, rad:139, crystal:'Tetragonal',    mag:'DM',  tc:67,      hfus:7.03,  hvap:296   },
+  51: { melt:630.63,  boil:1587,    density:6.697,    by:'Ancient',                           fact:'Used in ancient Egyptian eye makeup (kohl) as early as 3000 BC.',                                                        ox:'+5, +3, −3',  ie1:834,   ea:101,   rad:139, crystal:'Rhombohedral',  mag:'DM',  tc:24,      hfus:19.8,  hvap:193   },
+  52: { melt:449.51,  boil:987.8,   density:6.24,     by:'Franz-Joseph Müller',               fact:'Among the rarest stable solid elements in Earth\'s crust — rarer than platinum.',                                        ox:'+6, −2',      ie1:869,   ea:190.2, rad:138, crystal:'Hexagonal',     mag:'DM',  tc:3.0,     hfus:17.5,  hvap:52.7  },
+  53: { melt:113.7,   boil:184.3,   density:4.933,    by:'Bernard Courtois',                  fact:'Essential for thyroid hormone production; deficiency affects approximately 2 billion people.',                            ox:'+7, +5, −1',  ie1:1008,  ea:295.2, rad:139, crystal:'Orthorhombic',  mag:'DM',  tc:0.449,   hfus:15.5,  hvap:41.6  },
+  54: { melt:-111.75, boil:-108.1,  density:0.00589,  by:'William Ramsay',                    fact:'Xenon anesthesia produces a very smooth, rapid induction with minimal side effects.',                                     ox:'0',           ie1:1170,  ea:0,     rad:140, crystal:'FCC',           mag:'DM',  tc:0.0056,  hfus:2.27,  hvap:12.6  },
+  55: { melt:28.44,   boil:671,     density:1.873,    by:'Robert Bunsen',                     fact:'So reactive that even atmospheric moisture can trigger a violent explosion.',                                              ox:'+1',          ie1:376,   ea:45.5,  rad:244, crystal:'BCC',           mag:'PM',  tc:36,      hfus:2.09,  hvap:67.7  },
+  56: { melt:727,     boil:1870,    density:3.594,    by:'Humphry Davy',                      fact:'Barium sulfate is totally opaque to X-rays and is used as a "barium meal" for GI imaging.',                             ox:'+2',          ie1:503,   ea:14.0,  rad:215, crystal:'BCC',           mag:'PM',  tc:18,      hfus:7.12,  hvap:142   },
+  57: { melt:920,     boil:3464,    density:6.162,    by:'Carl Gustaf Mosander',               fact:'Used in high-quality camera and telescope lenses to reduce chromatic aberration.',                                        ox:'+3',          ie1:538,   ea:48,    rad:207, crystal:'DHCP',          mag:'PM',  tc:13,      hfus:6.20,  hvap:400   },
+  58: { melt:798,     boil:3443,    density:6.770,    by:'Jöns Jacob Berzelius',               fact:'Cerium oxide is used to polish glass and to give glass a yellow color.',                                                 ox:'+4, +3',      ie1:534,   ea:50,    rad:204, crystal:'FCC',           mag:'PM',  tc:11,      hfus:5.46,  hvap:398   },
+  59: { melt:931,     boil:3520,    density:6.77,     by:'Carl Auer von Welsbach',             fact:'Creates a brilliant yellow-green color in glasses and gemstones.',                                                       ox:'+3',          ie1:527,   ea:50,    rad:203, crystal:'DHCP',          mag:'PM',  tc:13,      hfus:6.89,  hvap:331   },
+  60: { melt:1016,    boil:3074,    density:7.01,     by:'Carl Auer von Welsbach',             fact:'Neodymium magnets are the strongest permanent magnets — used in hard drives and headphones.',                           ox:'+3',          ie1:533,   ea:50,    rad:201, crystal:'DHCP',          mag:'PM',  tc:17,      hfus:7.14,  hvap:289   },
+  61: { melt:1042,    boil:3000,    density:7.26,     by:'Marinsky & Glendenin',               fact:'The only lanthanide with no stable isotopes; extremely rare in nature.',                                                 ox:'+3',          ie1:540,   ea:50,    rad:199, crystal:'DHCP',          mag:'PM',  tc:15,      hfus:7.13,  hvap:289   },
+  62: { melt:1072,    boil:1794,    density:7.52,     by:'Lecoq de Boisbaudran',               fact:'Samarium-cobalt magnets operate at higher temperatures than neodymium magnets.',                                         ox:'+3, +2',      ie1:545,   ea:50,    rad:198, crystal:'Rhombohedral',  mag:'AFM', tc:13,      hfus:8.62,  hvap:175   },
+  63: { melt:826,     boil:1529,    density:5.264,    by:'Eugène-Anatole Demarçay',            fact:'Responsible for the red and blue phosphors in color TV screens and euro banknotes.',                                     ox:'+3, +2',      ie1:547,   ea:50,    rad:198, crystal:'BCC',           mag:'PM',  tc:14,      hfus:9.21,  hvap:176   },
+  64: { melt:1312,    boil:3273,    density:7.90,     by:'J.C.G. de Marignac',                 fact:'Gadolinium contrast agents are the most widely used MRI contrast media in clinical practice.',                          ox:'+3',          ie1:593,   ea:50,    rad:196, crystal:'HCP',           mag:'FM',  tc:11,      hfus:10.0,  hvap:301   },
+  65: { melt:1356,    boil:3230,    density:8.23,     by:'Carl Gustaf Mosander',               fact:'Produces a brilliant green fluorescence; used in compact fluorescent lamps.',                                            ox:'+3',          ie1:566,   ea:50,    rad:194, crystal:'HCP',           mag:'FM',  tc:11,      hfus:10.8,  hvap:295   },
+  66: { melt:1407,    boil:2562,    density:8.551,    by:'Lecoq de Boisbaudran',               fact:'Has the highest magnetic strength of any element; added to neodymium magnets for high-temp use.',                       ox:'+3',          ie1:573,   ea:50,    rad:192, crystal:'HCP',           mag:'PM',  tc:11,      hfus:11.1,  hvap:280   },
+  67: { melt:1461,    boil:2720,    density:8.795,    by:'Marc Delafontaine',                   fact:'Has the highest magnetic moment of any naturally occurring element.',                                                   ox:'+3',          ie1:581,   ea:50,    rad:192, crystal:'HCP',           mag:'PM',  tc:16,      hfus:17.0,  hvap:265   },
+  68: { melt:1529,    boil:2868,    density:9.066,    by:'Carl Gustaf Mosander',               fact:'Used as an amplifier in fiber-optic cables — enabling the modern internet.',                                            ox:'+3',          ie1:589,   ea:50,    rad:189, crystal:'HCP',           mag:'PM',  tc:15,      hfus:19.9,  hvap:280   },
+  69: { melt:1545,    boil:1950,    density:9.32,     by:'Per Teodor Cleve',                   fact:'The least abundant of the lanthanides that can be commercially extracted.',                                              ox:'+3, +2',      ie1:597,   ea:50,    rad:190, crystal:'HCP',           mag:'PM',  tc:17,      hfus:16.8,  hvap:247   },
+  70: { melt:824,     boil:1196,    density:6.90,     by:'J.C.G. de Marignac',                 fact:'Ytterbium clocks are among the most precise atomic clocks ever built.',                                                  ox:'+3, +2',      ie1:603,   ea:50,    rad:187, crystal:'FCC',           mag:'PM',  tc:39,      hfus:7.66,  hvap:159   },
+  71: { melt:1652,    boil:3402,    density:9.841,    by:'Georges Urbain',                     fact:'The densest and hardest of all the lanthanides.',                                                                        ox:'+3',          ie1:524,   ea:50,    rad:187, crystal:'HCP',           mag:'PM',  tc:16,      hfus:22.0,  hvap:414   },
+  72: { melt:2233,    boil:4603,    density:13.31,    by:'Coster & Hevesy',                    fact:'Used in nuclear control rods because it absorbs neutrons exceptionally well.',                                           ox:'+4',          ie1:659,   ea:0,     rad:175, crystal:'HCP',           mag:'PM',  tc:23,      hfus:27.2,  hvap:648   },
+  73: { melt:3017,    boil:5455,    density:16.69,    by:'Anders Gustaf Ekeberg',               fact:'Highly biocompatible; used in surgical implants and capacitors for smartphones.',                                       ox:'+5',          ie1:761,   ea:31,    rad:170, crystal:'BCC',           mag:'PM',  tc:57,      hfus:36.6,  hvap:743   },
+  74: { melt:3422,    boil:5555,    density:19.25,    by:'Juan José Elhuyar',                  fact:'Has the highest melting point of all pure metals; used in incandescent light filaments.',                               ox:'+6, +4, +2',  ie1:770,   ea:78.6,  rad:162, crystal:'BCC',           mag:'PM',  tc:174,     hfus:52.3,  hvap:824   },
+  75: { melt:3186,    boil:5596,    density:21.02,    by:'Walter Noddack',                     fact:'Has the highest boiling point of any element; one of the last stable elements discovered.',                             ox:'+7, +4',      ie1:760,   ea:14.5,  rad:151, crystal:'HCP',           mag:'PM',  tc:48,      hfus:60.4,  hvap:704   },
+  76: { melt:3033,    boil:5012,    density:22.59,    by:'Smithson Tennant',                   fact:'The densest naturally occurring element — about twice as dense as lead.',                                                ox:'+4, +3, +2',  ie1:840,   ea:106.1, rad:144, crystal:'HCP',           mag:'PM',  tc:88,      hfus:57.9,  hvap:738   },
+  77: { melt:2446,    boil:4428,    density:22.56,    by:'Smithson Tennant',                   fact:'The most corrosion-resistant metal; the second densest element on Earth.',                                              ox:'+4, +3',      ie1:880,   ea:151,   rad:141, crystal:'FCC',           mag:'PM',  tc:147,     hfus:41.1,  hvap:564   },
+  78: { melt:1768.3,  boil:3825,    density:21.45,    by:'Antonio de Ulloa',                   fact:'16th-century Spanish conquistadors considered platinum worthless, calling it "little silver".',                         ox:'+4, +2',      ie1:870,   ea:205.3, rad:139, crystal:'FCC',           mag:'PM',  tc:72,      hfus:22.2,  hvap:469   },
+  79: { melt:1064.18, boil:2856,    density:19.30,    by:'Ancient',                             fact:'All the gold ever mined would fit into a cube only about 21 meters on each side.',                                     ox:'+3, +1',      ie1:890,   ea:222.8, rad:136, crystal:'FCC',           mag:'DM',  tc:318,     hfus:12.6,  hvap:342   },
+  80: { melt:-38.83,  boil:356.73,  density:13.534,   by:'Ancient',                             fact:'The only metal liquid at room temperature; once used in hat-making, causing "mad hatter syndrome".',                  ox:'+2, +1',      ie1:1007,  ea:0,     rad:132, crystal:'Rhombohedral',  mag:'DM',  tc:8.3,     hfus:2.29,  hvap:59.1  },
+  81: { melt:304,     boil:1473,    density:11.85,    by:'William Crookes',                     fact:'Extremely toxic; called "the poisoner\'s poison" due to its historic use as a murder weapon.',                         ox:'+3, +1',      ie1:589,   ea:19.2,  rad:145, crystal:'HCP',           mag:'DM',  tc:46,      hfus:4.14,  hvap:165   },
+  82: { melt:327.46,  boil:1749,    density:11.34,    by:'Ancient',                             fact:'The word "plumbing" comes from "plumbum", the Latin word for lead.',                                                   ox:'+4, +2',      ie1:716,   ea:35.1,  rad:146, crystal:'FCC',           mag:'DM',  tc:35,      hfus:4.77,  hvap:180   },
+  83: { melt:271.5,   boil:1564,    density:9.78,     by:'Ancient',                             fact:'Bismuth expands when it solidifies (like water), forming spectacular geometric crystals with rainbow oxide colors.',   ox:'+5, +3',      ie1:703,   ea:91.2,  rad:148, crystal:'Rhombohedral',  mag:'DM',  tc:8,       hfus:11.3,  hvap:151   },
+  84: { melt:254,     boil:962,     density:9.196,    by:'Marie Curie',                         fact:'Discovered and named by Marie Curie after her home country Poland.',                                                    ox:'+4, +2',      ie1:812,   ea:183.3, rad:140, crystal:'SC',            mag:'PM',  tc:null,    hfus:13.0,  hvap:102   },
+  85: { melt:302,     boil:337,     density:6.35,     by:'Corson, MacKenzie & Segrè',           fact:'The rarest naturally occurring element — at any moment there is less than 30 g total in Earth\'s crust.',              ox:'+7, −1',      ie1:920,   ea:270.1, rad:150, crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  86: { melt:-71,     boil:-61.7,   density:0.00973,  by:'Friedrich Ernst Dorn',               fact:'A colorless radioactive gas that seeps from soil into buildings; the second leading cause of lung cancer.',             ox:'0',           ie1:1037,  ea:0,     rad:150, crystal:'FCC',           mag:'DM',  tc:null,    hfus:3.25,  hvap:18.1  },
+  87: { melt:27,      boil:677,     density:1.87,     by:'Marguerite Perey',                    fact:'The second rarest naturally occurring element and the most unstable of the first 101 elements.',                        ox:'+1',          ie1:393,   ea:47.2,  rad:260, crystal:'BCC',           mag:'PM',  tc:null,    hfus:2.0,   hvap:64.0  },
+  88: { melt:696,     boil:1737,    density:5.5,      by:'Marie & Pierre Curie',                fact:'Once used in luminous watch dials — the "Radium Girls" who painted them suffered fatal radiation poisoning.',           ox:'+2',          ie1:509,   ea:10,    rad:221, crystal:'BCC',           mag:'PM',  tc:18.6,    hfus:8.5,   hvap:113   },
+  89: { melt:1050,    boil:3198,    density:10.07,    by:'André-Louis Debierne',                fact:'So radioactive it glows blue in the dark due to ionization of the surrounding air.',                                   ox:'+3',          ie1:499,   ea:34,    rad:215, crystal:'FCC',           mag:'PM',  tc:12,      hfus:14.0,  hvap:400   },
+  90: { melt:1750,    boil:4788,    density:11.72,    by:'Jöns Jacob Berzelius',                fact:'3× more abundant than uranium and could power the world for thousands of years as nuclear fuel.',                      ox:'+4',          ie1:587,   ea:112,   rad:206, crystal:'FCC',           mag:'PM',  tc:54,      hfus:13.8,  hvap:514   },
+  91: { melt:1572,    boil:4027,    density:15.37,    by:'Fajans & Göhring',                    fact:'One of the rarest and most expensive naturally occurring elements to produce in quantity.',                             ox:'+5, +4',      ie1:568,   ea:53,    rad:200, crystal:'Orthorhombic',  mag:'PM',  tc:47,      hfus:12.3,  hvap:481   },
+  92: { melt:1132.2,  boil:4131,    density:19.1,     by:'Martin H. Klaproth',                  fact:'Used as a glass colorant for centuries before its radioactivity was discovered in 1896.',                              ox:'+6, +4, +3',  ie1:598,   ea:50.9,  rad:196, crystal:'Orthorhombic',  mag:'PM',  tc:27,      hfus:9.14,  hvap:422   },
+  93: { melt:644,     boil:4000,    density:20.2,     by:'McMillan & Abelson',                  fact:'The first transuranium element ever synthesized, achieved in 1940.',                                                   ox:'+5, +4, +3',  ie1:605,   ea:45.9,  rad:190, crystal:'Orthorhombic',  mag:'PM',  tc:6.3,     hfus:3.20,  hvap:336   },
+  94: { melt:639.4,   boil:3228,    density:19.816,   by:'Seaborg et al.',                      fact:'Plutonium-239 is the primary fissile material used in nuclear weapons.',                                               ox:'+4, +3',      ie1:585,   ea:null,  rad:187, crystal:'Monoclinic',    mag:'PM',  tc:6.7,     hfus:2.82,  hvap:333   },
+  95: { melt:1176,    boil:2607,    density:13.67,    by:'Seaborg et al.',                      fact:'Americium-241 is the radioactive source in most household smoke detectors.',                                           ox:'+3',          ie1:578,   ea:null,  rad:180, crystal:'DHCP',          mag:'PM',  tc:10,      hfus:14.4,  hvap:238   },
+  96: { melt:1340,    boil:3110,    density:13.51,    by:'Seaborg et al.',                      fact:'Named after Marie and Pierre Curie — its discovery was kept secret during WWII.',                                      ox:'+3',          ie1:581,   ea:null,  rad:169, crystal:'DHCP',          mag:'PM',  tc:null,    hfus:null,  hvap:null  },
+  97: { melt:986,     boil:null,    density:14.78,    by:'Seaborg et al.',                      fact:'First produced in 1949 by bombarding americium-241 with alpha particles in a cyclotron.',                             ox:'+3',          ie1:601,   ea:null,  rad:null,crystal:'DHCP',          mag:'PM',  tc:10,      hfus:null,  hvap:null  },
+  98: { melt:900,     boil:1470,    density:15.1,     by:'Seaborg et al.',                      fact:'Only about 5 micrograms of californium-252 are produced each year worldwide.',                                         ox:'+3',          ie1:608,   ea:null,  rad:null,crystal:'DHCP',          mag:'PM',  tc:null,    hfus:null,  hvap:null  },
+  99: { melt:860,     boil:996,     density:8.84,     by:'Ghiorso et al.',                      fact:'Discovered in 1952 in the fallout debris of the first hydrogen bomb test.',                                            ox:'+3',          ie1:619,   ea:null,  rad:null,crystal:'?',             mag:'PM',  tc:null,    hfus:null,  hvap:null  },
+  100:{ melt:1527,    boil:null,    density:null,     by:'Ghiorso et al.',                      fact:'Also discovered in hydrogen bomb fallout; named after nuclear physicist Enrico Fermi.',                                ox:'+3',          ie1:627,   ea:null,  rad:null,crystal:'?',             mag:'PM',  tc:null,    hfus:null,  hvap:null  },
+  101:{ melt:827,     boil:null,    density:null,     by:'Seaborg et al.',                      fact:'Named after Dmitri Mendeleev, the creator of the periodic table.',                                                     ox:'+3',          ie1:635,   ea:null,  rad:null,crystal:'?',             mag:'PM',  tc:null,    hfus:null,  hvap:null  },
+  102:{ melt:827,     boil:null,    density:null,     by:'Flerov et al.',                       fact:'Named after Alfred Nobel, inventor of dynamite and founder of the Nobel Prizes.',                                       ox:'+2',          ie1:642,   ea:null,  rad:null,crystal:'?',             mag:'PM',  tc:null,    hfus:null,  hvap:null  },
+  103:{ melt:1627,    boil:null,    density:null,     by:'Ghiorso et al.',                      fact:'Named after Ernest Lawrence, inventor of the cyclotron particle accelerator.',                                          ox:'+3',          ie1:470,   ea:null,  rad:null,crystal:'?',             mag:'PM',  tc:null,    hfus:null,  hvap:null  },
+  104:{ melt:2100,    boil:5500,    density:23.2,     by:'Dubna & Berkeley teams',              fact:'The first transactinide element; named after the pioneering physicist Ernest Rutherford.',                             ox:'+4',          ie1:580,   ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  105:{ melt:null,    boil:null,    density:29.3,     by:'Dubna & Berkeley teams',              fact:'The subject of a Cold War naming dispute between Soviet and American scientists.',                                      ox:'+5',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  106:{ melt:null,    boil:null,    density:35.0,     by:'Seaborg team',                        fact:'Named after Glenn Seaborg while he was still alive — a rare and unique honor.',                                        ox:'+6',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  107:{ melt:null,    boil:null,    density:37.1,     by:'GSI Darmstadt',                       fact:'Named after Niels Bohr, the father of quantum mechanics and the atomic model.',                                        ox:'+7',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  108:{ melt:null,    boil:null,    density:40.7,     by:'GSI Darmstadt',                       fact:'Named after the German state of Hessen (Hassia in Latin), where it was discovered.',                                   ox:'+8',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  109:{ melt:null,    boil:null,    density:37.4,     by:'GSI Darmstadt',                       fact:'Named after Lise Meitner, co-discoverer of nuclear fission and long overlooked for the Nobel Prize.',                  ox:'+9',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  110:{ melt:null,    boil:null,    density:34.8,     by:'GSI Darmstadt',                       fact:'Named after the city of Darmstadt, Germany, home of the GSI research center.',                                        ox:'+6',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  111:{ melt:null,    boil:null,    density:28.7,     by:'GSI Darmstadt',                       fact:'Named after Wilhelm Röntgen, who discovered X-rays and won the very first Nobel Prize in Physics.',                   ox:'+3',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  112:{ melt:null,    boil:null,    density:23.7,     by:'GSI Darmstadt',                       fact:'Named after Nicolaus Copernicus, who proposed that Earth revolves around the Sun.',                                    ox:'+2',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  113:{ melt:null,    boil:null,    density:null,     by:'RIKEN, Japan',                         fact:'The first element discovered in Asia — named after Japan ("Nihon" in Japanese).',                                     ox:'+3',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  114:{ melt:null,    boil:null,    density:null,     by:'Dubna & LLNL',                         fact:'Named after the Flerov Laboratory of Nuclear Reactions in Dubna, Russia.',                                            ox:'+2',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  115:{ melt:null,    boil:null,    density:null,     by:'Dubna & LLNL',                         fact:'Named after Moscow Oblast, Russia, home of the Joint Institute for Nuclear Research.',                                 ox:'+3',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  116:{ melt:null,    boil:null,    density:null,     by:'Dubna & LLNL',                         fact:'Named after Lawrence Livermore National Laboratory in Livermore, California.',                                         ox:'+2',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  117:{ melt:null,    boil:null,    density:null,     by:'Dubna & ORNL',                         fact:'Named after Tennessee, home of Oak Ridge National Laboratory and Vanderbilt University.',                              ox:'−1',          ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+  118:{ melt:null,    boil:null,    density:null,     by:'Dubna & LLNL',                         fact:'Named after nuclear physicist Yuri Oganessian, who was still alive at the time — a rare honor.',                     ox:'0',           ie1:null,  ea:null,  rad:null,crystal:'?',             mag:'?',   tc:null,    hfus:null,  hvap:null  },
+};
+
+function mixWithWhite([r, g, b], f = 0.82) {
+  return `rgb(${Math.round(r+(255-r)*f)},${Math.round(g+(255-g)*f)},${Math.round(b+(255-b)*f)})`;
+}
+
+function getGridPos(el) {
+  const [num, sym, name, mass, cat, grp, per] = el;
+  if (num >= 57 && num <= 71) return [num - 57 + 4, 9];
+  if (num >= 89 && num <= 103) return [num - 89 + 4, 10];
+  return [grp, per];
+}
+
+const table = document.getElementById('periodic-table');
+
+// Build legend
+const legendEl = document.getElementById('legend');
+Object.entries(CATEGORIES).forEach(([key, {label, color}]) => {
+  const item = document.createElement('div');
+  item.className = 'legend-item';
+  item.dataset.category = key;
+  item.innerHTML = `<div class="legend-swatch" style="background:${color}"></div>${label}`;
+  item.addEventListener('click', () => filterByCategory(key));
+  legendEl.appendChild(item);
+});
+
+// Place elements on grid
+ELEMENTS.forEach(el => {
+  const [num, sym, name, mass, cat, grp, per, phase, econf, eneg, disc] = el;
+  const [col, row] = getGridPos(el);
+  const div = document.createElement('div');
+  div.className = `element ${cat}`;
+  div.style.gridColumn = col;
+  div.style.gridRow = row;
+  div.dataset.num = num;
+  div.dataset.sym = sym.toLowerCase();
+  div.dataset.name = name.toLowerCase();
+  div.dataset.cat = cat;
+  div.dataset.phase = phase.toLowerCase();
+  div.innerHTML = `
+    <span class="el-number">${num}</span>
+    <span class="el-symbol">${sym}</span>
+    <span class="el-name">${name}</span>
+    <span class="el-mass">${mass}</span>
+  `;
+  div.addEventListener('click', () => {
+    if (currentElement === num && panel.classList.contains('visible')) {
+      closePanel();
+      currentElement = null;
+    } else {
+      currentElement = num;
+      showInfo(el);
+    }
+  });
+  table.appendChild(div);
+});
+
+// Lanthanide/Actinide placeholders
+const laP = document.createElement('div');
+laP.className = 'element lanthanide';
+laP.style.cssText = 'grid-column:3;grid-row:6;cursor:default';
+laP.innerHTML = `<span class="el-symbol" style="font-size:1.4rem">*</span><span class="el-name">57–71</span>`;
+table.appendChild(laP);
+
+const acP = document.createElement('div');
+acP.className = 'element actinide';
+acP.style.cssText = 'grid-column:3;grid-row:7;cursor:default';
+acP.innerHTML = `<span class="el-symbol" style="font-size:1.4rem">**</span><span class="el-name">89–103</span>`;
+table.appendChild(acP);
+
+const laLabel = document.createElement('div');
+laLabel.className = 'series-label';
+laLabel.style.cssText = 'grid-column:1/4;grid-row:9';
+laLabel.textContent = '* Lanthanides';
+table.appendChild(laLabel);
+
+const acLabel = document.createElement('div');
+acLabel.className = 'series-label';
+acLabel.style.cssText = 'grid-column:1/4;grid-row:10';
+acLabel.textContent = '** Actinides';
+table.appendChild(acLabel);
+
+// Info panel
+const panel   = document.getElementById('info-panel');
+const overlay = document.getElementById('modal-overlay');
+
+function fmt(v, unit='') {
+  if (v === null || v === undefined) return '—';
+  return v + (unit ? ' ' + unit : '');
+}
+
+function magFull(m) {
+  return { DM:'Diamagnetic', PM:'Paramagnetic', FM:'Ferromagnetic',
+           AFM:'Antiferromagnetic', FiM:'Ferrimagnetic', '?':'—' }[m] || m || '—';
+}
+
+function showInfo(el) {
+  const [num, sym, name, mass, cat, grp, per, phase, econf, eneg, disc] = el;
+  const ex    = EXTRA[num] || {};
+  const cat_  = CATEGORIES[cat] || { label: cat, color: '#888', rgb: [136,136,136] };
+  const color = cat_.color;
+  const rgb   = cat_.rgb;
+  const bg    = mixWithWhite(rgb, 0.85);
+
+  panel.style.background = bg;
+  panel.style.border = `2px solid ${color}`;
+
+  document.getElementById('info-symbol').textContent = sym;
+  document.getElementById('info-symbol').style.color = color;
+  document.getElementById('info-name').textContent = name;
+  document.getElementById('info-category').textContent = cat_.label;
+  document.getElementById('info-category').style.color = color;
+  document.getElementById('stat-number').textContent = num;
+  document.getElementById('stat-number').style.color = color;
+  document.getElementById('stat-mass').textContent = mass;
+  document.getElementById('stat-mass').style.color = color;
+
+  const meltStr = ex.melt !== null && ex.melt !== undefined ? ex.melt + ' °C' : '—';
+  const boilStr = ex.boil !== null && ex.boil !== undefined ? ex.boil + ' °C' : '—';
+  const densStr = ex.density !== null && ex.density !== undefined ? ex.density + ' g/cm³' : '—';
+
+  document.getElementById('info-details').innerHTML = `
+    <div class="info-row"><span>Electron Config</span><span>${econf}</span></div>
+    <div class="info-row"><span>Oxidation States</span><span>${ex.ox || '—'}</span></div>
+    <div class="info-row"><span>Electronegativity (χ)</span><span>${eneg ?? '—'}</span></div>
+    <div class="info-row"><span>Density</span><span>${densStr}</span></div>
+    <div class="info-row"><span>Covalent Radius</span><span>${fmt(ex.rad, 'pm')}</span></div>
+    <div class="info-row"><span>Ioniz. Energy (IE₁)</span><span>${fmt(ex.ie1, 'kJ/mol')}</span></div>
+    <div class="info-row"><span>Electron Affinity</span><span>${ex.ea !== null && ex.ea !== undefined ? ex.ea + ' kJ/mol' : '—'}</span></div>
+    <div class="info-row"><span>Crystal Structure</span><span>${ex.crystal || '—'}</span></div>
+    <div class="info-row"><span>Magnetic Order</span><span>${magFull(ex.mag)}</span></div>
+    <div class="info-row"><span>Melting Point</span><span>${meltStr}</span></div>
+    <div class="info-row"><span>Boiling Point</span><span>${boilStr}</span></div>
+    <div class="info-row"><span>ΔH fusion</span><span>${fmt(ex.hfus, 'kJ/mol')}</span></div>
+    <div class="info-row"><span>ΔH vaporization</span><span>${fmt(ex.hvap, 'kJ/mol')}</span></div>
+    <div class="info-row"><span>Thermal Conduct.</span><span>${fmt(ex.tc, 'W/m·K')}</span></div>
+    <div class="info-row"><span>Phase at STP</span><span>${phase}</span></div>
+    <div class="info-row"><span>Discovered</span><span>${disc}</span></div>
+    <div class="info-row"><span>Discovered By</span><span>${ex.by || '—'}</span></div>
+  `;
+
+  panel.classList.add('visible');
+  overlay.classList.add('visible');
+  alignPanel();
+}
+
+function closePanel() {
+  panel.classList.remove('visible');
+  overlay.classList.remove('visible');
+}
+
+let currentElement = null;
+
+function alignLayout() {
+  const wrapperRect = document.getElementById('table-wrapper').getBoundingClientRect();
+  const tableRect   = document.getElementById('periodic-table').getBoundingClientRect();
+
+  // Align page-header to sit exactly above the periodic table
+  const header = document.getElementById('page-header');
+  header.style.marginLeft = (tableRect.left - wrapperRect.left) + 'px';
+  header.style.width      = tableRect.width + 'px';
+
+  if (!panel.classList.contains('visible')) return;
+
+  const bottomGap = window.innerHeight - wrapperRect.bottom;
+  if (window.innerWidth > 1200) {
+    const GAP        = 54 / 3; // 18px = 1/3 of element box width
+    const panelLeft  = tableRect.right + GAP;
+    const rightValue = window.innerWidth - panelLeft - panel.offsetWidth;
+    panel.style.right     = rightValue + 'px';
+    const EXTRA_H = 54 / 3 / 2 + 54 / 3; // 9px (prev) + 18px (1/3 element box) = 27px above table top
+    panel.style.top       = (tableRect.top    - EXTRA_H) + 'px';
+    panel.style.bottom    = (window.innerHeight - tableRect.bottom) + 'px';
+    panel.style.transform = 'none';
+  } else {
+    panel.style.right     = '';
+    panel.style.bottom    = '';
+    panel.style.top       = '';
+    panel.style.transform = '';
+  }
+}
+
+function alignPanel() { alignLayout(); }
+
+window.addEventListener('resize', alignLayout);
+requestAnimationFrame(() => {
+  alignLayout();
+  currentElement = 1;
+  showInfo(ELEMENTS[0]);
+});
+
+overlay.addEventListener('click', closePanel);
+
+document.addEventListener('click', e => {
+  if (e.target.closest('#theme-toggle')) return;
+
+  const clickedElement = e.target.closest('.element');
+  const clickedLegend  = e.target.closest('.legend-item');
+
+  // Close popup if click is outside element boxes and popup
+  if (panel.classList.contains('visible')) {
+    if (!panel.contains(e.target) && !clickedElement) {
+      closePanel();
+      currentElement = null;
+    }
+  }
+
+  // Clear category filter if click is outside element boxes and legend items
+  if (activeCategory && !clickedElement && !clickedLegend) {
+    clearCategoryFilter();
+  }
+});
+
+// Light / dark toggle
+const themeBtn = document.getElementById('theme-toggle');
+themeBtn.addEventListener('click', () => {
+  const isLight = document.body.classList.toggle('light');
+  themeBtn.textContent = isLight ? '🌙' : '☀️';
+  if (isLight) {
+    currentElement = 1;
+    showInfo(ELEMENTS[0]);
+  }
+});
+
+// Search
+document.getElementById('search').addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  const els = document.querySelectorAll('.element[data-num]');
+  if (!q) { els.forEach(el => el.classList.remove('dimmed','highlighted')); return; }
+  els.forEach(el => {
+    const match = el.dataset.sym.includes(q) || el.dataset.name.includes(q) || el.dataset.num === q;
+    el.classList.toggle('dimmed', !match);
+    el.classList.toggle('highlighted', match);
+  });
+});
+
+// Phase filter
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const phase = btn.dataset.filter;
+    document.querySelectorAll('.element[data-num]').forEach(el => {
+      el.classList.toggle('dimmed', phase !== 'all' && el.dataset.phase !== phase);
+    });
+  });
+});
+
+let activeCategory = null;
+
+function clearCategoryFilter() {
+  document.querySelectorAll('.element[data-num]').forEach(el => el.classList.remove('dimmed','highlighted'));
+  document.querySelectorAll('.legend-item').forEach(li => li.classList.remove('active-legend'));
+  activeCategory = null;
+}
+
+function filterByCategory(cat) {
+  if (activeCategory === cat) { clearCategoryFilter(); return; }
+  activeCategory = cat;
+  document.querySelectorAll('.element[data-num]').forEach(el => {
+    el.classList.toggle('dimmed', el.dataset.cat !== cat);
+    el.classList.toggle('highlighted', el.dataset.cat === cat);
+  });
+  document.querySelectorAll('.legend-item').forEach(li => {
+    li.classList.toggle('active-legend', li.dataset.category === cat);
+  });
+}
+</script>
+</body>
+</html>

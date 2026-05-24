@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multinuclear NMR Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f1720;
+      --panel: rgba(13, 22, 31, 0.88);
+      --card: rgba(255, 255, 255, 0.05);
+      --line: rgba(255, 255, 255, 0.1);
+      --ink: #eef3f5;
+      --muted: #a9bbc2;
+      --accent: #8ae0ff;
+      --accent-2: #ffd17b;
+      --accent-3: #ff8f70;
+      --shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(138, 224, 255, 0.14), transparent 25%),
+        radial-gradient(circle at bottom right, rgba(255, 143, 112, 0.12), transparent 28%),
+        linear-gradient(180deg, #0f1720, #121f2a 45%, #0b1218 100%);
+    }
+    .shell { width: min(1380px, calc(100vw - 26px)); margin: 18px auto 60px; }
+    .hero, .panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .hero { padding: 26px 32px; margin-bottom: 18px; }
+    .eyebrow {
+      display: inline-flex;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(138, 224, 255, 0.1);
+      color: var(--accent);
+      font-size: 0.74rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    h1 {
+      margin: 12px 0 8px;
+      font-family: "Iowan Old Style", "Palatino Linotype", serif;
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+    .hero p { max-width: 800px; color: var(--muted); line-height: 1.7; margin: 0; font-size: 0.92rem; }
+    .layout {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 18px;
+    }
+    .panel { padding: 20px; }
+    .sidebar { position: sticky; top: 16px; height: fit-content; }
+    h2 {
+      margin: 0 0 14px;
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    h3 {
+      margin: 0 0 10px;
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .nucleus-list { display: grid; gap: 8px; }
+    .nucleus-btn {
+      text-align: left;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      border-radius: 16px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+      width: 100%;
+    }
+    .nucleus-btn:hover, .nucleus-btn:focus-visible {
+      transform: translateY(-2px);
+      border-color: rgba(138, 224, 255, 0.45);
+      background: rgba(255, 255, 255, 0.08);
+      outline: none;
+    }
+    .nucleus-btn.active {
+      border-color: rgba(255, 209, 123, 0.6);
+      background: linear-gradient(145deg, rgba(255, 209, 123, 0.12), rgba(138, 224, 255, 0.08));
+    }
+    .nucleus-btn strong { display: block; font-size: 1rem; }
+    .nucleus-btn span { display: block; margin-top: 3px; color: var(--muted); font-size: 0.78rem; }
+    /* Tab bar */
+    .tab-bar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all 160ms ease;
+    }
+    .tab-btn:hover { border-color: rgba(138, 224, 255, 0.4); color: var(--ink); }
+    .tab-btn.active {
+      background: rgba(138, 224, 255, 0.15);
+      border-color: rgba(138, 224, 255, 0.5);
+      color: var(--accent);
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    /* Nuclear properties table */
+    .props-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+      margin-bottom: 20px;
+    }
+    .props-table th {
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+    }
+    .props-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      line-height: 1.45;
+    }
+    .props-table td:first-child { color: var(--muted); font-size: 0.8rem; }
+    .props-table td:last-child { color: var(--accent-2); font-weight: 600; }
+    /* Shift scale */
+    .scale-wrap { margin-bottom: 22px; }
+    .scale-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .scale-bar {
+      position: relative;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      overflow: visible;
+      margin-bottom: 8px;
+    }
+    .scale-span {
+      position: absolute;
+      height: 100%;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: filter 150ms ease, opacity 150ms ease;
+      opacity: 0.82;
+    }
+    .scale-span:hover { opacity: 1; filter: brightness(1.2); }
+    .scale-span .label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.62rem;
+      font-weight: 700;
+      white-space: nowrap;
+      pointer-events: none;
+      color: rgba(255,255,255,0.9);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    }
+    /* Tooltip */
+    .tooltip {
+      position: fixed;
+      background: rgba(13,22,31,0.97);
+      border: 1px solid rgba(138,224,255,0.3);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      max-width: 260px;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+      line-height: 1.55;
+    }
+    .tooltip strong { color: var(--accent); }
+    /* Shift ranges table */
+    .ranges-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      margin-bottom: 20px;
+    }
+    .ranges-table th {
+      text-align: left;
+      padding: 7px 10px;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+    }
+    .ranges-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .ranges-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .ppm-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      background: rgba(138,224,255,0.12);
+      color: var(--accent);
+      font-family: "Courier New", monospace;
+    }
+    /* Coupling constants */
+    .coupling-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .coupling-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      padding: 14px;
+    }
+    .coupling-card h4 {
+      margin: 0 0 10px;
+      font-size: 0.8rem;
+      color: var(--accent-2);
+      letter-spacing: 0.08em;
+    }
+    .coupling-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.8rem;
+    }
+    .coupling-row:last-child { border-bottom: none; }
+    .coupling-row .name { color: var(--muted); }
+    .coupling-row .val { color: var(--accent); font-family: "Courier New", monospace; font-weight: 600; font-size: 0.78rem; }
+    .note-box {
+      border: 1px solid rgba(255,209,123,0.2);
+      border-radius: 12px;
+      background: rgba(255,209,123,0.06);
+      padding: 12px 14px;
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .note-box strong { color: var(--accent-2); }
+    /* Solvent table */
+    .solvent-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin-bottom: 16px;
+    }
+    .solvent-table th {
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+    }
+    .solvent-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-family: "Courier New", monospace;
+    }
+    .solvent-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .solvent-table td:first-child { font-family: inherit; color: var(--muted); }
+    .solvent-table td.ppm { color: var(--accent-2); }
+    .solvent-table td.water { color: #7dd9c0; }
+    /* Field strength table */
+    .field-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin-bottom: 16px;
+    }
+    .field-table th {
+      text-align: center;
+      padding: 8px 8px;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--line);
+    }
+    .field-table th:first-child { text-align: left; }
+    .field-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      text-align: center;
+      font-family: "Courier New", monospace;
+      font-size: 0.78rem;
+    }
+    .field-table td:first-child { text-align: left; font-family: inherit; color: var(--muted); }
+    .field-table tr:hover td { background: rgba(255,255,255,0.03); }
+    .field-table .highlight-col { color: var(--accent); font-weight: 700; }
+    /* References */
+    .ref-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+    .ref-list li {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      padding: 10px 14px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .ref-list li strong { color: var(--ink); }
+    .section-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 20px 0 8px;
+      font-weight: 700;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 20px 0;
+    }
+    .nucleus-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .n-badge {
+      width: 72px;
+      height: 72px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--accent), #4dbadf);
+      color: #082530;
+      font-weight: 800;
+      box-shadow: 0 12px 30px rgba(138, 224, 255, 0.22);
+      flex-shrink: 0;
+    }
+    .n-badge .mass { font-size: 0.65rem; line-height: 1; }
+    .n-badge .sym { font-size: 1.6rem; line-height: 1; }
+    .n-info { flex: 1; }
+    .n-info .name { font-size: 1.4rem; font-family: "Iowan Old Style","Palatino Linotype",serif; }
+    .n-info .desc { font-size: 0.83rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .inner-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
+      padding: 14px;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <div class="hero">
+    <span class="eyebrow">PhD Research Tool</span>
+    <h1>Multinuclear NMR Dashboard</h1>
+    <p>Comprehensive reference for <sup>1</sup>H, <sup>13</sup>C, <sup>31</sup>P, <sup>19</sup>F, <sup>29</sup>Si, <sup>11</sup>B, <sup>27</sup>Al, and <sup>195</sup>Pt NMR spectroscopy. Covering nuclear properties, chemical shift ranges, coupling constants, solvent references, and field-strength frequency tables. Data from IUPAC 2001, Gottlieb 1997, Fulmer 2010, Reich (Hans Reich NMR Collection, ACS), and primary literature.</p>
+  </div>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <div class="sidebar panel">
+      <h2>Select Nucleus</h2>
+      <div class="nucleus-list" id="nucleusList"></div>
+    </div>
+
+    <!-- Main content -->
+    <div class="panel" id="mainPanel">
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('shifts',this)">Shifts &amp; Ranges</button>
+        <button class="tab-btn" onclick="switchTab('coupling',this)">Coupling Constants</button>
+        <button class="tab-btn" onclick="switchTab('solvent',this)">Solvent Reference</button>
+        <button class="tab-btn" onclick="switchTab('field',this)">Field Strengths</button>
+        <button class="tab-btn" onclick="switchTab('refs',this)">References</button>
+      </div>
+
+      <div id="tab-shifts" class="tab-content active"></div>
+      <div id="tab-coupling" class="tab-content"></div>
+      <div id="tab-solvent" class="tab-content"></div>
+      <div id="tab-field" class="tab-content"></div>
+      <div id="tab-refs" class="tab-content"></div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ─── Data ────────────────────────────────────────────────────────────────────
+const NUCLEI = {
+  '1H': {
+    symbol: 'H', mass: 1, name: 'Proton', color: '#8ae0ff',
+    desc: 'Spin-1/2, highest sensitivity, universal reference nucleus. Proton NMR is routinely the first experiment performed on any new compound.',
+    props: {
+      'Spin (I)': '1/2',
+      'γ (×10⁷ rad T⁻¹ s⁻¹)': '26.752',
+      'Natural abundance (%)': '99.985',
+      'Relative sensitivity': '1.000',
+      'Larmor freq. at 400 MHz': '400.00 MHz',
+      'Standard reference': 'TMS (δ = 0.00 ppm)'
+    },
+    scaleMin: -1, scaleMax: 15,
+    spans: [
+      { label: 'TMS', lo: -0.1, hi: 0.1, color: 'rgba(200,200,200,0.5)', tip: 'TMS (tetramethylsilane)\nδ = 0.00 ppm\nInternal reference standard' },
+      { label: 'NH₂/OH', lo: 0.5, hi: 5.0, color: 'rgba(150,200,120,0.6)', tip: 'NH₂: 0.5–3.0 ppm; OH: 0.5–5.0 ppm\nBroad, exchangeable; variable with conc., temp., solvent' },
+      { label: 'Alkyl', lo: 0.7, hi: 2.0, color: 'rgba(100,180,255,0.55)', tip: 'Alkyl C–H\nCH₃: 0.9 ppm; CH₂: 1.2 ppm; CH: 1.5 ppm\nAllylic: 1.7–2.3 ppm' },
+      { label: 'α-C=O/N/S', lo: 2.0, hi: 3.5, color: 'rgba(138,224,255,0.6)', tip: 'α-C=O: 2.1–2.7 ppm\nN-CH: 2.2–2.9 ppm; S-CH: 2.0–3.0 ppm\nPropargyl: 1.7–2.7 ppm' },
+      { label: 'OCH₃/benzylic', lo: 2.3, hi: 3.9, color: 'rgba(180,140,255,0.55)', tip: 'OCH₃: 3.3–3.8 ppm\nBenzylic CH₂: 2.3–2.5 ppm\nO-CH: 3.4–4.5 ppm' },
+      { label: 'Alkene', lo: 4.5, hi: 6.5, color: 'rgba(255,200,80,0.6)', tip: 'Vinyl/alkene C=CH\nTerminal alkene: 4.5–5.2 ppm\nInternal alkene: 5.0–6.5 ppm' },
+      { label: 'ArH', lo: 6.5, hi: 9.0, color: 'rgba(255,143,70,0.65)', tip: 'Aromatic H\nElectron-rich ArH: 6.5–7.5 ppm\nElectron-poor ArH: 7.5–9.0 ppm' },
+      { label: 'CHO', lo: 9.4, hi: 10.1, color: 'rgba(255,100,100,0.65)', tip: 'Aldehyde C–H\nδ = 9.4–10.0 ppm\nDistinctive low-field singlet' },
+      { label: 'COOH', lo: 10.0, hi: 12.5, color: 'rgba(255,60,60,0.65)', tip: 'Carboxylic acid O–H\nδ = 10–12 ppm\nBroad, very deshielded' },
+    ],
+    ranges: [
+      ['TMS', '(CH₃)₄Si', '0.00', 'Internal reference'],
+      ['Alkyl CH₃', 'R–CH₃', '0.7–1.0', 'Primary alkyl'],
+      ['Alkyl CH₂', 'R–CH₂–R', '1.1–1.4', 'Secondary alkyl'],
+      ['Alkyl CH', 'R₃CH', '1.3–1.7', 'Tertiary alkyl'],
+      ['Cyclopropane', 'c-C₃H₅–H', '0.5–1.0', 'Anisotropic shielding'],
+      ['Allylic', 'C=C–CH₃', '1.7–2.3', 'Adjacent to double bond'],
+      ['Propargyl', 'C≡C–CH₂', '1.7–2.7', 'Adjacent to triple bond'],
+      ['α-Carbonyl', 'C=O–CH₂', '2.1–2.7', 'Electron withdrawal by C=O'],
+      ['N–CH', 'R₂N–CH', '2.2–2.9', 'Adjacent to amine N'],
+      ['S–CH', 'RS–CH', '2.0–3.0', 'Adjacent to thioether S'],
+      ['Benzylic', 'Ar–CH₂', '2.3–2.5', 'Adjacent to arene ring'],
+      ['OCH₃', 'R–O–CH₃', '3.3–3.8', 'Methoxy groups'],
+      ['O–CH', 'R–O–CH₂', '3.4–4.5', 'Ethers, esters (OCH side)'],
+      ['Alkene =CH₂', 'R–CH=CH₂', '4.5–5.2', 'Terminal vinyl'],
+      ['Alkene =CH–', 'R–CH=CH–R', '5.0–6.5', 'Internal alkene'],
+      ['Aromatic', 'Ar–H', '6.5–8.5', 'Typical aromatic range'],
+      ['Electron-poor ArH', 'NO₂–Ar–H', '7.5–9.0', 'Nitro, carbonyl substituted'],
+      ['Aldehyde', 'R–CHO', '9.4–10.0', 'Highly deshielded'],
+      ['Carboxylic acid', 'R–COOH', '10–12', 'Broad, exchangeable'],
+      ['NH₂ (amine)', 'R–NH₂', '0.5–3.0', 'Broad, exchangeable, variable'],
+      ['OH (alcohol)', 'R–OH', '0.5–5.0', 'Variable, concentration-dependent'],
+    ]
+  },
+  '13C': {
+    symbol: 'C', mass: 13, name: 'Carbon-13', color: '#ffd17b',
+    desc: 'Spin-1/2, low natural abundance (1.1%) and low sensitivity. Broad chemical shift range ~250 ppm. Typically observed with 1H broadband decoupling.',
+    props: {
+      'Spin (I)': '1/2',
+      'γ (×10⁷ rad T⁻¹ s⁻¹)': '6.728',
+      'Natural abundance (%)': '1.109',
+      'Relative sensitivity': '1.76 × 10⁻⁴',
+      'Larmor freq. at 400 MHz': '100.61 MHz',
+      'Standard reference': 'TMS (δ = 0.00 ppm)'
+    },
+    scaleMin: -10, scaleMax: 230,
+    spans: [
+      { label: 'sp³ alkyl', lo: 0, hi: 50, color: 'rgba(100,180,255,0.55)', tip: 'sp³ alkyl carbons\nδ = 0–50 ppm\nIncreasing substitution → downfield' },
+      { label: 'Cyclopropane', lo: 0, hi: 22, color: 'rgba(150,220,200,0.5)', tip: 'Cyclopropane C\nδ = 0–22 ppm\nAnisotropic shielding, unusually upfield' },
+      { label: 'C-X heteroatom', lo: 40, hi: 90, color: 'rgba(180,140,255,0.55)', tip: 'Carbons α to O, N, S, halogen\nδ = 40–90 ppm\nDeshielded by electronegative substituents' },
+      { label: 'Alkyne', lo: 65, hi: 90, color: 'rgba(120,200,120,0.55)', tip: 'Alkyne sp carbon\nδ = 65–90 ppm\nShielded by triple-bond anisotropy' },
+      { label: 'Alkene C=C', lo: 100, hi: 150, color: 'rgba(255,200,80,0.6)', tip: 'Alkene/arene sp² carbon\nδ = 100–150 ppm\nArene: 110–170 ppm' },
+      { label: 'Arene', lo: 110, hi: 170, color: 'rgba(255,165,50,0.55)', tip: 'Aromatic carbons\nδ = 110–170 ppm\nIPSO substituted C can reach 165 ppm' },
+      { label: 'Nitrile', lo: 115, hi: 125, color: 'rgba(200,120,255,0.55)', tip: 'Nitrile/isonitrile C≡N\nδ = 115–125 ppm' },
+      { label: 'Ester/Amide', lo: 160, hi: 180, color: 'rgba(255,120,100,0.6)', tip: 'Ester C=O: 160–180 ppm\nAmide C=O: 160–175 ppm\nCarbamate: 152–160 ppm' },
+      { label: 'Acid C=O', lo: 170, hi: 185, color: 'rgba(255,90,80,0.6)', tip: 'Carboxylic acid C=O\nδ = 170–185 ppm' },
+      { label: 'Ketone', lo: 195, hi: 215, color: 'rgba(255,50,50,0.7)', tip: 'Ketone C=O\nδ = 195–215 ppm\nAldehyde: 190–205 ppm' },
+    ],
+    ranges: [
+      ['sp³ Alkyl (general)', 'R–CH₃, R₂CH₂, R₃CH', '0–50', 'Primary–tertiary alkyl'],
+      ['Cyclopropane', 'c-C₃H₅–', '0–22', 'Unusually upfield (anisotropic)'],
+      ['Cyclobutane/pentane', 'c-C₄H₇–, c-C₅H₉–', '20–30', 'Typical cycloalkane'],
+      ['C–O ethers, alcohols', 'R–O–CH₂–', '60–90', 'Deshielded by O'],
+      ['C–N amines', 'R₂N–CH₂–', '40–60', 'Deshielded by N'],
+      ['C–halogen', 'R–CH₂–Cl, Br', '20–60', 'Halide-bearing C'],
+      ['Alkyne (sp)', 'R–C≡C–R', '65–90', 'Terminal: ~68; internal: ~80–90'],
+      ['Alkene (sp²)', 'R–CH=CH–', '100–150', 'Broad range; terminal =CH₂ ~110'],
+      ['Arene (typical)', 'C₆H₅–', '110–145', 'Most aromatic C'],
+      ['Arene (ipso, substituted)', 'Ar–C–R', '125–170', 'Substituted by heteroatom'],
+      ['Nitrile', 'R–C≡N', '115–125', 'Distinctive narrow range'],
+      ['Carbonate', 'R–O–CO–O–R', '150–160', 'Carbonate C=O'],
+      ['Ester C=O', 'R–CO–O–R', '160–180', 'Including lactones'],
+      ['Amide C=O', 'R–CO–NR₂', '160–175', 'Restricted rotation possible'],
+      ['Carboxylic acid', 'R–COOH', '170–185', 'Acidic carbonyl'],
+      ['Anhydride', 'R–CO–O–CO–R', '165–170', 'Anhydride carbonyls'],
+      ['Aldehyde C=O', 'R–CHO', '190–205', '1JCH ≈ 175 Hz'],
+      ['Ketone C=O', 'R–CO–R', '195–215', 'α,β-unsat. lower field'],
+    ]
+  },
+  '31P': {
+    symbol: 'P', mass: 31, name: 'Phosphorus-31', color: '#ff8f70',
+    desc: 'Spin-1/2, 100% natural abundance, moderately sensitive. Very wide shift range (~700 ppm). Reference: 85% H₃PO₄ (external). Common in organometallic and biological chemistry.',
+    props: {
+      'Spin (I)': '1/2',
+      'γ (×10⁷ rad T⁻¹ s⁻¹)': '10.839',
+      'Natural abundance (%)': '100.00',
+      'Relative sensitivity': '6.63 × 10⁻²',
+      'Larmor freq. at 400 MHz': '161.98 MHz',
+      'Standard reference': '85% H₃PO₄ (δ = 0.00 ppm)'
+    },
+    scaleMin: -250, scaleMax: 250,
+    spans: [
+      { label: 'PH₃', lo: -245, hi: -235, color: 'rgba(150,220,200,0.6)', tip: 'PH₃\nδ ≈ −240 ppm\nHighly shielded phosphine' },
+      { label: 'PMe₃', lo: -65, hi: -58, color: 'rgba(100,180,255,0.6)', tip: 'PMe₃ (trimethylphosphine)\nδ ≈ −62 ppm' },
+      { label: 'PEt₃', lo: -23, hi: -17, color: 'rgba(120,190,255,0.55)', tip: 'PEt₃ (triethylphosphine)\nδ ≈ −20 ppm' },
+      { label: 'PPh₃', lo: -9, hi: -3, color: 'rgba(150,150,255,0.6)', tip: 'PPh₃ (triphenylphosphine)\nδ ≈ −6 ppm' },
+      { label: 'H₃PO₄/phosphate', lo: -7, hi: 7, color: 'rgba(200,200,200,0.5)', tip: '85% H₃PO₄ reference δ = 0\nPhosphate esters: −5 to +5 ppm' },
+      { label: 'Phosphonate', lo: 15, hi: 35, color: 'rgba(255,200,80,0.6)', tip: 'Phosphonate R–P(O)(OR)₂\nδ = +15 to +30 ppm' },
+      { label: 'R₃P=O', lo: 25, hi: 55, color: 'rgba(255,165,50,0.6)', tip: 'Phosphine oxide R₃P=O\nδ = +25 to +50 ppm' },
+      { label: 'POCl₃', lo: 0, hi: 6, color: 'rgba(200,160,80,0.5)', tip: 'POCl₃ δ ≈ +3 ppm' },
+      { label: 'Phosphite P(OR)₃', lo: 122, hi: 148, color: 'rgba(255,120,100,0.6)', tip: 'Phosphite/phosphorous ester P(OR)₃\nδ = +125 to +145 ppm' },
+      { label: 'PCl₃', lo: 214, hi: 224, color: 'rgba(255,70,70,0.65)', tip: 'PCl₃\nδ ≈ +219 ppm\nHighly deshielded' },
+    ],
+    ranges: [
+      ['PH₃', 'PH₃', '−240', 'Most shielded common P species'],
+      ['PMe₃', 'P(CH₃)₃', '−62', 'Trialkyl phosphine, alkyl donation'],
+      ['PEt₃', 'P(C₂H₅)₃', '−20', 'Triethylphosphine'],
+      ['PPh₃', 'P(C₆H₅)₃', '−6', 'Triphenylphosphine; widely used ligand'],
+      ['H₃PO₄', '85% H₃PO₄ (aq)', '0', 'External reference standard'],
+      ['Phosphate ester', '(RO)₃P=O', '−5 to +5', 'Biological phosphates, DNA backbone'],
+      ['POCl₃', 'POCl₃', '+3', 'Phosphoryl chloride'],
+      ['Phosphonate R–P(O)(OR)₂', 'RP(=O)(OR)₂', '+15 to +30', 'Phosphonic acid derivatives'],
+      ['Phosphine oxide R₃P=O', 'R₃P=O', '+25 to +50', 'Oxidized phosphine'],
+      ['Phosphite P(OR)₃', 'P(OR)₃', '+125 to +145', 'Trivalent P, no P=O'],
+      ['PCl₃', 'PCl₃', '+219', 'Trichlorophosphine, highly deshielded'],
+      ['dppe in Pd complexes', 'Pd(dppe)Cl₂', '+25 to +45', 'Typical Pd–P shift range'],
+      ['Pt–P complexes', 'trans-PtCl₂(PR₃)₂', '+10 to +30', 'Large ¹J(Pt–P) observed'],
+      ['Rh–P complexes', 'Wilkinson cat. RhCl(PPh₃)₃', '+25 to +45', '²J(Rh–P) ≈ 100–130 Hz'],
+      ['Cis-Pt phosphine', 'cis-PtCl₂(PR₃)₂', '+5 to +25', 'Cis configuration'],
+    ]
+  },
+  '19F': {
+    symbol: 'F', mass: 19, name: 'Fluorine-19', color: '#7dd9c0',
+    desc: 'Spin-1/2, 100% natural abundance, ~83% sensitivity vs ¹H. Very wide shift range (~350 ppm). Reference: CFCl₃ (δ = 0 ppm). Extremely sensitive to electronic environment.',
+    props: {
+      'Spin (I)': '1/2',
+      'γ (×10⁷ rad T⁻¹ s⁻¹)': '25.181',
+      'Natural abundance (%)': '100.00',
+      'Relative sensitivity': '0.833',
+      'Larmor freq. at 400 MHz': '376.50 MHz',
+      'Standard reference': 'CFCl₃ (δ = 0.00 ppm)'
+    },
+    scaleMin: -350, scaleMax: 50,
+    spans: [
+      { label: 'Acyl F', lo: -65, hi: -25, color: 'rgba(255,165,50,0.6)', tip: 'Acyl fluoride R–COF\nδ = −25 to −65 ppm' },
+      { label: 'CFCl₃', lo: 2, hi: -2, color: 'rgba(200,200,200,0.5)', tip: 'CFCl₃ reference\nδ = 0.00 ppm' },
+      { label: 'SF₆/PF₆⁻', lo: -75, hi: -67, color: 'rgba(200,160,80,0.55)', tip: 'SF₆: δ = −71 ppm\nPF₆⁻: δ = −71 ppm (d, ¹J(PF)=710 Hz)' },
+      { label: 'CF₃', lo: -70, hi: -55, color: 'rgba(100,200,255,0.6)', tip: 'Trifluoromethyl CF₃\nδ ≈ −63 ppm (ArCF₃, OCOCF₃ vary)' },
+      { label: 'BF₄⁻', lo: -157, hi: -147, color: 'rgba(180,140,255,0.55)', tip: 'Tetrafluoroborate BF₄⁻\nδ = −152 ppm (singlet or br)' },
+      { label: 'ArF ortho', lo: -122, hi: -112, color: 'rgba(255,200,80,0.6)', tip: 'Ortho-fluorine on arene\nδ = −115 to −120 ppm' },
+      { label: 'ArF meta/para', lo: -167, hi: -157, color: 'rgba(255,140,60,0.6)', tip: 'Meta-F: −160 to −165 ppm\nPara-F: ≈ −162 ppm' },
+      { label: 'CHF₂', lo: -125, hi: -113, color: 'rgba(138,224,255,0.55)', tip: 'Difluoromethylene –CHF₂\nδ ≈ −119 ppm' },
+      { label: 'CH₂F', lo: -228, hi: -212, color: 'rgba(120,210,120,0.55)', tip: 'Monofluoromethylene –CH₂F\nδ ≈ −220 ppm\nMost shielded alkyl F' },
+    ],
+    ranges: [
+      ['CFCl₃', 'CFCl₃', '0', 'Reference compound (neat)'],
+      ['Acyl fluoride', 'R–COF', '−25 to −65', 'Highly reactive; deshielded vs alkyl F'],
+      ['SF₆', 'SF₆', '−71', 'Symmetrical; sharp singlet'],
+      ['PF₆⁻', 'PF₆⁻', '−71', 'Doublet, ¹J(PF) ≈ 710 Hz'],
+      ['CF₃ (aliphatic)', 'R–CF₃', '−63', 'Trifluoromethyl, aliphatic'],
+      ['CF₃ (aromatic)', 'Ar–CF₃', '−62 to −65', 'Slightly variable with Ar substituents'],
+      ['ArF ortho', 'o-FC₆H₄–', '−115 to −120', 'Strong coupling to ipso C'],
+      ['CHF₂', 'R–CHF₂', '−119', 'Difluoromethyl'],
+      ['BF₄⁻', 'BF₄⁻', '−152', 'Counterion in ionic liquids/cat.'],
+      ['ArF meta', 'm-FC₆H₄–', '−160 to −165', 'Long-range F shielding'],
+      ['ArF para', 'p-FC₆H₄–', '−162', 'Symmetric aryl fluoride'],
+      ['CH₂F (monofluoro)', 'R–CH₂F', '−220', 'Most shielded organofluorine'],
+      ['Vinyl fluoride', 'R–CF=CH₂', '−115 to −130', 'Variable with substitution'],
+      ['Fluoroform', 'CHF₃', '−79', 'Trifluoromethane (ref. solvent)'],
+      ['Perfluoroalkyl', 'C₈F₁₇', '−80 to −130', 'CF₂ interior: −122; CF₃ end: −80'],
+    ]
+  },
+  '29Si': {
+    symbol: 'Si', mass: 29, name: 'Silicon-29', color: '#c4b5fd',
+    desc: 'Spin-1/2, 4.7% natural abundance, γ negative (signals inverted in some experiments). Reference: TMS (δ = 0 ppm). Important for silicones, zeolites, organosilicon chemistry.',
+    props: {
+      'Spin (I)': '1/2',
+      'γ (×10⁷ rad T⁻¹ s⁻¹)': '−5.319',
+      'Natural abundance (%)': '4.685',
+      'Relative sensitivity': '3.69 × 10⁻⁴',
+      'Larmor freq. at 400 MHz': '79.49 MHz',
+      'Standard reference': 'TMS (δ = 0.00 ppm)'
+    },
+    scaleMin: -140, scaleMax: 60,
+    spans: [
+      { label: 'TMS', lo: -2, hi: 2, color: 'rgba(200,200,200,0.5)', tip: 'TMS (tetramethylsilane) δ = 0\nReference for ²⁹Si and ¹H/¹³C' },
+      { label: 'R₄Si/R₃SiH', lo: -22, hi: -5, color: 'rgba(100,180,255,0.55)', tip: 'Tetraalkylsilane: −10 to −20 ppm\nTrialkylsilane R₃SiH: −10 to −20 ppm' },
+      { label: 'R₃SiF', lo: -18, hi: 2, color: 'rgba(120,200,200,0.55)', tip: 'Trialkylfluorosilane R₃SiF\nδ = 0 to −15 ppm' },
+      { label: 'R₃SiOR\'', lo: 8, hi: 28, color: 'rgba(180,140,255,0.55)', tip: 'Trialkoxysilane (one OR)\nR₃Si–OR: +10 to +25 ppm' },
+      { label: 'R₃SiCl', lo: 26, hi: 38, color: 'rgba(255,200,80,0.6)', tip: 'Trialkylchlorosilane R₃SiCl\nδ = +28 to +35 ppm' },
+      { label: 'Silanols', lo: -48, hi: -12, color: 'rgba(150,220,120,0.55)', tip: 'Silanols R₃Si–OH\nδ = −15 to −45 ppm' },
+      { label: 'Si(OR)₄', lo: -84, hi: -74, color: 'rgba(255,140,60,0.6)', tip: 'Tetraorthosilicate Si(OR)₄ / TEOS\nδ = −78 to −82 ppm' },
+      { label: 'T environments', lo: -82, hi: -42, color: 'rgba(255,100,100,0.6)', tip: 'T environments RSiO₃ (in siloxane networks)\nT1: −45 to −55 ppm; T2: −55 to −65 ppm; T3: −65 to −80 ppm' },
+      { label: 'Q environments', lo: -122, hi: -78, color: 'rgba(255,50,50,0.65)', tip: 'Q silicate environments SiO₄\nQ2: −88 to −98 ppm; Q3: −98 to −110 ppm; Q4: −108 to −120 ppm' },
+    ],
+    ranges: [
+      ['TMS', '(CH₃)₄Si', '0', 'Reference compound'],
+      ['Tetraalkylsilane', 'R₄Si', '−10 to −20', 'Four carbon substituents'],
+      ['Trialkylsilane', 'R₃SiH', '−10 to −20', 'Si–H stretching ~2100 cm⁻¹'],
+      ['Trialkylsilyl ether', 'R₃Si–OR\'', '+10 to +25', 'TMS ether common protecting group'],
+      ['Trialkylchlorosilane', 'R₃SiCl', '+28 to +35', 'Reactive silane, electrophilic Si'],
+      ['Trialkyl fluorosilane', 'R₃SiF', '0 to −15', 'Strong Si–F bond (>800 kJ/mol)'],
+      ['Silanol', 'R₃Si–OH', '−15 to −45', 'Surface silanol groups, condensation'],
+      ['Tetraalkoxysilane', 'Si(OR)₄ (TEOS)', '−78 to −82', 'Precursor for sol-gel chemistry'],
+      ['T1 monosubst.', 'RSi(OH)₂(OSi)', '−45 to −55', 'One Si–O–Si bond'],
+      ['T2 disubst.', 'RSi(OH)(OSi)₂', '−55 to −65', 'Two Si–O–Si bonds'],
+      ['T3 trisubst.', 'RSiO₃ (fully cond.)', '−65 to −80', 'Fully condensed T unit'],
+      ['Q2', 'Si(OSi)₂(OH)₂', '−88 to −98', 'Two bridging + two OH'],
+      ['Q3', 'Si(OSi)₃(OH)', '−98 to −110', 'Three bridging oxygens'],
+      ['Q4', 'Si(OSi)₄', '−108 to −120', 'Fully cross-linked silicate (e.g. quartz)'],
+      ['Silicone (PDMS)', '(CH₃)₂SiO', '−20 to −22', 'Polydimethylsiloxane backbone D unit'],
+    ]
+  },
+  '11B': {
+    symbol: 'B', mass: 11, name: 'Boron-11', color: '#fb923c',
+    desc: 'Spin-3/2, 80.1% natural abundance, quadrupolar nucleus. Linewidths depend on symmetry at boron. Wide shift range. Reference: BF₃·Et₂O (δ = 0 ppm). Essential for boronic acid/organoborane chemistry.',
+    props: {
+      'Spin (I)': '3/2',
+      'γ (×10⁷ rad T⁻¹ s⁻¹)': '8.585',
+      'Natural abundance (%)': '80.10',
+      'Relative sensitivity': '0.133',
+      'Larmor freq. at 400 MHz': '128.38 MHz',
+      'Standard reference': 'BF₃·Et₂O (δ = 0.00 ppm)'
+    },
+    scaleMin: -50, scaleMax: 100,
+    spans: [
+      { label: 'BH₄⁻', lo: -44, hi: -36, color: 'rgba(150,220,200,0.6)', tip: 'Tetrahydroborate BH₄⁻\nδ ≈ −40 ppm\nNarrow; tetrahedral, Td symmetry' },
+      { label: 'BF₄⁻', lo: -4, hi: 2, color: 'rgba(200,200,200,0.5)', tip: 'Tetrafluoroborate BF₄⁻\nδ ≈ −1 ppm\nNarrow line; Td symmetry' },
+      { label: 'BH₃·THF', lo: -14, hi: -6, color: 'rgba(120,200,200,0.55)', tip: 'BH₃·THF complex\nδ ≈ −10 ppm\nNarrow; tetrahedral adduct' },
+      { label: 'R₄B⁻', lo: -12, hi: 8, color: 'rgba(180,140,255,0.55)', tip: 'Tetracoordinate organoborates R₄B⁻\nδ = −10 to +5 ppm\nNarrow lines; Td B' },
+      { label: 'BF₃·Et₂O', lo: -2, hi: 2, color: 'rgba(200,200,200,0.45)', tip: 'BF₃·OEt₂\nδ = 0 ppm (reference)\nTricoordinate with one O-donor' },
+      { label: 'Catecholborane', lo: 18, hi: 26, color: 'rgba(138,224,255,0.55)', tip: 'Catecholborane\nδ ≈ +22 ppm\nModerately broad; tricoordinate' },
+      { label: 'Boronate ester', lo: 18, hi: 32, color: 'rgba(100,180,255,0.55)', tip: 'Boronate ester R–B(OR)₂\nδ = +20 to +30 ppm' },
+      { label: 'Boronic acid', lo: 26, hi: 36, color: 'rgba(255,200,80,0.6)', tip: 'Arylboronic acid Ar–B(OH)₂\nδ = +28 to +35 ppm\nBroad; planar sp² B' },
+      { label: '9-BBN', lo: 27, hi: 33, color: 'rgba(255,165,50,0.6)', tip: '9-BBN (9-borabicyclo[3.3.1]nonane)\nδ ≈ +30 ppm\nModerately broad; useful hydroboration reagent' },
+      { label: 'Triaryl B', lo: 38, hi: 72, color: 'rgba(255,130,60,0.65)', tip: 'Triarylborane BAr₃\nδ = +40 to +70 ppm\nBroad; Lewis acidic' },
+      { label: 'Trialkyl B', lo: 77, hi: 92, color: 'rgba(255,60,50,0.7)', tip: 'Trialkylborane BR₃\nδ = +80 to +90 ppm\nVery broad; strong Lewis acid' },
+    ],
+    ranges: [
+      ['BH₄⁻', 'NaBH₄, LiBH₄', '−40', 'Tetrahedral; narrow; common reductant'],
+      ['BH₃·THF', 'BH₃·THF', '−10', 'Hydroboration reagent; Td B'],
+      ['BF₄⁻', 'NBu₄BF₄, etc.', '−1', 'Non-coordinating anion; sharp singlet'],
+      ['Tetracoordinate R₄B⁻', 'NaB(C₆H₅)₄', '−10 to +5', 'Tetrahedral; narrow lines'],
+      ['BF₃·Et₂O', 'BF₃·OEt₂', '0', 'Reference compound; Lewis acid'],
+      ['Catecholborane', 'HB(cat)', '+22', 'Useful mild hydroboration reagent'],
+      ['Boronate ester', 'R–B(pin)', '+20 to +30', 'Stable; Suzuki coupling partner'],
+      ['ArB(OH)₂ boronic acid', 'PhB(OH)₂', '+28 to +33', 'Broad singlet; sp² planar B'],
+      ['Alkyl B(OH)₂', 'n-BuB(OH)₂', '+30 to +35', 'Slightly broader than ArB(OH)₂'],
+      ['9-BBN', '9-BBN', '+30', 'Selective hydroboration; hindered'],
+      ['Triarylborane', 'B(C₆F₅)₃', '+40 to +70', 'Strong FLP Lewis acid; very broad'],
+      ['Trialkylborane', 'B(n-Bu)₃', '+80 to +90', 'Very broad; highly Lewis acidic'],
+      ['Diborane', 'B₂H₆', '+17', 'Broad; bridging B–H–B'],
+      ['Pinacolborane', 'HBpin', '+28', 'Common C–H borylation reagent'],
+    ]
+  },
+  '27Al': {
+    symbol: 'Al', mass: 27, name: 'Aluminum-27', color: '#f59e0b',
+    desc: 'Spin-5/2, quadrupolar nucleus (Q = 14.66 × 10⁻³⁰ m²), 100% natural abundance, very high receptivity. Linewidths are exquisitely sensitive to coordination symmetry: tetrahedral (Td) or octahedral (Oh) sites with high symmetry give narrow lines; distorted environments give signals kilohertz wide. Indispensable for zeolite, aluminosilicate, aluminate, and organoaluminum chemistry.',
+    props: {
+      'Spin (I)': '5/2',
+      'γ (×10⁷ rad T⁻¹ s⁻¹)': '6.976',
+      'Natural abundance (%)': '100.00',
+      'Relative sensitivity': '0.206',
+      'Quadrupole moment Q (10⁻³⁰ m²)': '14.66',
+      'Larmor freq. at 400 MHz': '104.26 MHz',
+      'Standard reference': '[Al(H₂O)₆]³⁺ (δ = 0.00 ppm)'
+    },
+    scaleMin: -30, scaleMax: 170,
+    spans: [
+      { label: 'Oct. Al(VI)', lo: -20, hi: 20, color: 'rgba(100,180,255,0.55)', tip: 'Octahedral Al(VI)\nδ = −20 to +20 ppm\n[Al(H₂O)₆]³⁺ = 0 (reference); Al(acac)₃ ≈ 0\nAlF₃ ≈ +17; α-Al₂O₃ oct. ≈ +5 ppm\nNarrow lines at high symmetry (Oh)' },
+      { label: 'Penta Al(V)', lo: 20, hi: 45, color: 'rgba(180,140,255,0.55)', tip: 'Penta-coordinate Al(V)\nδ = +20 to +45 ppm\nDistinct from both Td and Oh\nIntermediate linewidth; seen in aluminate glasses and certain Al-NHC complexes' },
+      { label: 'Td Al(IV) alkoxide', lo: 45, hi: 65, color: 'rgba(255,200,80,0.55)', tip: 'Tetrahedral Al(IV) alkoxide / aluminosilicate\nAl(OiPr)₃ monomer: ~50–60 ppm\nZeolite Brønsted acid sites: +54–62 ppm\nNarrow for highly symmetric Td sites' },
+      { label: 'NaAlO₂ / γ-Al₂O₃ Td', lo: 62, hi: 82, color: 'rgba(255,165,50,0.6)', tip: 'Tetrahedral aluminate\nγ-Al₂O₃ Td sites: +65–70 ppm\nNaAlO₂: +78 ppm\nAl₂O₃ framework tetrahedra: +65–78 ppm' },
+      { label: 'AlH₄⁻', lo: 98, hi: 112, color: 'rgba(150,220,200,0.6)', tip: 'Tetrahydroaluminate AlH₄⁻\nLiAlH₄ in THF/Et₂O: δ ≈ +104 ppm\nTetrahedral; moderately sharp\n¹J(Al–H) ≈ 175–184 Hz (satellites in ¹H NMR)' },
+      { label: 'AlCl₃/AlBr₃', lo: 98, hi: 115, color: 'rgba(200,140,60,0.6)', tip: 'Trihalide Al (4-coordinate in solution)\nAlCl₃: ~100–105 ppm (non-coordinating solvent)\nAlBr₃: ~103 ppm\nShifts dramatically upfield (~0 ppm) in coordinating solvents (THF, Et₂O)' },
+      { label: 'AlR₃ (trialkyl)', lo: 145, hi: 165, color: 'rgba(255,70,70,0.7)', tip: 'Trialkyl-/triarylaluminum R₃Al\nAlMe₃: ~155 ppm; AlEt₃: ~148 ppm\nTricoordinate (D₃h): highly deshielded\nVery broad (W₁/₂ 5–50 kHz); strong Lewis acid' },
+    ],
+    ranges: [
+      ['[Al(H₂O)₆]³⁺', 'Al(NO₃)₃ or AlCl₃/D₂O', '0', 'Reference; octahedral hexaaqua complex'],
+      ['Al(acac)₃', 'Al(acac)₃', '~0', 'Octahedral, highly symmetric; very narrow line'],
+      ['Octahedral Al(VI) general', 'AlX₆ environments', '−20 to +20', 'Al-OH, Al-F octahedral; narrow if symmetric'],
+      ['AlF₃ (octahedral)', 'AlF₃', '+17', 'Fluoroaluminate octahedral coordination'],
+      ['α-Al₂O₃ (oct. sites)', 'AlO₆ in corundum', '+5 to +10', 'Extra-framework Al; broadened in amorphous phases'],
+      ['Penta-coord. Al(V)', 'Aluminate glasses, adducts', '+20 to +45', 'Five-coordinate; intermediate shift and linewidth'],
+      ['Al(OiPr)₃ monomer (Td)', 'Al(OR)₃ in dilute solution', '+50 to +60', 'Tetrahedral monomeric alkoxide'],
+      ['Zeolite framework Al', '[AlO₄]⁻ in zeolite network', '+54 to +62', 'Tetrahedral Brønsted acid sites; narrow singlet'],
+      ['γ-Al₂O₃ (Td sites)', 'AlO₄ in transition aluminas', '+65 to +70', 'Tetrahedral sites; ratio to Oh sites diagnostic of calcination'],
+      ['NaAlO₂ / [AlO₄]', 'NaAlO₂', '+78', 'Highly symmetric Td aluminate; sharp'],
+      ['LiAlH₄ (AlH₄⁻)', 'LiAlH₄ in Et₂O/THF', '+104', 'Tetrahedral hydride; ¹J(Al–H) ≈ 175–184 Hz as ¹H satellites'],
+      ['AlCl₃ (non-coord. solvent)', 'AlCl₃ in benzene/CH₂Cl₂', '~103', 'Shifts to ~0 ppm in coordinating solvents (THF, Et₂O)'],
+      ['AlBr₃ (solution)', 'AlBr₃ in non-coord. solvent', '~103', '4-coord.; strong Lewis acid, solvent adducts shift upfield'],
+      ['AlMe₃', 'Al(CH₃)₃', '~155', 'Tricoordinate; very deshielded and broad (W₁/₂ 5–50 kHz)'],
+      ['AlEt₃', 'Al(C₂H₅)₃', '~148', 'Trialkylaluminum; key co-catalyst in Ziegler–Natta systems'],
+    ]
+  },
+  '195Pt': {
+    symbol: 'Pt', mass: 195, name: 'Platinum-195', color: '#94a3b8',
+    desc: 'Spin-1/2, 33.8% natural abundance. Chemical shift range ≈ 13,000 ppm — one of the widest known for any NMR-active nucleus. Extraordinarily sensitive to oxidation state, coordination geometry, and the nature of all ligands (especially trans-influence). ¹J(Pt–P) satellites are routinely resolved in ³¹P NMR and used for cis/trans assignment. Temperature coefficient ≈ −1 ppm/K requires strict temperature control.',
+    props: {
+      'Spin (I)': '1/2',
+      'γ (×10⁷ rad T⁻¹ s⁻¹)': '5.768',
+      'Natural abundance (%)': '33.8',
+      'Relative sensitivity': '3.4 × 10⁻³',
+      'Larmor freq. at 400 MHz': '86.00 MHz',
+      'Standard reference': 'Na₂[PtCl₆] in D₂O (δ = 0.00 ppm, IUPAC)'
+    },
+    scaleMin: -7000, scaleMax: 4000,
+    spans: [
+      { label: 'Pt(IV) heavy halide', lo: 500, hi: 3500, color: 'rgba(255,120,100,0.65)', tip: 'Pt(IV) complexes — deshielded\nPtBr₆²⁻: ≈ +1660 ppm\nPtI₆²⁻: ≈ +3290 ppm\nHeavy-halide heavy-atom effect causes strong deshielding' },
+      { label: 'Na₂PtCl₆ ref.', lo: -150, hi: 150, color: 'rgba(200,200,200,0.5)', tip: 'Na₂[PtCl₆] in D₂O = 0 ppm (IUPAC reference)\nPt(IV), octahedral PtCl₆²⁻\nNote: older literature uses K₂PtCl₄ = 0 ppm (≈ −1630 vs this scale)' },
+      { label: 'Pt(II) N-donor', lo: -2800, hi: -1500, color: 'rgba(138,224,255,0.6)', tip: 'Pt(II) with N-donor ligands\nCisplatin cis-[PtCl₂(NH₃)₂]: ≈ −2100 ppm\n[Pt(NH₃)₄]²⁺: ≈ −2700 ppm\nCarboplatin: ≈ −1700 ppm\nClinically relevant range' },
+      { label: 'Pt(II)–P trans', lo: -5000, hi: -3800, color: 'rgba(180,140,255,0.65)', tip: 'Pt(II) phosphine complexes (trans isomers)\ntrans-PtCl₂(PEt₃)₂: ≈ −4460 ppm\ntrans-PtCl₂(PPh₃)₂: ≈ −4300 ppm\n¹J(Pt–P) ≈ 2200–2800 Hz (P trans to P)' },
+      { label: 'Pt(II)–P cis', lo: -4800, hi: -3500, color: 'rgba(255,200,80,0.6)', tip: 'Pt(II) phosphine complexes (cis isomers)\ncis-PtCl₂(PPh₃)₂: ≈ −4100 ppm\ncis-PtCl₂(PEt₃)₂: ≈ −3780 ppm\n¹J(Pt–P) ≈ 3400–3700 Hz (P trans to Cl)' },
+      { label: 'Pt(0) complexes', lo: -6800, hi: -4500, color: 'rgba(100,200,150,0.65)', tip: 'Pt(0) complexes — most shielded\nPt(PPh₃)₄: ≈ −5070 ppm\nPt(COD)₂: ≈ −5800 ppm\nPt(PR₃)₂(alkene): ≈ −4000 to −5500 ppm\n¹J(Pt–P) largest here: 4000–5000 Hz' },
+    ],
+    ranges: [
+      ['Na₂[PtCl₆] (IUPAC ref.)', 'Na₂PtCl₆/D₂O', '0', 'IUPAC external reference (Pt(IV), PtCl₆²⁻)'],
+      ['K₂[PtCl₄]', 'K₂PtCl₄/D₂O', '−1630', 'Common Pt(II) reference; older convention: K₂PtCl₄ = 0'],
+      ['PtBr₆²⁻', 'Na₂PtBr₆/D₂O', '+1660', 'Pt(IV) with Br; heavy-atom deshielding'],
+      ['PtI₆²⁻', 'Na₂PtI₆', '~+3290', 'Pt(IV) with I; very large heavy-atom effect'],
+      ['Carboplatin', 'cis-[Pt(CBDCA)(NH₃)₂]', '~−1700', 'Clinical drug; dicarboxylate chelate; Pt(II)'],
+      ['Cisplatin', 'cis-[PtCl₂(NH₃)₂]', '~−2100', 'Benchmark clinical drug; landmark ¹⁹⁵Pt NMR compound'],
+      ['Zeise\'s salt', '[PtCl₃(η²-C₂H₄)]⁻', '~−3070', 'Classic Pt(II) alkene complex; Pt(II)'],
+      ['[Pt(NH₃)₄]²⁺', 'Pt(NH₃)₄Cl₂', '~−2700', 'Tetraammineplatinum(II)'],
+      ['cis-PtCl₂(PPh₃)₂', 'cis-phosphine Pt(II)', '~−4100', '¹J(Pt–P) ≈ 3500 Hz; P trans to Cl → large coupling'],
+      ['trans-PtCl₂(PEt₃)₂', 'trans-phosphine Pt(II)', '~−4460', '¹J(Pt–P) ≈ 2395 Hz; P trans to P → reduced by trans-influence'],
+      ['Pt(PPh₃)₄', 'Pt(0) homoleptic phosphine', '~−5070', 'Pt(0); ¹J(Pt–P) ≈ 4800 Hz; most shielded phosphine complex'],
+      ['Pt(COD)₂', 'Pt(0) diolefin precursor', '~−5800', 'Common Pt(0) synthetic precursor; very upfield'],
+      ['Pt(IV) general', 'PtX₄Y₂ / PtX₂Y₂Z₂', '+500 to +7000', 'Wide range; sensitive to all 6 ligands (Oh geometry)'],
+      ['Pt(II) general', 'PtX₂L₂ type', '−500 to −5000', 'Depends on L: phosphine >> N-donor >> halide (upfield)'],
+      ['Pt(0) general', 'Pt(PR₃)ₙ or Pt(alkene)₂', '−4000 to −7000', 'Phosphine/diolefin Pt(0) complexes; most upfield'],
+    ]
+  }
+};
+
+// Coupling constants data
+const COUPLING = {
+  '1H': {
+    title: '¹H–¹H and ¹H–X Coupling Constants',
+    note: 'Karplus equation: ³J(HH) = A cos²θ − B cosθ + C (Karplus 1959). For vicinal H–C–C–H: J depends on dihedral angle θ. At θ = 0°: J ≈ 8–11 Hz; at θ = 90°: J ≈ 0–1 Hz; at θ = 180°: J ≈ 11–14 Hz. Widely used for conformational analysis in carbohydrates, proteins, and ring systems.',
+    groups: [
+      {
+        title: '²J(HH) Geminal',
+        couplings: [
+          ['sp³ geminal (acyclic)', '10–16 Hz'],
+          ['sp² geminal (=CH₂)', '0–3 Hz'],
+          ['Aldehyde C–H (unique)', '~2–3 Hz'],
+          ['Cyclopropane geminal', '4–9 Hz'],
+        ]
+      },
+      {
+        title: '³J(HH) Vicinal',
+        couplings: [
+          ['Acyclic free rotation (avg)', '6–8 Hz'],
+          ['trans-Alkene ³J', '12–18 Hz'],
+          ['cis-Alkene ³J', '6–12 Hz'],
+          ['Aromatic (ortho)', '6–9 Hz'],
+          ['Aromatic (meta, ⁴J)', '1–3 Hz'],
+          ['Cyclopentane axial-axial', '~8 Hz'],
+          ['Cyclohexane ax-ax', '8–13 Hz'],
+          ['Cyclohexane ax-eq/eq-eq', '2–5 Hz'],
+        ]
+      },
+      {
+        title: '¹H–F Couplings',
+        couplings: [
+          ['³J(HF) vicinal', '45–55 Hz'],
+          ['⁴J(HF) long-range', '5–25 Hz'],
+          ['²J(HF) geminal', '44–80 Hz'],
+        ]
+      },
+      {
+        title: '¹H–P Couplings',
+        couplings: [
+          ['²J(HP) geminal P–CH', '2–15 Hz'],
+          ['³J(HP) vicinal', '5–15 Hz'],
+          ['P–H direct (phosphines)', '180–230 Hz'],
+        ]
+      }
+    ]
+  },
+  '13C': {
+    title: '¹³C–H and ¹³C–X Coupling Constants',
+    note: '¹J(CH) reflects % s-character at carbon: sp³ (~25% s) ≈ 125 Hz; sp² (~33% s) ≈ 155 Hz; sp (~50% s) ≈ 250 Hz. Observed in coupled 13C spectra or J-resolved experiments.',
+    groups: [
+      {
+        title: '¹J(CH) One-Bond C–H',
+        couplings: [
+          ['sp³ alkyl C–H', '~125 Hz'],
+          ['sp² alkene C–H', '~155 Hz'],
+          ['sp alkyne C–H', '~250 Hz'],
+          ['Aldehyde CHO', '~175 Hz'],
+          ['Aromatic ArC–H', '~160 Hz'],
+          ['Cyclopropane C–H', '~160 Hz'],
+        ]
+      },
+      {
+        title: '²J / ³J(CH)',
+        couplings: [
+          ['²J(CH) two-bond', '0–10 Hz'],
+          ['³J(CH) three-bond', '0–8 Hz'],
+        ]
+      },
+      {
+        title: '¹J(CF)',
+        couplings: [
+          ['¹J(CF) one-bond', '150–235 Hz'],
+          ['²J(CF) two-bond', '20–35 Hz'],
+          ['³J(CF) three-bond', '3–10 Hz'],
+        ]
+      },
+      {
+        title: '¹J(CP)',
+        couplings: [
+          ['¹J(CP) phosphine–C', '10–60 Hz'],
+          ['¹J(CP) phosphonate C', '140–155 Hz'],
+        ]
+      }
+    ]
+  },
+  '31P': {
+    title: '³¹P Coupling Constants',
+    note: '¹J(Pt–P) is exceptionally large (2000–5000 Hz) and highly diagnostic for Pt oxidation state and trans-influence. trans-¹J(Pt–P) > cis-¹J(Pt–P). ¹J(Rh–P) ≈ 100–180 Hz. cis/trans-J(PP) ratios are useful for stereochemical assignment in square-planar complexes.',
+    groups: [
+      {
+        title: 'P–H Couplings',
+        couplings: [
+          ['¹J(PH) direct (phosphines)', '180–230 Hz'],
+          ['²J(PH) P–C–H', '2–15 Hz'],
+          ['³J(PH) P–C–C–H', '0–12 Hz'],
+        ]
+      },
+      {
+        title: 'P–P Couplings',
+        couplings: [
+          ['cis-¹J(PP) (square planar Pt)', '10–50 Hz'],
+          ['trans-¹J(PP) (square planar)', '200–450 Hz'],
+          ['¹J(PP) general range', 'Wide (0–500 Hz)'],
+        ]
+      },
+      {
+        title: 'P–Metal Couplings',
+        couplings: [
+          ['¹J(Pt–P) trans', '2000–5000 Hz'],
+          ['¹J(Pt–P) cis', '1000–2500 Hz'],
+          ['¹J(Rh–P)', '~100–180 Hz'],
+          ['¹J(W–P)', '~250–300 Hz'],
+        ]
+      },
+      {
+        title: 'P–C Couplings (¹³C satellites)',
+        couplings: [
+          ['¹J(PC) phosphine', '10–60 Hz'],
+          ['¹J(PC) phosphonate', '140–155 Hz'],
+          ['²J(PC)', '2–20 Hz'],
+        ]
+      }
+    ]
+  },
+  '19F': {
+    title: '¹⁹F Coupling Constants',
+    note: '¹⁹F couplings are often large and clearly resolved due to the high γ. F–F through-bond couplings can be surprisingly small. ¹J(PF) in PF₃ ≈ 1400 Hz; in PF₆⁻ ≈ 710 Hz. ¹J(SiF) ≈ 175–200 Hz.',
+    groups: [
+      {
+        title: '¹⁹F–¹³C Couplings',
+        couplings: [
+          ['¹J(CF) one-bond', '150–235 Hz'],
+          ['²J(CF) two-bond', '20–35 Hz'],
+          ['³J(CF) three-bond', '3–10 Hz'],
+          ['⁴J(CF) four-bond', '0–3 Hz'],
+        ]
+      },
+      {
+        title: '¹⁹F–³¹P Couplings',
+        couplings: [
+          ['¹J(PF) in PF₃', '~1400 Hz'],
+          ['¹J(PF) in PF₆⁻', '~710 Hz'],
+          ['¹J(PF) in POF₃', '~1055 Hz'],
+          ['²J(PF)', '50–100 Hz'],
+        ]
+      },
+      {
+        title: '¹⁹F–¹H Couplings',
+        couplings: [
+          ['²J(FH) geminal', '44–80 Hz'],
+          ['³J(FH) vicinal', '45–55 Hz'],
+          ['⁴J(FH) long-range', '5–25 Hz'],
+        ]
+      },
+      {
+        title: '¹⁹F–¹⁹F Couplings',
+        couplings: [
+          ['³J(FF) vicinal', '0–30 Hz'],
+          ['⁴J(FF) four-bond', '0–20 Hz'],
+          ['⁵J(FF) five-bond', '0–15 Hz'],
+        ]
+      }
+    ]
+  },
+  '29Si': {
+    title: '²⁹Si Coupling Constants',
+    note: '²⁹Si has a negative gyromagnetic ratio (γ < 0). NOE enhancements can be negative, so INEPT or direct excitation is preferred over NOE-based experiments. ¹J(SiH) and ¹J(SiC) are the most practically useful couplings.',
+    groups: [
+      {
+        title: '²⁹Si–¹H Couplings',
+        couplings: [
+          ['¹J(SiH) monosilane SiH₄', '~202 Hz'],
+          ['¹J(SiH) trialkylsilane R₃SiH', '160–205 Hz'],
+          ['²J(SiH) two-bond', '2–10 Hz'],
+          ['³J(SiH) three-bond', '1–5 Hz'],
+        ]
+      },
+      {
+        title: '²⁹Si–¹³C Couplings',
+        couplings: [
+          ['¹J(SiC) alkyl', '40–55 Hz'],
+          ['¹J(SiC) aryl', '55–70 Hz'],
+          ['²J(SiC)', '5–15 Hz'],
+        ]
+      },
+      {
+        title: '²⁹Si–¹⁹F Couplings',
+        couplings: [
+          ['¹J(SiF) one-bond', '175–200 Hz'],
+          ['¹J(SiF) R₃SiF', '~177 Hz'],
+          ['²J(SiF)', '~10–20 Hz'],
+        ]
+      },
+      {
+        title: '²⁹Si–³¹P Couplings',
+        couplings: [
+          ['²J(SiP) through O', '10–30 Hz'],
+          ['¹J(SiP) direct', '~70 Hz (rare)'],
+        ]
+      }
+    ]
+  },
+  '11B': {
+    title: '¹¹B Coupling Constants',
+    note: '¹¹B is a quadrupolar nucleus (I = 3/2, Q = +40.59 × 10⁻³⁰ m²). Quadrupolar relaxation is fast when symmetry at B is low, giving broad lines (100–3000 Hz). Tetrahedral B (BH₄⁻, R₄B⁻) relaxes more slowly → sharper lines. ¹⁰B (I = 3, 19.9% nat. abund.) also visible; ~3.25× broader lines than ¹¹B.',
+    groups: [
+      {
+        title: '¹¹B–¹H Couplings',
+        couplings: [
+          ['¹J(BH) BH₄⁻', '~82 Hz'],
+          ['¹J(BH) BH₃ adducts', '~90 Hz'],
+          ['¹J(BH) trialkylborane', '~100–130 Hz (if resolved)'],
+          ['General range ¹J(BH)', '60–190 Hz'],
+        ]
+      },
+      {
+        title: '¹¹B–¹⁹F Couplings',
+        couplings: [
+          ['¹J(BF) in BF₄⁻', '~15 Hz (broad, obs. in ¹⁹F)'],
+          ['¹J(BF) in BF₃·Et₂O', '~15–20 Hz'],
+          ['General ¹J(BF)', '15–60 Hz'],
+        ]
+      },
+      {
+        title: 'Linewidth Notes',
+        couplings: [
+          ['Tetrahedral B (BH₄⁻, R₄B⁻)', 'Sharp: W₁/₂ < 10 Hz'],
+          ['Tricoordinate B (BR₃)', 'Broad: W₁/₂ 50–3000 Hz'],
+          ['Boronic acid B(OH)₂', 'W₁/₂ ~200–500 Hz'],
+          ['BF₄⁻ (Td symmetry)', 'W₁/₂ ~1–5 Hz'],
+        ]
+      }
+    ]
+  },
+  '27Al': {
+    title: '²⁷Al Coupling Constants &amp; Quadrupolar Effects',
+    note: '²⁷Al is a quadrupolar nucleus (I = 5/2, Q = 14.66 × 10⁻³⁰ m²). Quadrupolar relaxation dominates all line-shape behavior. At low-symmetry sites T₁ is microseconds → "self-decoupled" broad resonance (1–100 kHz). At high-symmetry tetrahedral or octahedral sites, T₁ reaches milliseconds → narrower lines and occasionally resolved J-couplings. Coupling constants to ²⁷Al appear as broadening or satellite patterns in ¹H, ¹³C, and ³¹P spectra of organoaluminum and aluminate compounds. Solid-state ²⁷Al MAS NMR (high-field, fast MAS) resolves Td/Oh/penta-coord. sites routinely unresolved in solution.',
+    groups: [
+      {
+        title: '²⁷Al–¹H Couplings',
+        couplings: [
+          ['¹J(AlH) in AlH₄⁻', '175–184 Hz (obs. as ¹H satellites)'],
+          ['¹J(AlH) in R₂AlH (dialkylaluminum hydrides)', '~130–160 Hz'],
+          ['²J(AlH) two-bond', '5–25 Hz (rarely resolved; quadrupolar broadening)'],
+        ]
+      },
+      {
+        title: '²⁷Al–¹³C Couplings',
+        couplings: [
+          ['¹J(AlC) in AlMe₃ and AlEt₃', '~110–160 Hz'],
+          ['¹J(AlC) in Al(C₆H₅)₃', '~130 Hz'],
+          ['²J(AlC) two-bond', '1–10 Hz (typically unresolved)'],
+        ]
+      },
+      {
+        title: 'Linewidth vs. Coordination Symmetry',
+        couplings: [
+          ['Zeolite Td sites [AlO₄]⁻', 'W₁/₂ < 200 Hz (sharp, CQ ≈ 1–4 MHz)'],
+          ['Al(acac)₃ / Al(H₂O)₆³⁺ (Oh)', 'W₁/₂ ~ 100–300 Hz (symmetric)'],
+          ['Distorted Oh Al (solution)', 'W₁/₂ 1–10 kHz (CQ ≈ 4–10 MHz)'],
+          ['Penta-coordinate Al(V)', 'W₁/₂ 1–5 kHz (intermediate)'],
+          ['Tricoordinate AlR₃ (D₃h)', 'W₁/₂ 5–50 kHz (often very broad)'],
+        ]
+      },
+      {
+        title: 'Quadrupolar Coupling Constants (CQ)',
+        couplings: [
+          ['Zeolite / aluminosilicate Td Al', 'CQ = 1–4 MHz; η = 0–0.3'],
+          ['Extra-framework Oh Al (γ-Al₂O₃)', 'CQ = 4–7 MHz; η variable'],
+          ['AlR₃ trialkyl', 'CQ ≈ 20–30 MHz (large; broad)'],
+          ['Q (quadrupole moment)', '14.66 × 10⁻³⁰ m²'],
+          ['High-field MAS advantage', 'Δν₁/₂ ∝ 1/B₀² → go to ≥18.8 T for resolution'],
+        ]
+      }
+    ]
+  },
+  '195Pt': {
+    title: '¹⁹⁵Pt Coupling Constants',
+    note: '¹⁹⁵Pt is spin-1/2 and routinely observed via satellites in ³¹P, ¹H, and ¹³C NMR spectra. ¹J(Pt–P) is the most diagnostically powerful: for cis-PtCl₂(PR₃)₂ (P trans to Cl, weak trans-influence), ¹J(Pt–P) ≈ 3400–3700 Hz; for trans-PtCl₂(PR₃)₂ (P trans to P, stronger trans-influence), ¹J(Pt–P) ≈ 2200–2800 Hz. Temperature coefficient ≈ −1 ppm/K — temperature must be controlled to ±0.1 K for high-precision measurements (see Reich 7-MULTI-2 for spin-½ satellite principles).',
+    groups: [
+      {
+        title: '¹⁹⁵Pt–³¹P Couplings',
+        couplings: [
+          ['¹J(Pt–P) cis-PtCl₂(PR₃)₂ [P trans to Cl]', '3400–3700 Hz'],
+          ['¹J(Pt–P) trans-PtCl₂(PR₃)₂ [P trans to P]', '2200–2800 Hz'],
+          ['¹J(Pt–P) Pt(0) Pt(PR₃)₄', '4000–5000 Hz'],
+          ['¹J(Pt–P) with strong trans-influence ligand (H⁻, alkyl)', '1200–2500 Hz (reduced)'],
+          ['²J(Pt–P) two-bond (via C)', '50–150 Hz'],
+        ]
+      },
+      {
+        title: 'Trans-Influence on ¹J(Pt–P)',
+        couplings: [
+          ['Trans to Cl⁻ (weak σ-donor)', '¹J(Pt–P) ≈ 3400–3700 Hz (large)'],
+          ['Trans to PR₃ (moderate σ)', '¹J(Pt–P) ≈ 2200–2800 Hz'],
+          ['Trans to alkyl/aryl (strong σ)', '¹J(Pt–P) ≈ 1500–2500 Hz'],
+          ['Trans to H⁻ (strongest σ)', '¹J(Pt–P) ≈ 1200–2000 Hz (smallest)'],
+          ['Trans to CO (strong π-acid)', '¹J(Pt–P) ≈ 3000–4000 Hz'],
+        ]
+      },
+      {
+        title: '¹⁹⁵Pt–¹H Couplings',
+        couplings: [
+          ['¹J(Pt–H) Pt(II) hydrides trans to PR₃', '700–1100 Hz'],
+          ['¹J(Pt–H) Pt(II) hydrides trans to Cl', '1100–1400 Hz'],
+          ['¹J(Pt–H) Pt(IV) hydrides', '300–800 Hz'],
+          ['²J(Pt–H) Pt–C–H (trans arrangement)', '60–90 Hz'],
+          ['²J(Pt–H) Pt–C–H (cis arrangement)', '12–40 Hz'],
+          ['³J(Pt–H) three-bond', '15–80 Hz'],
+        ]
+      },
+      {
+        title: '¹⁹⁵Pt–¹³C Couplings',
+        couplings: [
+          ['¹J(Pt–C) σ-alkyl/aryl', '500–1000 Hz'],
+          ['¹J(Pt–C) NHC carbene Pt(II)', '800–1500 Hz'],
+          ['¹J(Pt–C) η²-bound alkene C', '30–150 Hz'],
+          ['¹J(Pt–C) CO carbonyl', '1200–1700 Hz'],
+          ['²J(Pt–C) two-bond', '20–100 Hz'],
+        ]
+      }
+    ]
+  }
+};
+
+// Solvent reference data (Gottlieb 1997, Fulmer 2010)
+const SOLVENTS = [
+  { name: 'CDCl₃',       H: '7.26',           C: '77.16 (t)',         water: '1.56' },
+  { name: 'CD₃OD',       H: '3.31 (5)',        C: '49.00 (7)',         water: '4.87' },
+  { name: 'DMSO-d₆',     H: '2.50 (5)',        C: '39.52 (7)',         water: '3.33' },
+  { name: 'D₂O',         H: '4.79',            C: 'N/A',              water: '4.79' },
+  { name: 'C₆D₆',        H: '7.16',            C: '128.06 (3)',        water: '0.40' },
+  { name: 'Acetone-d₆',  H: '2.05 (5)',        C: '29.84; 206.26',    water: '2.84' },
+  { name: 'CD₃CN',       H: '1.94 (5)',        C: '1.32; 118.26',     water: '2.13' },
+  { name: 'CD₂Cl₂',      H: '5.32 (3)',        C: '53.84 (5)',         water: '1.51' },
+  { name: 'THF-d₈',      H: '1.72; 3.58',     C: '25.37; 67.21',     water: '2.42' },
+  { name: 'Pyridine-d₅', H: '7.22; 7.58; 8.74', C: '123.87; 135.91; 149.90', water: 'N/A' },
+];
+
+// Gyromagnetic ratios ×10⁷ rad/T·s
+const GAMMA = {
+  '1H':  26.752,
+  '13C':  6.728,
+  '19F': 25.181,
+  '31P': 10.839,
+  '29Si':-5.319,
+  '11B':  8.585,
+  '27Al': 6.976,
+  '195Pt':5.768,
+};
+const FIELD_FREQS = [300, 400, 500, 600, 700, 800, 1000];
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let currentNucleus = '1H';
+let currentTab = 'shifts';
+
+// ─── Render sidebar ──────────────────────────────────────────────────────────
+function renderSidebar() {
+  const list = document.getElementById('nucleusList');
+  list.innerHTML = '';
+  Object.keys(NUCLEI).forEach(key => {
+    const n = NUCLEI[key];
+    const btn = document.createElement('button');
+    btn.className = 'nucleus-btn' + (key === currentNucleus ? ' active' : '');
+    btn.innerHTML = `<strong><sup>${n.mass}</sup>${n.symbol}</strong><span>${n.name}</span>`;
+    btn.onclick = () => { currentNucleus = key; renderSidebar(); renderCurrentTab(); };
+    list.appendChild(btn);
+  });
+}
+
+// ─── Tab switching ───────────────────────────────────────────────────────────
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  switch(currentTab) {
+    case 'shifts':   renderShifts(); break;
+    case 'coupling': renderCoupling(); break;
+    case 'solvent':  renderSolvent(); break;
+    case 'field':    renderField(); break;
+    case 'refs':     renderRefs(); break;
+  }
+}
+
+// ─── Shifts tab ──────────────────────────────────────────────────────────────
+function renderShifts() {
+  const n = NUCLEI[currentNucleus];
+  const el = document.getElementById('tab-shifts');
+
+  // Nucleus header
+  let html = `<div class="nucleus-header">
+    <div class="n-badge" style="background:linear-gradient(135deg,${n.color},${lighten(n.color,30)})">
+      <span class="mass">${n.mass}</span>
+      <span class="sym">${n.symbol}</span>
+    </div>
+    <div class="n-info">
+      <div class="name"><sup>${n.mass}</sup>${n.symbol} &mdash; ${n.name}</div>
+      <div class="desc">${n.desc}</div>
+    </div>
+  </div>`;
+
+  // Two-col: props + summary stats
+  html += `<div class="two-col">
+    <div class="inner-card">
+      <h3>Nuclear Properties</h3>
+      <table class="props-table">
+        <tbody>`;
+  Object.entries(n.props).forEach(([k, v]) => {
+    html += `<tr><td>${k}</td><td>${v}</td></tr>`;
+  });
+  html += `</tbody></table>
+    </div>
+    <div class="inner-card">
+      <h3>Quick Facts</h3>
+      <div style="font-size:0.8rem;color:var(--muted);line-height:1.8;">
+        <div>Shift range: <span style="color:var(--accent-2)">${n.scaleMin} to ${n.scaleMax} ppm (displayed)</span></div>
+        <div>Reference: <span style="color:var(--ink)">${n.props['Standard reference']}</span></div>
+        <div>Spin: <span style="color:var(--ink)">${n.props['Spin (I)']}</span></div>
+        <div>Natural abundance: <span style="color:var(--ink)">${n.props['Natural abundance (%)']}</span></div>
+        <div>Sensitivity vs ¹H: <span style="color:var(--ink)">${n.props['Relative sensitivity']}</span></div>
+        <div style="margin-top:10px;font-size:0.75rem;border-top:1px solid var(--line);padding-top:8px;">Hover over the shift scale below for compound-specific details.</div>
+      </div>
+    </div>
+  </div>`;
+
+  // Chemical shift scale
+  html += `<div class="scale-wrap">
+    <div class="section-label">&delta; Chemical Shift Scale (ppm)</div>
+    <div class="scale-label-row">
+      <span>&delta; ${n.scaleMin} ppm</span>
+      <span>&delta; ${n.scaleMax} ppm</span>
+    </div>
+    <div class="scale-bar" id="scaleBar">${buildScaleBar(n)}</div>
+    <div style="font-size:0.72rem;color:var(--muted);margin-top:4px;">Hover colored regions for details &nbsp;|&nbsp; Scale: ${n.scaleMin} to ${n.scaleMax} ppm</div>
+  </div>`;
+
+  // Ranges table
+  html += `<div class="section-label">Chemical Shift Ranges</div>
+  <table class="ranges-table">
+    <thead><tr>
+      <th>Group / Environment</th>
+      <th>Formula / Example</th>
+      <th>&delta; (ppm)</th>
+      <th>Notes</th>
+    </tr></thead>
+    <tbody>`;
+  n.ranges.forEach(row => {
+    html += `<tr>
+      <td>${row[0]}</td>
+      <td style="font-family:'Courier New',monospace;font-size:0.78rem;">${row[1]}</td>
+      <td><span class="ppm-badge">${row[2]}</span></td>
+      <td style="color:var(--muted);font-size:0.78rem;">${row[3]}</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+
+  el.innerHTML = html;
+  attachTooltips();
+}
+
+function buildScaleBar(n) {
+  const range = n.scaleMax - n.scaleMin;
+  const colors = ['#60a5fa','#a78bfa','#34d399','#fbbf24','#f87171','#fb923c','#38bdf8','#c084fc','#4ade80','#facc15','#f472b6'];
+  let spans = '';
+  n.spans.forEach((s, i) => {
+    const lo = Math.max(s.lo, n.scaleMin);
+    const hi = Math.min(s.hi, n.scaleMax);
+    if (hi <= lo) return;
+    const left = ((lo - n.scaleMin) / range) * 100;
+    const width = ((hi - lo) / range) * 100;
+    const col = s.color || colors[i % colors.length];
+    const safeLabel = width > 4 ? s.label : '';
+    const escapedTip = s.tip.replace(/"/g, '&quot;').replace(/\n/g, '&#10;');
+    spans += `<div class="scale-span" style="left:${left.toFixed(2)}%;width:${width.toFixed(2)}%;background:${col};"
+      data-tip="${escapedTip}">
+      <span class="label">${safeLabel}</span>
+    </div>`;
+  });
+  return spans;
+}
+
+function attachTooltips() {
+  const tip = document.getElementById('tooltip');
+  document.querySelectorAll('.scale-span').forEach(el => {
+    el.addEventListener('mouseenter', e => {
+      const text = el.getAttribute('data-tip').replace(/&#10;/g, '\n');
+      const lines = text.split('\n');
+      tip.innerHTML = lines.map((l,i) => i===0 ? `<strong>${l}</strong>` : l).join('<br>');
+      tip.style.display = 'block';
+    });
+    el.addEventListener('mousemove', e => {
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top  = (e.clientY - 10) + 'px';
+    });
+    el.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+  });
+}
+
+function lighten(hex, pct) {
+  // Simple brightness bump for gradient
+  return hex;
+}
+
+// ─── Coupling tab ─────────────────────────────────────────────────────────────
+function renderCoupling() {
+  const c = COUPLING[currentNucleus];
+  if (!c) { document.getElementById('tab-coupling').innerHTML = '<p style="color:var(--muted)">No coupling data available.</p>'; return; }
+
+  let html = `<div class="section-label">${c.title}</div>
+  <div class="note-box"><strong>Note:</strong> ${c.note}</div>
+  <div class="coupling-grid">`;
+
+  c.groups.forEach(g => {
+    html += `<div class="coupling-card">
+      <h4>${g.title}</h4>`;
+    g.couplings.forEach(([name, val]) => {
+      html += `<div class="coupling-row">
+        <span class="name">${name}</span>
+        <span class="val">${val}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+
+  html += `</div>`;
+
+  // Karplus diagram note for 1H
+  if (currentNucleus === '1H') {
+    html += `<div class="note-box" style="margin-top:8px;">
+      <strong>Karplus Equation (³J vicinal H–H):</strong><br>
+      ³J = A cos²θ − B cosθ + C &nbsp;(Karplus, 1959; Haasnoot–Altona reparametrization for heterocycles)<br>
+      Typical values: A = 10.4, B = 1.5, C = 1.4 Hz (Altona–Karplus)<br>
+      θ = 0° → ³J ≈ 8–11 Hz | θ = 90° → ³J ≈ 0–1 Hz | θ = 180° → ³J ≈ 11–14 Hz<br>
+      Used routinely in <strong>carbohydrate anomeric assignment</strong>, <strong>protein backbone φ angles</strong>, and <strong>ring conformation analysis</strong>.
+    </div>`;
+  }
+  if (currentNucleus === '31P') {
+    html += `<div class="note-box" style="margin-top:8px;">
+      <strong>Trans influence on ¹J(Pt–P):</strong> Large ¹J(Pt–P) values (2000–5000 Hz) are observed as ¹⁹⁵Pt satellites on ³¹P signals. The magnitude depends strongly on the trans-ligand: strong σ-donors trans to P reduce ¹J(Pt–P) relative to weaker trans-ligands. cis-PtCl₂(PR₃)₂ (P trans to Cl): ¹J(Pt–P) ≈ 3400–3700 Hz; trans-PtCl₂(PR₃)₂ (P trans to P): ¹J(Pt–P) ≈ 2200–2800 Hz. This is a powerful tool for assigning cis/trans isomers without X-ray crystallography.
+    </div>`;
+  }
+  if (currentNucleus === '195Pt') {
+    html += `<div class="note-box" style="margin-top:8px;">
+      <strong>¹⁹⁵Pt satellite observation in multinuclear NMR (after Reich 7-MULTI-2):</strong><br>
+      ¹⁹⁵Pt is a low-abundance spin-1/2 nucleus (33.8% natural abundance). Each satellite in ³¹P, ¹H, or ¹³C NMR has intensity = ½ × 0.338 = 16.9% of the main peak (per Pt-coupled nucleus). The satellite pattern follows the same J-coupling rules as other spin-1/2 nuclei: trans coupling across double bonds > cis coupling; Karplus-type dihedral dependence for ³J(Pt–H) couplings. Virtual coupling effects are significant in complexes with two equivalent trans-P ligands (AA′ spin system) — the ¹³C NMR of such complexes shows apparent triplets even for carbons coupled to only one P (see Reich 7-2.4, second-order effects).
+      <br><strong>Temperature dependence:</strong> δ(¹⁹⁵Pt) ≈ −1 ppm/K. Measure at a regulated temperature and report it explicitly; shifts in the literature recorded at different temperatures are not directly comparable.
+    </div>`;
+  }
+  if (currentNucleus === '27Al') {
+    html += `<div class="note-box" style="margin-top:8px;">
+      <strong>²⁷Al quadrupolar self-decoupling (after Reich 7-MULTI-2.5):</strong><br>
+      ²⁷Al (I = 5/2, Q = 14.66 × 10⁻³⁰ m²) behaves as a "self-decoupled" nucleus in low-symmetry environments: fast quadrupolar T₁ relaxation averages the ²⁷Al spin states, collapsing coupling in ¹H/¹³C/³¹P spectra to broadened singlets rather than resolved multiplets. This is entirely analogous to ¹⁴N self-decoupling (Q = 0.019) and ¹¹B (Q = 0.036), but Q for ²⁷Al is ~800× larger than ²H — so the effect is far more pronounced. Resolved ¹J(Al–H) satellites (e.g., in AlH₄⁻) are only observed when Al sits in a high-symmetry (Td) environment where CQ is small and T₁ is long. At high magnetic field, second-order quadrupolar broadening scales as 1/B₀, making high-field instruments essential for solution and solid-state ²⁷Al NMR.
+    </div>`;
+  }
+
+  document.getElementById('tab-coupling').innerHTML = html;
+}
+
+// ─── Solvent tab ──────────────────────────────────────────────────────────────
+function renderSolvent() {
+  let html = `<div class="section-label">Residual Solvent &amp; Water Chemical Shifts</div>
+  <div class="note-box">
+    <strong>Sources:</strong> Gottlieb, H.E.; Kotlyar, V.; Nudelman, A. <em>J. Org. Chem.</em> <strong>1997</strong>, 62, 7512–7515.
+    Fulmer, G.R. et al. <em>Organometallics</em> <strong>2010</strong>, 29, 2176–2179.<br>
+    Values in ppm relative to TMS (¹H, ¹³C) or appropriate reference. Multiplicity in parentheses: s=singlet, t=triplet, 7=septet, 5=quintet, 3=triplet. Water shifts are temperature- and concentration-dependent.
+  </div>
+  <table class="solvent-table">
+    <thead><tr>
+      <th>Solvent</th>
+      <th>¹H residual (ppm)</th>
+      <th>¹³C residual (ppm)</th>
+      <th>H₂O ¹H (ppm)</th>
+    </tr></thead>
+    <tbody>`;
+
+  SOLVENTS.forEach(s => {
+    html += `<tr>
+      <td>${s.name}</td>
+      <td class="ppm">${s.H}</td>
+      <td class="ppm">${s.C}</td>
+      <td class="water">${s.water}</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table>
+  <div class="note-box">
+    <strong>Practical notes:</strong><br>
+    • CDCl₃ is the most common solvent. The ¹H residual at 7.26 ppm can overlap with ArH signals.<br>
+    • C₆D₆ (benzene-d₆) gives unusually upfield water (0.40 ppm) due to ring-current shielding; useful for separating OH from solvent.<br>
+    • DMSO-d₆ has a high boiling point and retains exchangeable protons well — use for NH/OH observation.<br>
+    • D₂O: ¹³C not observed (no carbon). Water peak varies: 4.79 ppm at 25°C, shifts upfield with increasing temperature.<br>
+    • Acetone-d₆: two ¹³C signals (CH₃ + C=O). CD₃CN: two ¹³C signals (CH₃ + CN).<br>
+    • THF-d₈ and pyridine-d₅ show multiple ¹H and ¹³C signals (both CH environments present).<br>
+    • For <strong>²⁹Si</strong> NMR: TMS in CDCl₃ is also used as ²⁹Si reference (δ = 0). HMDS (hexamethyldisilazane) δ(²⁹Si) = +5.0 ppm is occasionally used.<br>
+    • For <strong>³¹P</strong> NMR: 85% H₃PO₄ is always an external reference; it does not dissolve in common organic solvents.<br>
+    • For <strong>¹¹B</strong> NMR: BF₃·OEt₂ in CDCl₃ is the external reference; it can be added as a capillary insert.<br>
+    • For <strong>²⁷Al</strong> NMR: [Al(H₂O)₆]³⁺ (Al(NO₃)₃ or AlCl₃/D₂O) is the external reference at δ = 0 ppm. Best measured in D₂O for aqueous Al compounds; for organoaluminum chemistry use C₆D₆, CD₂Cl₂, or toluene-d₈. Lines can be extremely broad — optimize shimming and spectral window. Solid-state MAS NMR requires fast spinning (≥14 kHz) at high field (≥18.8 T) to resolve inequivalent sites.<br>
+    • For <strong>¹⁹⁵Pt</strong> NMR: Na₂[PtCl₆] in D₂O is the IUPAC external reference (δ = 0). Common solvents: D₂O (aqueous Pt complexes), DMSO-d₆ (organoplatinum), CD₂Cl₂, CDCl₃. Temperature must be regulated (δ ≈ −1 ppm/K) — use a thermostatted probe. Older literature uses K₂[PtCl₄] in D₂O (= 0 ppm in that convention, ≈ −1630 ppm vs IUPAC Na₂PtCl₆ scale). Direct ¹⁹⁵Pt observation is preferred over satellites for precise shift measurements; ¹J(Pt–P) is usually measured from the ³¹P spectrum.
+  </div>`;
+
+  document.getElementById('tab-solvent').innerHTML = html;
+}
+
+// ─── Field strength tab ───────────────────────────────────────────────────────
+function renderField() {
+  const gamma1H = GAMMA['1H'];
+
+  let html = `<div class="section-label">Operating Frequencies at Different Field Strengths</div>
+  <div class="note-box">
+    Frequency calculated as: <strong>ν<sub>X</sub> = ν<sub>¹H</sub> × |γ<sub>X</sub> / γ<sub>¹H</sub>|</strong>
+    where γ values (×10⁷ rad T⁻¹ s⁻¹): ¹H = 26.752, ¹³C = 6.728, ¹⁹F = 25.181, ³¹P = 10.839, ²⁹Si = −5.319, ¹¹B = 8.585, ²⁷Al = 6.976, ¹⁹⁵Pt = 5.768.
+    Note: ²⁹Si has negative γ; absolute frequency displayed. ¹H spectrometer frequency (column header) denotes the nominal instrument field.
+  </div>
+  <table class="field-table">
+    <thead><tr>
+      <th>Nucleus</th>`;
+
+  FIELD_FREQS.forEach(f => {
+    html += `<th>${f} MHz</th>`;
+  });
+
+  html += `</tr></thead><tbody>`;
+
+  Object.keys(GAMMA).forEach(nuc => {
+    const g = Math.abs(GAMMA[nuc]);
+    const ratio = g / gamma1H;
+    html += `<tr>
+      <td><sup>${NUCLEI[nuc].mass}</sup>${NUCLEI[nuc].symbol}</td>`;
+    FIELD_FREQS.forEach(f => {
+      const freq = (f * ratio).toFixed(2);
+      const isActive = nuc === currentNucleus ? ' class="highlight-col"' : '';
+      html += `<td${isActive}>${freq}</td>`;
+    });
+    html += `</tr>`;
+  });
+
+  html += `</tbody></table>
+  <div class="note-box">
+    <strong>Common spectrometer designations:</strong><br>
+    • <strong>300 MHz</strong> ¹H → 7.05 T (entry-level research/teaching)<br>
+    • <strong>400 MHz</strong> ¹H → 9.40 T (standard research workhorse)<br>
+    • <strong>500 MHz</strong> ¹H → 11.75 T (high-resolution routine research)<br>
+    • <strong>600 MHz</strong> ¹H → 14.09 T (high-field; good for ¹³C, ¹⁵N sensitivity)<br>
+    • <strong>700 MHz</strong> ¹H → 16.44 T<br>
+    • <strong>800 MHz</strong> ¹H → 18.79 T (protein/materials NMR)<br>
+    • <strong>1000 MHz</strong> ¹H → 23.49 T (cutting-edge; few worldwide)<br>
+    <br>
+    <strong>Key frequencies (400 MHz ¹H instrument):</strong>
+    ¹H: 400.00 | ¹³C: 100.61 | ¹⁹F: 376.50 | ³¹P: 161.98 | ²⁹Si: 79.49 | ¹¹B: 128.38 | ²⁷Al: 104.26 | ¹⁹⁵Pt: 86.00 MHz
+  </div>`;
+
+  document.getElementById('tab-field').innerHTML = html;
+}
+
+// ─── References tab ──────────────────────────────────────────────────────────
+function renderRefs() {
+  const refs = [
+    {
+      num: 1,
+      cite: 'Harris, R.K.; Becker, E.D.; Cabral de Menezes, S.M.; Goodfellow, R.; Granger, P.',
+      title: 'NMR Nomenclature. Nuclear Spin Properties and Conventions for Chemical Shifts.',
+      journal: 'Pure Appl. Chem.',
+      details: '2001, 73(11), 1795–1818.',
+      note: 'Definitive IUPAC recommendations for NMR nomenclature, nuclear properties, and Ξ scale for chemical shifts.'
+    },
+    {
+      num: 2,
+      cite: 'Gottlieb, H.E.; Kotlyar, V.; Nudelman, A.',
+      title: 'NMR Chemical Shifts of Common Laboratory Solvents as Trace Impurities.',
+      journal: 'J. Org. Chem.',
+      details: '1997, 62, 7512–7515.',
+      note: 'Primary reference for residual solvent and water ¹H/¹³C shifts in common deuterated NMR solvents.'
+    },
+    {
+      num: 3,
+      cite: 'Fulmer, G.R.; Miller, A.J.M.; Sherden, N.H.; Gottlieb, H.E.; Nudelman, A.; Stoltz, B.M.; Bercaw, J.E.; Goldberg, K.I.',
+      title: 'NMR Chemical Shifts of Common Organometallic Compounds and Solvents.',
+      journal: 'Organometallics',
+      details: '2010, 29, 2176–2179.',
+      note: 'Extended solvent tables including organometallic solvents; also includes H₂O peaks and additional solvents.'
+    },
+    {
+      num: 4,
+      cite: 'Pretsch, E.; Bühlmann, P.; Badertscher, M.',
+      title: 'Structure Determination of Organic Compounds. Tables of Spectral Data.',
+      journal: 'Springer,',
+      details: '4th ed., 2009. ISBN 978-3-540-93809-1.',
+      note: 'Comprehensive spectral tables for MS, IR, ¹H NMR, ¹³C NMR, and other nuclei. Indispensable desk reference.'
+    },
+    {
+      num: 5,
+      cite: 'Mason, J. (ed.)',
+      title: 'Multinuclear NMR.',
+      journal: 'Plenum Press,',
+      details: '1987. ISBN 978-0-306-42680-0.',
+      note: 'Classic reference text covering NMR of all NMR-active nuclei. Individual chapters on each nucleus by experts.'
+    },
+    {
+      num: 6,
+      cite: 'Dolbier, W.R.',
+      title: 'Guide to Fluorine NMR for Organic Chemists.',
+      journal: 'Wiley-Blackwell,',
+      details: '2009. ISBN 978-0-470-16519-7.',
+      note: 'Practical guide to ¹⁹F NMR; chemical shifts, coupling constants, and interpretation for organic fluorine compounds.'
+    },
+    {
+      num: 7,
+      cite: 'Quin, L.D.',
+      title: 'A Guide to Organophosphorus Chemistry.',
+      journal: 'Wiley-Interscience,',
+      details: '2000. ISBN 978-0-471-31824-8.',
+      note: 'Comprehensive treatment of organophosphorus chemistry including ³¹P NMR data for all phosphorus compound classes.'
+    },
+    {
+      num: 8,
+      cite: 'Wrackmeyer, B.',
+      title: '²⁹Si NMR parameters. Annual Reports on NMR Spectroscopy, Vol. 38.',
+      journal: 'Academic Press,',
+      details: '1999, 203–264.',
+      note: 'Definitive review of ²⁹Si NMR chemical shifts, coupling constants, and applications in organosilicon chemistry.'
+    },
+    {
+      num: 9,
+      cite: 'Wrackmeyer, B.',
+      title: '¹¹B NMR parameters. Annual Reports on NMR Spectroscopy, Vol. 20.',
+      journal: 'Academic Press,',
+      details: '1988, 61–203.',
+      note: 'Comprehensive ¹¹B NMR chemical shifts and coupling constants; quadrupolar effects and linewidth analysis.'
+    },
+    {
+      num: 10,
+      cite: 'Karplus, M.',
+      title: 'Contact Electron-Spin Coupling of Nuclear Magnetic Moments.',
+      journal: 'J. Chem. Phys.',
+      details: '1959, 30, 11–15.',
+      note: 'Original Karplus equation for ³J(HH) coupling vs. dihedral angle; foundation for NMR conformational analysis.'
+    },
+    {
+      num: 11,
+      cite: 'Tolman, C.A.',
+      title: 'Phosphorus Ligand Exchange Equilibria on Zerovalent Nickel.',
+      journal: 'J. Am. Chem. Soc.',
+      details: '1970, 92, 2953–2956.',
+      note: 'Tolman cone angle concept; relevant to ³¹P NMR interpretation of phosphine ligand steric/electronic effects.'
+    },
+    {
+      num: 12,
+      cite: 'Lipkowitz, K.B.; Boyd, D.B. (eds.)',
+      title: 'Reviews in Computational Chemistry, Vol. 8.',
+      journal: 'VCH,',
+      details: '1996.',
+      note: 'Contains chapters on calculated NMR chemical shifts; relevant for DFT-predicted vs. experimental δ comparison.'
+    },
+    {
+      num: 13,
+      cite: 'Reich, H.J.',
+      title: 'Effects of Other NMR-Active Nuclei on ¹H and ¹³C NMR Spectra (Section 7-MULTI-2). Hans Reich NMR Collection.',
+      journal: 'ACS Division of Organic Chemistry, organicchemistrydata.org/hansreich/resources/nmr/?page=07-multi-02-effects/',
+      details: 'Accessed 2026.',
+      note: 'Authoritative online reference covering J-coupling with quadrupolar nuclei (including ²⁷Al self-decoupling), spin-1/2 satellite observation (including ¹⁹⁵Pt), second-order effects in phosphine complexes, isotope shifts, and Karplus-angle dependence for multinuclear X–H couplings. The companion section 7-MULTI-3 covers ¹⁹⁵Pt and other spin-1/2 metals in detail.'
+    },
+    {
+      num: 14,
+      cite: 'Pregosin, P.S.',
+      title: 'NMR in Organometallic Chemistry.',
+      journal: 'Wiley-VCH,',
+      details: '2012. ISBN 978-3-527-33013-0.',
+      note: 'Leading practical text on multinuclear NMR in organometallic chemistry; extensive ¹⁹⁵Pt NMR data including coupling constants, temperature effects, and trans-influence analysis.'
+    },
+    {
+      num: 15,
+      cite: 'Pregosin, P.S.; Kunz, R.W.',
+      title: '³¹P and ¹³C NMR of Transition Metal Phosphine Complexes. NMR Basic Principles and Progress, Vol. 16.',
+      journal: 'Springer,',
+      details: '1979.',
+      note: 'Classic compilation of ¹J(Pt–P), ²J(P–Pt–P), and ¹J(Pt–C) coupling constants; cis/trans isomer distinction via ¹⁹⁵Pt satellite analysis.'
+    },
+    {
+      num: 16,
+      cite: 'Akitt, J.W.',
+      title: '²⁷Al NMR Spectroscopy. Annual Reports on NMR Spectroscopy, Vol. 21.',
+      journal: 'Academic Press,',
+      details: '1989, 1–78.',
+      note: 'Comprehensive review of ²⁷Al NMR: chemical shifts, quadrupolar coupling constants, solution vs. solid-state, zeolite applications, and organoaluminum compounds.'
+    },
+    {
+      num: 17,
+      cite: 'Delpuech, J.-J. (ed.)',
+      title: 'Dynamics of Solutions and Fluid Mixtures by NMR.',
+      journal: 'Wiley,',
+      details: '1995.',
+      note: 'Contains chapters on quadrupolar nuclei including ²⁷Al; dynamic exchange and linewidth analysis in aluminate systems.'
+    },
+    {
+      num: 18,
+      cite: 'Bühl, M.; Kaupp, M.; Malkina, O.L.; Malkin, V.G.',
+      title: 'The DFT Route to NMR Chemical Shifts.',
+      journal: 'J. Comput. Chem.',
+      details: '1999, 20, 91–105.',
+      note: 'Key reference for DFT calculation of ²⁷Al and ¹⁹⁵Pt chemical shifts; benchmark comparisons with experimental values for transition-metal and main-group compounds.'
+    },
+  ];
+
+  let html = `<div class="section-label">Literature References</div>
+  <div class="note-box">
+    All chemical shift and coupling constant data in this dashboard are compiled from primary literature and authoritative review sources. Specific values may vary slightly between instruments, conditions, and solvent batches. Always consult primary literature for precise measurements.
+  </div>
+  <ol class="ref-list">`;
+
+  refs.forEach(r => {
+    html += `<li>
+      <strong>[${r.num}]</strong> ${r.cite} "${r.title}" <em>${r.journal}</em> ${r.details}
+      <br><span style="color:var(--accent);font-size:0.75rem;">→ ${r.note}</span>
+    </li>`;
+  });
+
+  html += `</ol>`;
+  document.getElementById('tab-refs').innerHTML = html;
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderSidebar();
+renderShifts();
+renderSolvent();
+renderField();
+renderRefs();
+renderCoupling();
+// Show first tab
+switchTab('shifts', document.querySelector('.tab-btn'));
+</script>
+</body>
+</html>
