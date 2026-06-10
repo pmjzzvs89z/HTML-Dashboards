@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Claude Code · Slash Commands &amp; Power Features</title>
+<style>
+  @page { size: Letter; margin: 0.6in 0.55in 0.6in 0.55in; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    margin-left: 0.7cm !important;
+    padding-left: 0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 9.6pt;
+    color: #15171c;
+    line-height: 1.36;
+  }
+  header.cover {
+    border-bottom: 2px solid #0f1117;
+    padding-bottom: 10pt;
+    margin-bottom: 14pt;
+  }
+  header.cover h1 {
+    margin: 0;
+    font-size: 22pt;
+    letter-spacing: -0.01em;
+    color: #0f1117;
+  }
+  header.cover .sub {
+    margin-top: 4pt;
+    font-size: 10pt;
+    color: #5d6470;
+  }
+  .legend {
+    margin-top: 8pt;
+    font-size: 8.6pt;
+    color: #4b515c;
+    line-height: 1.45;
+  }
+  .legend code { background: #eef0f4; padding: 1px 4px; border-radius: 3px; font-size: 90%; }
+
+  main {
+    column-count: 2;
+    column-gap: 18pt;
+    column-fill: balance;
+  }
+
+  section.cat {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 9pt;
+  }
+  section.cat h2 {
+    font-size: 10.4pt;
+    color: #1a55b8;
+    border-bottom: 1px solid #c8d3e8;
+    margin: 0 0 5pt 0;
+    padding-bottom: 2pt;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .cmd {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 5.5pt;
+    padding-bottom: 4pt;
+    border-bottom: 1px dotted #d6dae2;
+  }
+  .cmd:last-child { border-bottom: 0; }
+
+  .cmd .name {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 9.6pt;
+    font-weight: 700;
+    color: #b03a17;
+  }
+  .cmd .what {
+    margin-left: 4pt;
+    color: #15171c;
+  }
+  .cmd .use, .cmd .tip {
+    margin-top: 2pt;
+    font-size: 8.6pt;
+    color: #3a414c;
+    line-height: 1.4;
+  }
+  .cmd .use::before {
+    content: "Use ";
+    font-weight: 700;
+    color: #1a55b8;
+  }
+  .cmd .tip::before {
+    content: "Tip ";
+    font-weight: 700;
+    color: #2a8f50;
+  }
+  .cmd code {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: #eef0f4;
+    padding: 0.5px 3px;
+    border-radius: 3px;
+    font-size: 90%;
+    color: #1a1f2a;
+  }
+  .alias {
+    color: #6b7280;
+    font-size: 8.4pt;
+    font-style: italic;
+  }
+
+  footer {
+    margin-top: 10pt;
+    padding-top: 6pt;
+    border-top: 1px solid #c8d3e8;
+    font-size: 8pt;
+    color: #6b7280;
+    column-span: all;
+  }
+  footer a { color: #1a55b8; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header class="cover">
+  <h1>Claude Code · Slash Commands &amp; Power Features</h1>
+  <div class="sub">Quick reference for the commands you reach by typing <code style="background:#eef0f4;padding:1px 4px;border-radius:3px;">/</code> in the CLI, plus the input prefixes, permission modes, memory layers, and extension points that don&rsquo;t appear in older guides.</div>
+  <div class="legend">
+    Each command entry shows the command, what it does, a usage hint, and (where useful) a non-obvious tip.
+    Aliases are noted in italics. Commands marked <em>[skill]</em> or <em>[workflow]</em> are bundled but otherwise behave like the regular built-ins.
+    The page after the command tables covers <strong>input prefixes</strong> (<code>!</code>, <code>@</code>, <code>#</code>), <strong>plan mode</strong>, <strong>permission modes</strong>, <strong>CLAUDE.md memory</strong>, <strong>skills / sub-agents / MCP / hooks</strong>, and <strong>headless mode</strong>.
+  </div>
+</header>
+
+<main>
+
+<section class="cat">
+  <h2>Session management</h2>
+
+  <div class="cmd">
+    <span class="name">/clear</span> <span class="what">— start fresh with empty context, keeping project memory.</span>
+    <div class="use"><code>/clear fixing-auth</code> — names the old session in the resume picker. <span class="alias">aliases /reset, /new</span></div>
+  </div>
+  <div class="cmd">
+    <span class="name">/resume</span> <span class="what">— return to a previous conversation by name, ID, or picker.</span>
+    <div class="use"><code>/resume</code> opens a picker; background sessions are tagged <code>bg</code>. <span class="alias">alias /continue</span></div>
+  </div>
+  <div class="cmd">
+    <span class="name">/branch</span> <span class="what">— fork the current conversation; try a new direction without losing the original.</span>
+    <div class="use">Switches into the branch; the original is recoverable with <code>/resume</code>.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/rename</span> <span class="what">— label the current session.</span>
+    <div class="use"><code>/rename auth-refactor</code>; auto-generates a name if omitted.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/background</span> <span class="what">— detach the session to run as a background agent.</span>
+    <div class="use"><code>/background integrate the feedback</code> — last instruction before detaching. <span class="alias">alias /bg</span></div>
+    <div class="tip">Monitor with <code>claude agents</code> from a fresh terminal.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/exit</span> <span class="what">— quit the CLI; detaches from background sessions.</span>
+    <div class="use"><span class="alias">alias /quit</span></div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Model &amp; reasoning</h2>
+
+  <div class="cmd">
+    <span class="name">/model</span> <span class="what">— switch the AI model.</span>
+    <div class="use">Press <code>s</code> on a row to switch for current session only.</div>
+    <div class="tip">Switching mid-session re-reads history without prompt cache.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/effort</span> <span class="what">— adjust reasoning depth.</span>
+    <div class="use">Levels: <code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code>, <code>max</code>, <code>ultracode</code>; <code>auto</code> resets.</div>
+    <div class="tip"><code>ultracode</code> auto-orchestrates multi-agent workflows.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/fast</span> <span class="what">— toggle fast mode (lower cost, slightly reduced quality).</span>
+    <div class="use"><code>/fast on</code> or <code>/fast off</code>.</div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Context &amp; memory</h2>
+
+  <div class="cmd">
+    <span class="name">/context</span> <span class="what">— visualize context usage with optimization tips.</span>
+    <div class="use"><code>/context all</code> opens a fullscreen per-item breakdown.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/compact</span> <span class="what">— summarize the conversation to free context.</span>
+    <div class="use"><code>/compact focus on perf</code> — optional steering hint.</div>
+    <div class="tip">Project rules, skills, and memory files survive compaction.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/memory</span> <span class="what">— edit CLAUDE.md memory; toggle auto-memory.</span>
+    <div class="use">Interactive editor for project and personal memory entries.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/init</span> <span class="what">— scaffold a CLAUDE.md starter for the current project.</span>
+    <div class="use"><code>CLAUDE_CODE_NEW_INIT=1 claude</code> for the interactive flow (skills, hooks, memory).</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/recap</span> <span class="what">— one-line summary of the current session on demand.</span>
+    <div class="use">Useful before sharing or before <code>/clear</code>.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/add-dir</span> <span class="what">— add a working directory for file access this session.</span>
+    <div class="use"><code>/add-dir ../other-repo</code>; CLAUDE.md is NOT auto-discovered from added dirs.</div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Code review &amp; quality</h2>
+
+  <div class="cmd">
+    <span class="name">/code-review</span> <span class="what">— scan the diff for bugs and cleanups.</span>
+    <div class="use">Levels <code>low</code>…<code>ultra</code>; <code>--fix</code> applies findings; <code>--comment</code> posts inline PR comments.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/simplify</span> <span class="what">— review changes for cleanup opportunities and apply fixes.</span>
+    <div class="use">Runs reuse / simplification / efficiency / abstraction agents in parallel.</div>
+    <div class="tip">Won't hunt for correctness bugs — pair with <code>/code-review</code>.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/review</span> <span class="what">— review a GitHub PR locally.</span>
+    <div class="use">Auto-detects PR from branch, or pass URL/number; needs <code>gh</code> CLI.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/security-review</span> <span class="what">— scan pending changes for security issues.</span>
+    <div class="use">Looks for injection, auth, and data-exposure problems in the diff.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/diff</span> <span class="what">— interactive viewer for uncommitted changes and per-turn diffs.</span>
+    <div class="use">←/→ switch between git diff and Claude turns; ↑/↓ browse files.</div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Workflow &amp; automation</h2>
+
+  <div class="cmd">
+    <span class="name">/plan</span> <span class="what">— enter plan mode and lay out steps before any change.</span>
+    <div class="use"><code>/plan fix the auth bug</code> — optional description.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/goal</span> <span class="what">— work across turns until a condition is met.</span>
+    <div class="use"><code>/goal npm test succeeds</code>; <code>/goal clear</code> to stop.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/batch</span> <span class="what">— orchestrate large changes across the codebase in parallel.</span>
+    <div class="use"><code>/batch migrate src/ from Solid to React</code>.</div>
+    <div class="tip">Decomposes into 5–30 units, one subagent per unit in a git worktree.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/fork</span> <span class="what">— spawn a forked subagent that inherits the conversation.</span>
+    <div class="use">Runs in background; result returns to the main thread.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/loop</span> <span class="what">— run a prompt repeatedly on a schedule.</span>
+    <div class="use"><code>/loop 5m check the deploy</code>; omit interval to self-pace.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/run</span> <span class="what">— launch and drive your project's app to verify a change.</span>
+    <div class="use">First call sets up a project-specific run skill, then re-uses it.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/verify</span> <span class="what">— confirm a change by building, running, and observing.</span>
+    <div class="use">Use when type checks and tests aren't enough proof.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/tasks</span> <span class="what">— view everything running in the background.</span>
+    <div class="use">Lists subagents, bash commands, and workflows. <span class="alias">alias /bashes</span></div>
+  </div>
+  <div class="cmd">
+    <span class="name">/btw</span> <span class="what">— ask a quick side question without bloating history.</span>
+    <div class="use"><code>/btw what's foo()'s signature?</code></div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Configuration &amp; setup</h2>
+
+  <div class="cmd">
+    <span class="name">/config</span> <span class="what">— open settings (theme, model, output style, prefs).</span>
+    <div class="use"><span class="alias">alias /settings</span></div>
+  </div>
+  <div class="cmd">
+    <span class="name">/permissions</span> <span class="what">— manage allow/ask/deny rules for tools.</span>
+    <div class="use">Inspect by scope, add/remove, manage working dirs. <span class="alias">alias /allowed-tools</span></div>
+  </div>
+  <div class="cmd">
+    <span class="name">/mcp</span> <span class="what">— manage MCP server connections and OAuth.</span>
+    <div class="use">Add, remove, check status of MCP servers.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/agents</span> <span class="what">— configure subagents.</span>
+    <div class="use">Interactive UI for creating and editing subagent definitions.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/hooks</span> <span class="what">— view configured hooks for tool events.</span>
+    <div class="use">Inspect matchers and hook commands across scopes.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/keybindings</span> <span class="what">— edit keyboard shortcuts.</span>
+    <div class="use">Opens <code>~/.claude/keybindings.json</code>.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/theme</span> <span class="what">— change color theme.</span>
+    <div class="use">Built-ins plus custom themes from <code>~/.claude/themes/</code>.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/statusline</span> <span class="what">— configure the prompt status line.</span>
+    <div class="use">Describe what you want or auto-import from your shell prompt.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/color</span> <span class="what">— set the prompt-bar accent color.</span>
+    <div class="use"><code>/color blue</code>; <code>/color default</code> resets.</div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Debug &amp; recovery</h2>
+
+  <div class="cmd">
+    <span class="name">/debug</span> <span class="what">— turn on debug logging and troubleshoot.</span>
+    <div class="use"><code>/debug session hangs on file reads</code>; logs start now, off by default.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/doctor</span> <span class="what">— diagnose installation and settings.</span>
+    <div class="use">Press <code>f</code> to have Claude fix reported issues.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/rewind</span> <span class="what">— roll back conversation and/or code to a checkpoint.</span>
+    <div class="use">Includes summarize-mode for partial rollback. <span class="alias">aliases /checkpoint, /undo</span></div>
+  </div>
+  <div class="cmd">
+    <span class="name">/feedback</span> <span class="what">— file a bug or share the conversation.</span>
+    <div class="use">Conversation context is auto-attached. <span class="alias">aliases /bug, /share</span></div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Integrations</h2>
+
+  <div class="cmd">
+    <span class="name">/desktop</span> <span class="what">— continue this session in the Claude Code desktop app.</span>
+    <div class="use">macOS / Windows + subscription. <span class="alias">alias /app</span></div>
+  </div>
+  <div class="cmd">
+    <span class="name">/remote-control</span> <span class="what">— make this session controllable from claude.ai.</span>
+    <div class="use">Sync to claude.ai/code. <span class="alias">alias /rc</span></div>
+  </div>
+  <div class="cmd">
+    <span class="name">/teleport</span> <span class="what">— pull a Claude Code-on-the-web session into this terminal.</span>
+    <div class="use">Picker fetches the branch and full conversation. <span class="alias">alias /tp</span></div>
+  </div>
+  <div class="cmd">
+    <span class="name">/install-github-app</span> <span class="what">— set up the Claude GitHub Actions app.</span>
+    <div class="use">Interactive wizard for the current repo.</div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Discovery &amp; learning</h2>
+
+  <div class="cmd">
+    <span class="name">/claude-api</span> <span class="what">— load Claude API reference (model IDs, params, migration).</span>
+    <div class="use"><code>/claude-api migrate</code> upgrades calls to a newer model.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/deep-research</span> <span class="what">— fan out web searches and synthesize a cited report.</span>
+    <div class="use"><code>/deep-research how to optimize React performance</code>.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/insights</span> <span class="what">— analyze your past Claude Code sessions.</span>
+    <div class="use">Surfaces project areas, patterns, and friction points.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/team-onboarding</span> <span class="what">— generate a team onboarding guide from usage history.</span>
+    <div class="use">Pulls last 30 days; share link on Team / Enterprise.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/powerup</span> <span class="what">— interactive lessons + demos for hidden features.</span>
+    <div class="use">Animated walkthrough of high-leverage capabilities.</div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Output &amp; account</h2>
+
+  <div class="cmd">
+    <span class="name">/copy</span> <span class="what">— copy the last (or Nth-latest) assistant response to clipboard.</span>
+    <div class="use"><code>/copy 2</code> for the second-to-last; <code>w</code> in picker writes to file (handy over SSH).</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/export</span> <span class="what">— export the conversation as plain text.</span>
+    <div class="use">With a filename writes directly; without, opens save dialog.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">/usage</span> <span class="what">— session cost, plan limits, activity, per-feature breakdown.</span>
+    <div class="use"><span class="alias">aliases /cost, /stats</span></div>
+  </div>
+  <div class="cmd">
+    <span class="name">/help</span> <span class="what">— show available commands; type letters after <code>/help</code> to filter.</span>
+  </div>
+</section>
+
+<section class="cat" style="break-before: column;">
+  <h2>Input prefixes &amp; shortcuts</h2>
+
+  <div class="cmd">
+    <span class="name">!cmd</span> <span class="what">— run a shell command in this session.</span>
+    <div class="use"><code>!ls -la</code>, <code>!gcloud auth login</code>; output lands in the conversation, so Claude can act on it.</div>
+    <div class="tip">Better than asking Claude to run interactive logins itself.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">@path</span> <span class="what">— attach a file or directory to the prompt.</span>
+    <div class="use"><code>@src/auth.ts what does this do?</code>; tab-completes paths.</div>
+    <div class="tip">Cheaper than pasting code; respects <code>.gitignore</code>.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">#note</span> <span class="what">— add a memory entry inline.</span>
+    <div class="use"><code>#we always run tests with npm run test:unit</code> — saved to CLAUDE.md or auto-memory.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Shift+Tab</span> <span class="what">— cycle permission modes (default → accept-edits → plan).</span>
+    <div class="use">Footer of the prompt shows the active mode.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Esc</span> <span class="what">— interrupt Claude mid-response without exiting.</span>
+    <div class="use">Double-Esc opens the message picker to edit a prior turn.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Ctrl+R</span> <span class="what">— toggle verbose mode (shows full tool inputs/outputs).</span>
+    <div class="use">Useful when a tool call surprises you.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Up arrow</span> <span class="what">— recall previous prompts in this session.</span>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Plan mode &amp; permission modes</h2>
+
+  <div class="cmd">
+    <span class="name">Plan mode</span> <span class="what">— Claude explores and proposes a plan but cannot edit, write, or run mutating commands.</span>
+    <div class="use">Enter via <code>/plan</code> or Shift+Tab; Claude exits with an approval prompt.</div>
+    <div class="tip">Use it for non-trivial changes — review the plan, then approve to execute.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Default mode</span> <span class="what">— Claude asks before each tool the workspace hasn&rsquo;t pre-approved.</span>
+    <div class="use">Safe baseline. Approvals can be granted once, always-for-this-session, or always-for-this-project.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Accept-edits mode</span> <span class="what">— auto-approve file edits; still asks for shell commands.</span>
+    <div class="use">Good for focused refactors when you trust the diff review afterwards.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Bypass-permissions</span> <span class="what">— skip all prompts (a.k.a. &ldquo;YOLO mode&rdquo;).</span>
+    <div class="use"><code>claude --dangerously-skip-permissions</code> at launch.</div>
+    <div class="tip">Only inside a sandbox/container or a throwaway worktree.</div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Memory &amp; CLAUDE.md hierarchy</h2>
+
+  <div class="cmd">
+    <span class="name">./CLAUDE.md</span> <span class="what">— project memory, committed to git.</span>
+    <div class="use">Project-wide rules: build commands, conventions, &ldquo;always do X / never do Y&rdquo;.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">./CLAUDE.local.md</span> <span class="what">— project memory, gitignored.</span>
+    <div class="use">Personal notes scoped to this repo (paths, secrets layout, your preferences).</div>
+  </div>
+  <div class="cmd">
+    <span class="name">~/.claude/CLAUDE.md</span> <span class="what">— user-level memory, applies to every project.</span>
+    <div class="use">Global rules: tone, formatting, default model, language preferences.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Auto-memory</span> <span class="what">— Claude learns facts about you from conversation and stores them in <code>~/.claude/.../memory/</code>.</span>
+    <div class="use">Toggle via <code>/memory</code>. Each fact is a small file with frontmatter <em>(user / feedback / project / reference)</em>.</div>
+    <div class="tip">If something keeps drifting, save it explicitly in CLAUDE.md instead of relying on auto-memory.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Discovery</span> <span class="what">— Claude reads CLAUDE.md from the project root, the home dir, and any parent up the tree.</span>
+    <div class="use"><code>/add-dir</code> does NOT auto-discover CLAUDE.md from the added directory.</div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Extending Claude Code</h2>
+
+  <div class="cmd">
+    <span class="name">Skills</span> <span class="what">— reusable, parameterized prompts you invoke with <code>/skill-name</code>.</span>
+    <div class="use">Project skills in <code>.claude/skills/</code>; user skills in <code>~/.claude/skills/</code>; Markdown body + YAML frontmatter.</div>
+    <div class="tip">Bundled skills (e.g. <code>/deep-research</code>) live alongside built-ins.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Sub-agents</span> <span class="what">— specialized agents Claude can spawn for focused tasks (review, explore, plan).</span>
+    <div class="use">Configure via <code>/agents</code>; project agents in <code>.claude/agents/</code>.</div>
+    <div class="tip">Each agent has its own context window — great for keeping the main conversation clean.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">MCP servers</span> <span class="what">— external integrations: GitHub, Linear, Slack, Postgres, browsers, etc.</span>
+    <div class="use">Manage with <code>/mcp</code>; configure in <code>~/.claude.json</code> or <code>.mcp.json</code>.</div>
+    <div class="tip">MCP is for <em>third-party</em> tools. File edits, bash, and grep are built-ins, not MCP.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Hooks</span> <span class="what">— shell scripts that fire on tool events (PreToolUse, PostToolUse, UserPromptSubmit, etc.).</span>
+    <div class="use">Defined under <code>hooks</code> in <code>~/.claude/settings.json</code> or <code>.claude/settings.json</code>.</div>
+    <div class="tip">Use to enforce project policy (block bad commands, auto-format on write, run lints after edit).</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Output styles</span> <span class="what">— preset personas/formats for Claude&rsquo;s replies.</span>
+    <div class="use">Set in <code>/config</code> or via <code>--output-style</code>; e.g. <em>concise</em>, <em>explanatory</em>, custom.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">Worktrees</span> <span class="what">— isolated git worktrees so an agent can mutate files without colliding with your branch.</span>
+    <div class="use">Auto-used by <code>/batch</code> and parallel sub-agents; cleaned up if no changes.</div>
+  </div>
+</section>
+
+<section class="cat">
+  <h2>Headless mode &amp; scripting</h2>
+
+  <div class="cmd">
+    <span class="name">claude -p "&hellip;"</span> <span class="what">— run a single prompt non-interactively, print the answer, exit.</span>
+    <div class="use"><code>claude -p "summarize today&rsquo;s diff"</code> in a script or cron job.</div>
+    <div class="tip">Combine with <code>--output-format json</code> for machine parsing.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">claude --resume &lt;id&gt;</span> <span class="what">— resume a specific session by ID (handy in CI).</span>
+    <div class="use">Pair with <code>--print</code> to script multi-turn flows.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">--model / --fallback-model</span> <span class="what">— pin model at launch.</span>
+    <div class="use"><code>claude --model claude-opus-4-8 --fallback-model claude-sonnet-4-6</code>.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">--add-dir / --append-system-prompt</span> <span class="what">— add a working dir or extend the system prompt at launch.</span>
+    <div class="use">Useful for monorepos and bot personas in CI.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">CLAUDE_CODE_NEW_INIT=1 claude</span> <span class="what">— interactive first-run wizard (skills, hooks, memory).</span>
+    <div class="use">Run once per new project to scaffold a sensible <code>.claude/</code> setup.</div>
+  </div>
+  <div class="cmd">
+    <span class="name">GitHub Actions app</span> <span class="what">— Claude Code as a PR reviewer/responder in CI.</span>
+    <div class="use">Set up via <code>/install-github-app</code>; reacts to <code>@claude</code> mentions on issues and PRs.</div>
+  </div>
+</section>
+
+<footer>
+  Source: official Claude Code docs (<code>code.claude.com/docs</code>) and the CLI&rsquo;s own <code>/help</code> output.
+  Built-in commands and extension points evolve quickly — when in doubt, type <code>/help</code> in the CLI for the current list.
+</footer>
+
+</main>
+</body>
+</html>
