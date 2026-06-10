@@ -1,0 +1,1322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Hoya Plants — Interactive Dashboard</title>
+<script>
+  // Apply theme before paint to avoid flash
+  (function(){
+    const saved = localStorage.getItem("hoya-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = saved || (prefersDark ? "dark" : "light");
+    if(theme==="dark") document.documentElement.classList.add("dark");
+  })();
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ---------- LIGHT MODE (modern, clean) ---------- */
+  :root{
+    --bg:         #f6f7f5;
+    --bg-elev:    #ffffff;
+    --bg-subtle:  #eef0ec;
+    --border:     #e4e7e2;
+    --border-2:   #d6dbd3;
+    --text:       #0f1713;
+    --text-muted: #5a6661;
+    --text-dim:   #8a938e;
+    --accent:     #0f766e;   /* teal-700 */
+    --accent-2:   #14b8a6;   /* teal-500 */
+    --accent-soft:#ccfbf1;   /* teal-100 */
+    --accent-ink: #064e4a;
+    --ring:       rgba(20,184,166,.35);
+    --shadow:     0 1px 2px rgba(15,23,19,.04), 0 12px 32px -16px rgba(15,23,19,.12);
+    --glow-a:     #e6fffb;
+    --glow-b:     #eef6ee;
+    --badge-beg-bg:#dcfce7;--badge-beg-fg:#166534;
+    --badge-int-bg:#fef3c7;--badge-int-fg:#92400e;
+    --badge-adv-bg:#fee2e2;--badge-adv-fg:#991b1b;
+    --img-a:#a7f3d0; --img-b:#34d399; --img-c:#0f766e;
+    --modal-bg: rgba(10,15,12,.5);
+  }
+  /* ---------- DARK MODE ---------- */
+  html.dark{
+    --bg:         #0a0f0d;
+    --bg-elev:    #121816;
+    --bg-subtle:  #1a211e;
+    --border:     #232b27;
+    --border-2:   #2f3934;
+    --text:       #e7ece9;
+    --text-muted: #9aa6a0;
+    --text-dim:   #6b7672;
+    --accent:     #2dd4bf;   /* teal-400 */
+    --accent-2:   #5eead4;   /* teal-300 */
+    --accent-soft:#0b3b38;
+    --accent-ink: #ccfbf1;
+    --ring:       rgba(45,212,191,.4);
+    --shadow:     0 1px 2px rgba(0,0,0,.5), 0 20px 40px -20px rgba(0,0,0,.7);
+    --glow-a:     #0f2a2a;
+    --glow-b:     #102318;
+    --badge-beg-bg:#0b3b25;--badge-beg-fg:#86efac;
+    --badge-int-bg:#3b2b0b;--badge-int-fg:#fcd34d;
+    --badge-adv-bg:#3b1414;--badge-adv-fg:#fca5a5;
+    --img-a:#134e48; --img-b:#0f766e; --img-c:#042f2e;
+    --modal-bg: rgba(0,0,0,.7);
+  }
+  html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.serif{font-family:'Fraunces',Georgia,serif;letter-spacing:-0.015em;}
+  .app-bg{
+    background:
+      radial-gradient(1200px 600px at 15% -10%,var(--glow-a) 0%,transparent 55%),
+      radial-gradient(1000px 500px at 95% 5%,var(--glow-b) 0%,transparent 50%),
+      var(--bg);
+    min-height:100vh;
+  }
+  .card{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;}
+  .card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border-2);}
+  .panel{background:var(--bg-elev);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);}
+  .badge{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:600;letter-spacing:.01em;}
+  .badge-beg{background:var(--badge-beg-bg);color:var(--badge-beg-fg);}
+  .badge-int{background:var(--badge-int-bg);color:var(--badge-int-fg);}
+  .badge-adv{background:var(--badge-adv-bg);color:var(--badge-adv-fg);}
+  .chip{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border-radius:999px;background:var(--bg-subtle);color:var(--text-muted);font-size:.72rem;font-weight:500;border:1px solid var(--border);transition:all .15s ease;}
+  .chip:hover{border-color:var(--border-2);color:var(--text);}
+  .chip[data-active="true"]{background:var(--accent);color:#fff;border-color:var(--accent);}
+  html.dark .chip[data-active="true"]{color:#041312;}
+  .modal-backdrop{background:var(--modal-bg);backdrop-filter:blur(6px);}
+  .care-icon{width:1rem;height:1rem;stroke-width:2;}
+  details>summary{list-style:none;cursor:pointer;}
+  details>summary::-webkit-details-marker{display:none;}
+  .scroll-thin::-webkit-scrollbar{height:8px;width:8px;}
+  .scroll-thin::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:10px;}
+  .fade-in{animation:fade .3s ease both;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  .stat-bar{height:6px;border-radius:999px;background:var(--bg-subtle);overflow:hidden;}
+  .stat-bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:999px;}
+  input,select{font:inherit;color:var(--text);}
+  .field{background:var(--bg-subtle);border:1px solid var(--border);color:var(--text);}
+  .field::placeholder{color:var(--text-dim);}
+  input:focus,select:focus,button:focus-visible{outline:2px solid var(--ring);outline-offset:2px;border-color:var(--accent);}
+  .cmp-dot{width:10px;height:10px;border-radius:999px;background:var(--border-2);display:inline-block;}
+  .cmp-dot.on{background:var(--accent);}
+  .btn-primary{background:var(--accent);color:#fff;border:1px solid var(--accent);}
+  html.dark .btn-primary{color:#041312;}
+  .btn-primary:hover{background:var(--accent-2);border-color:var(--accent-2);}
+  .btn-ghost{background:var(--bg-subtle);color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--border-2);}
+  .text-muted{color:var(--text-muted);}
+  .text-dim{color:var(--text-dim);}
+  .text-accent{color:var(--accent);}
+  .divider{border-color:var(--border);}
+  .img-ph{background:linear-gradient(135deg,var(--img-a),var(--img-b) 55%,var(--img-c));position:relative;overflow:hidden;}
+  .img-ph::after{content:"";position:absolute;inset:0;background:
+    radial-gradient(circle at 28% 28%,rgba(255,255,255,.3),transparent 42%),
+    radial-gradient(circle at 72% 65%,rgba(0,0,0,.22),transparent 55%);}
+  .img-ph span{position:absolute;inset:auto 0 10% 0;text-align:center;color:#fff;font-family:'Fraunces',serif;font-style:italic;font-size:.88rem;text-shadow:0 1px 3px rgba(0,0,0,.45);padding:0 .5rem;letter-spacing:.01em;}
+  /* theme toggle */
+  .theme-toggle{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--bg-elev);border:1px solid var(--border);color:var(--text);transition:all .2s ease;}
+  .theme-toggle:hover{border-color:var(--accent);color:var(--accent);}
+  html.dark .sun-icon{display:block;} html.dark .moon-icon{display:none;}
+  html:not(.dark) .sun-icon{display:none;} html:not(.dark) .moon-icon{display:block;}
+  /* tabs */
+  .tab-btn{color:var(--text-muted);transition:all .2s ease;}
+  .tab-btn[data-active="true"]{background:var(--bg-elev);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .tab-btn:hover:not([data-active="true"]){color:var(--text);}
+  /* propagation step numbers */
+  .step-num{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-family:'Fraunces',serif;flex-shrink:0;}
+  /* dl keys consistent */
+  dl dt{color:var(--text-muted);}
+  dl dd{color:var(--text);}
+  code{background:var(--bg-subtle);padding:0 .3em;border-radius:4px;color:var(--accent);}
+</style>
+</head>
+<body class="app-bg min-h-screen">
+
+<header class="max-w-7xl mx-auto px-5 pt-8 pb-5">
+  <div class="flex items-center justify-between gap-4 flex-wrap">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl grid place-items-center shadow-sm" style="background:var(--accent);color:#fff;">
+        <i data-lucide="leaf" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="text-3xl md:text-4xl font-[800]" style="color:var(--text);">Hoya <span style="color:var(--accent);">Plants</span></h1>
+        <p class="text-sm text-muted">The 100 most commonly grown Hoya species in the United States</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="hidden md:flex items-center gap-2 text-xs text-muted">
+        <i data-lucide="info" class="w-4 h-4"></i>
+        <span>Click a card for details · use filters & compare</span>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+        <i data-lucide="sun" class="w-4 h-4 sun-icon"></i>
+        <i data-lucide="moon" class="w-4 h-4 moon-icon"></i>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- STATS OVERVIEW -->
+<section class="max-w-7xl mx-auto px-5 grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" aria-label="Collection stats">
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Species</div>
+    <div class="text-3xl serif font-[800] text-accent" id="stat-total">—</div>
+    <div class="text-xs text-muted">In this dashboard</div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Difficulty mix</div>
+    <div id="stat-difficulty" class="mt-2 space-y-1.5"></div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Top origin region</div>
+    <div class="text-xl serif font-[700] mt-1" style="color:var(--text);" id="stat-region">—</div>
+    <div class="text-xs text-muted" id="stat-region-sub">—</div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Fragrant bloomers</div>
+    <div class="text-3xl serif font-[800] text-accent" id="stat-fragrant">—</div>
+    <div class="text-xs text-muted">Flowers with noticeable scent</div>
+  </div>
+</section>
+
+<!-- TAB NAV -->
+<nav class="max-w-7xl mx-auto px-5 mb-5" aria-label="Sections">
+  <div class="inline-flex p-1 rounded-xl" style="background:var(--bg-subtle);border:1px solid var(--border);">
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="catalog">Catalog</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="care">Plant Care</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="propagation">Propagation</button>
+  </div>
+</nav>
+
+<!-- CATALOG VIEW -->
+<div id="view-catalog">
+
+<!-- CONTROLS -->
+<section class="max-w-7xl mx-auto px-5 mb-5">
+  <div class="panel p-4 md:p-5">
+    <div class="flex flex-col md:flex-row md:items-center gap-3">
+      <div class="relative flex-1">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-dim"></i>
+        <input id="search" type="search" placeholder="Search scientific or common name…" aria-label="Search Hoyas"
+          class="field w-full pl-9 pr-3 py-2 rounded-lg" />
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-muted">Sort</label>
+        <select id="sort" class="field px-2 py-2 rounded-lg text-sm">
+          <option value="rank">Commonality rank</option>
+          <option value="name">Name A–Z</option>
+          <option value="difficulty">Difficulty</option>
+          <option value="size">Mature size</option>
+        </select>
+      </div>
+      <button id="cmp-toggle" class="btn-primary px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+        <i data-lucide="columns-3" class="w-4 h-4"></i><span>Compare</span>
+        <span id="cmp-count" class="ml-1 text-[10px] rounded-full px-1.5 py-0.5" style="background:rgba(255,255,255,.22);">0</span>
+      </button>
+    </div>
+
+    <!-- Filter groups -->
+    <div class="mt-4 grid gap-3 text-sm">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-20">Difficulty</span>
+        <div id="f-difficulty" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-20">Light</span>
+        <div id="f-light" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-20">Water</span>
+        <div id="f-water" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-20">Region</span>
+        <div id="f-region" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-20">Bloom</span>
+        <div id="f-bloom" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-20">Fragrant</span>
+        <div id="f-fragrant" class="flex flex-wrap gap-1.5"></div>
+        <button id="clear-filters" class="ml-auto text-xs text-accent underline decoration-dotted">Clear all</button>
+      </div>
+    </div>
+
+    <!-- Care legend -->
+    <details class="mt-4">
+      <summary class="text-xs text-muted flex items-center gap-1"><i data-lucide="help-circle" class="w-3.5 h-3.5"></i>Care legend</summary>
+      <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted">
+        <div class="flex items-center gap-2"><i data-lucide="sun" class="w-4 h-4" style="color:#f59e0b;"></i>Light level</div>
+        <div class="flex items-center gap-2"><i data-lucide="droplets" class="w-4 h-4" style="color:#0ea5e9;"></i>Watering frequency</div>
+        <div class="flex items-center gap-2"><i data-lucide="wind" class="w-4 h-4" style="color:var(--accent);"></i>Humidity need</div>
+        <div class="flex items-center gap-2"><i data-lucide="thermometer" class="w-4 h-4" style="color:#f43f5e;"></i>Temperature</div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- COMPARE TRAY -->
+<section id="cmp-tray" class="max-w-7xl mx-auto px-5 mb-5 hidden">
+  <div class="panel p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="serif text-lg font-[700] text-accent">Compare (up to 3)</h2>
+      <button id="cmp-clear" class="text-xs text-accent underline decoration-dotted">Clear</button>
+    </div>
+    <div id="cmp-table" class="overflow-x-auto scroll-thin"></div>
+  </div>
+</section>
+
+<!-- RESULTS GRID -->
+<main class="max-w-7xl mx-auto px-5 pb-16">
+  <div class="flex items-center justify-between mb-3">
+    <div id="result-count" class="text-sm text-muted">—</div>
+  </div>
+  <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+  <div id="empty" class="hidden text-center py-16 text-muted">
+    <i data-lucide="leaf-off" class="w-8 h-8 mx-auto mb-2"></i>
+    <div>No Hoyas match those filters.</div>
+  </div>
+</main>
+
+</div><!-- /view-catalog -->
+
+<!-- PLANT CARE VIEW -->
+<div id="view-care" class="hidden">
+<section class="max-w-5xl mx-auto px-5 pb-16">
+
+  <!-- Intro -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-xl grid place-items-center shrink-0" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="heart-pulse" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold" style="color:var(--text);">Hoya Plant Care Guide</h2>
+        <p class="text-sm mt-1" style="color:var(--text-muted);">Hoyas come in a huge variety, are easy to care for, bloom, don't need frequent repotting, are non-toxic to pets, and are generally compact. They're often called wax plants because of their thick, waxy leaves &mdash; though many species have thinner, softer foliage.</p>
+        <p class="text-xs mt-2" style="color:var(--text-dim);">Care tips adapted from <a href="https://hoyatreasures.com/pages/caring-for-hoya" target="_blank" rel="noopener" class="underline" style="color:var(--accent);">Hoya Treasures</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Care cards grid -->
+  <div class="grid md:grid-cols-2 gap-5 mb-6">
+
+    <!-- Soil & Medium -->
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+          <i data-lucide="mountain" class="w-5 h-5"></i>
+        </div>
+        <h3 class="font-semibold" style="color:var(--text);">Soil &amp; Medium</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">Many growers use a <strong>DIY pon mix</strong> (semi-hydroponic) or a chunky, well-draining aroid mix. Pon works especially well in self-watering systems.</p>
+      <ul class="text-sm space-y-1" style="color:var(--text-muted);">
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Pumice, perlite, leca, or pon for drainage</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Orchid bark + perlite + potting soil works great</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Hoyas love being root-bound &mdash; don't overpot</li>
+      </ul>
+    </div>
+
+    <!-- Watering -->
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+          <i data-lucide="droplets" class="w-5 h-5"></i>
+        </div>
+        <h3 class="font-semibold" style="color:var(--text);">Watering</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">Water when the pot feels lighter than when it's wet. In pon, you can visually see when it's dry and chalky.</p>
+      <ul class="text-sm space-y-1" style="color:var(--text-muted);">
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Self-watering pots with wicking systems work best with pon</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Without self-watering, water every other day or mist daily</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Roots should <em>not</em> sit directly in standing water</li>
+      </ul>
+    </div>
+
+    <!-- Light, Temp & Humidity -->
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+          <i data-lucide="sun" class="w-5 h-5"></i>
+        </div>
+        <h3 class="font-semibold" style="color:var(--text);">Light, Temperature &amp; Humidity</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">Most hoyas thrive in bright indirect light. Each species card in the catalog lists its specific preferences.</p>
+      <div class="grid grid-cols-3 gap-3 mt-3">
+        <div class="text-center p-2 rounded-lg" style="background:var(--bg-subtle);">
+          <div class="text-lg font-bold" style="color:var(--accent);">&#9728;</div>
+          <div class="text-xs font-medium" style="color:var(--text);">Light</div>
+          <div class="text-xs" style="color:var(--text-muted);">Bright indirect</div>
+        </div>
+        <div class="text-center p-2 rounded-lg" style="background:var(--bg-subtle);">
+          <div class="text-lg font-bold" style="color:var(--accent);">73&ndash;85&deg;F</div>
+          <div class="text-xs font-medium" style="color:var(--text);">Temperature</div>
+          <div class="text-xs" style="color:var(--text-muted);">Ideal range</div>
+        </div>
+        <div class="text-center p-2 rounded-lg" style="background:var(--bg-subtle);">
+          <div class="text-lg font-bold" style="color:var(--accent);">60&ndash;73%</div>
+          <div class="text-xs font-medium" style="color:var(--text);">Humidity</div>
+          <div class="text-xs" style="color:var(--text-muted);">Sweet spot</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fertilizer -->
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+          <i data-lucide="flask-conical" class="w-5 h-5"></i>
+        </div>
+        <h3 class="font-semibold" style="color:var(--text);">Fertilizer</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">Fertilize lightly with each watering. Rotate fertilizers for balanced nutrition, then flush every fourth week.</p>
+      <div class="text-sm space-y-2" style="color:var(--text-muted);">
+        <div class="p-2 rounded-lg flex items-center gap-3" style="background:var(--bg-subtle);">
+          <span class="font-mono text-xs px-2 py-0.5 rounded" style="background:var(--accent-soft);color:var(--accent-ink);">Wk 1</span>
+          <span>Super Thrive Foliage Pro &mdash; &frac12; tsp</span>
+        </div>
+        <div class="p-2 rounded-lg flex items-center gap-3" style="background:var(--bg-subtle);">
+          <span class="font-mono text-xs px-2 py-0.5 rounded" style="background:var(--accent-soft);color:var(--accent-ink);">Wk 2</span>
+          <span>Tezula Plants K-Lite Formula &mdash; 1 scoop</span>
+        </div>
+        <div class="p-2 rounded-lg flex items-center gap-3" style="background:var(--bg-subtle);">
+          <span class="font-mono text-xs px-2 py-0.5 rounded" style="background:var(--accent-soft);color:var(--accent-ink);">Wk 3</span>
+          <span>Alternate / rotate + Hormex rooting hormone &frac14; tsp</span>
+        </div>
+        <div class="p-2 rounded-lg flex items-center gap-3" style="background:var(--bg-subtle);">
+          <span class="font-mono text-xs px-2 py-0.5 rounded" style="background:var(--accent-soft);color:var(--accent-ink);">Wk 4</span>
+          <span>Plain water only &mdash; flush mineral buildup</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /care cards grid -->
+
+  <!-- New Plant Acclimation -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="package-open" class="w-5 h-5"></i>
+      </div>
+      <h3 class="font-semibold" style="color:var(--text);">New Plant Acclimation</h3>
+    </div>
+    <p class="text-sm mb-4" style="color:var(--text-muted);">When you receive a new hoya, follow these steps to give it the best start:</p>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="p-4 rounded-xl text-center" style="background:var(--bg-subtle);">
+        <div class="step-num mx-auto mb-2">1</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Unbox &amp; Inspect</h4>
+        <p class="text-xs" style="color:var(--text-muted);">Check for pests or damage. Give it a little water and light after days in a dark box.</p>
+      </div>
+      <div class="p-4 rounded-xl text-center" style="background:var(--bg-subtle);">
+        <div class="step-num mx-auto mb-2">2</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Quarantine 3 Weeks</h4>
+        <p class="text-xs" style="color:var(--text-muted);">Keep away from your collection. Don't repot, trim leaves, or cut roots during this period.</p>
+      </div>
+      <div class="p-4 rounded-xl text-center" style="background:var(--bg-subtle);">
+        <div class="step-num mx-auto mb-2">3</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Don't Stress</h4>
+        <p class="text-xs" style="color:var(--text-muted);">A few broken or yellowing leaves are 100% normal from shipping stress. They'll recover.</p>
+      </div>
+      <div class="p-4 rounded-xl text-center" style="background:var(--bg-subtle);">
+        <div class="step-num mx-auto mb-2">4</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Repot (Optional)</h4>
+        <p class="text-xs" style="color:var(--text-muted);">After 3 weeks, move to your preferred mix. Keep the same pot size &mdash; only go up 1&Prime; when root-bound.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pest Management -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="bug" class="w-5 h-5"></i>
+      </div>
+      <h3 class="font-semibold" style="color:var(--text);">Pest Prevention &amp; Treatment</h3>
+    </div>
+    <p class="text-sm mb-4" style="color:var(--text-muted);">Spray all plants weekly for pests &mdash; whether you see signs of them or not. Prevention is far easier than treatment.</p>
+
+    <div class="grid md:grid-cols-2 gap-5">
+      <!-- Prevention -->
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <h4 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color:var(--accent);">
+          <i data-lucide="shield-check" class="w-4 h-4"></i> Preventive (Weekly)
+        </h4>
+        <div class="text-sm space-y-2" style="color:var(--text-muted);">
+          <div class="p-2 rounded-lg" style="background:var(--bg-elev);">
+            <strong>PureCrop</strong> &mdash; 4 Tbsp per gallon of water. Targets root mealies. Adjust pH (it raises pH significantly). Leave lights on while drying.
+          </div>
+          <div class="p-2 rounded-lg" style="background:var(--bg-elev);">
+            <strong>Horticultural Oil</strong> &mdash; 2 tsp per gallon of water. Apply after PureCrop dries. Turn lights off overnight.
+          </div>
+          <div class="p-2 rounded-lg" style="background:var(--bg-elev);">
+            <strong>Kontos</strong> (systemic) &mdash; &frac14; tsp per gallon, every 3 weeks. Takes ~3 weeks to activate. Good long-term preventative.
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Infestation -->
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <h4 class="text-sm font-semibold mb-3 flex items-center gap-2" style="color:#ef4444;">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i> Active Infestation
+        </h4>
+        <div class="text-sm space-y-2" style="color:var(--text-muted);">
+          <div class="p-2 rounded-lg" style="background:var(--bg-elev);">
+            <strong>BioAdvanced Complete Insect Killer</strong> for Soil &amp; Turf &mdash; 1 Tbsp per gallon of water. Kills at all life-cycle stages.
+          </div>
+          <div class="p-3 rounded-lg text-xs" style="background:var(--bg-elev);border-left:3px solid #ef4444;">
+            <strong>Safety:</strong> Wear mask &amp; gloves. Spray outside if possible. Toxic to inhale. Do not use on outdoor flowering plants &mdash; harmful to pollinators.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Tips -->
+  <div class="panel p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="lightbulb" class="w-5 h-5"></i>
+      </div>
+      <h3 class="font-semibold" style="color:var(--text);">Quick Tips for Faster Growth</h3>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);color:var(--text-muted);">
+        <strong style="color:var(--text);">Keep them root-bound</strong><br>
+        Hoyas bloom and grow better when snug. Only go up 1&Prime; when roots push all sides.
+      </div>
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);color:var(--text-muted);">
+        <strong style="color:var(--text);">Humidity 60&ndash;73%</strong><br>
+        Higher humidity = faster growth. Use a humidifier or group plants together.
+      </div>
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);color:var(--text-muted);">
+        <strong style="color:var(--text);">Bright indirect light</strong><br>
+        More light = more growth &amp; blooms. Grow lights work great for supplementing.
+      </div>
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);color:var(--text-muted);">
+        <strong style="color:var(--text);">Fertilize consistently</strong><br>
+        A little with each watering beats heavy monthly doses. Rotate products.
+      </div>
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);color:var(--text-muted);">
+        <strong style="color:var(--text);">Self-watering pots</strong><br>
+        Wicking systems with pon keep moisture perfectly consistent.
+      </div>
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);color:var(--text-muted);">
+        <strong style="color:var(--text);">Weekly pest spray</strong><br>
+        Prevention is everything. Spray whether you see pests or not.
+      </div>
+    </div>
+  </div>
+
+</section>
+</div><!-- /view-care -->
+
+<!-- PROPAGATION TUTORIAL VIEW -->
+<div id="view-propagation" class="hidden">
+<section class="max-w-5xl mx-auto px-5 pb-16">
+
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-xl grid place-items-center shrink-0" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="sprout" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h2 class="serif text-2xl md:text-3xl font-[800]" style="color:var(--text);">How to Propagate <span class="text-accent">Hoyas</span></h2>
+        <p class="text-sm text-muted mt-1">Hoyas are among the easiest houseplants to multiply. Master these methods and you'll never run out of plants to share.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Method cards -->
+  <div class="grid md:grid-cols-2 gap-4 mb-8">
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="droplet" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Water Propagation</h3><span class="badge badge-beg ml-auto">Beginner</span></div>
+      <p class="text-sm text-muted mb-3">The classic — watch roots form in real time.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">Most vining Hoyas (carnosa, pubicalyx, australis, kerrii, obovata).</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">Root time</div>
+      <p class="text-sm">2–6 weeks</p>
+    </div>
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="layers" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Sphagnum Moss</h3><span class="badge badge-beg ml-auto">Beginner</span></div>
+      <p class="text-sm text-muted mb-3">Highest success rate, especially for fussy species.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">H. linearis, serpens, polyneura, undulata, curtisii, retusa.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">Root time</div>
+      <p class="text-sm">3–8 weeks</p>
+    </div>
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="flower" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Perlite / LECA</h3><span class="badge badge-int ml-auto">Intermediate</span></div>
+      <p class="text-sm text-muted mb-3">Best of both worlds: moisture + airflow, no rot.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">Thick-stemmed species (pachyclada, kerrii, macrophylla).</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">Root time</div>
+      <p class="text-sm">3–6 weeks</p>
+    </div>
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="git-branch" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Air Layering</h3><span class="badge badge-adv ml-auto">Advanced</span></div>
+      <p class="text-sm text-muted mb-3">For rare or expensive cuttings you can't afford to lose.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">H. macgillivrayi, imbricata, lambii, undulata.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">Root time</div>
+      <p class="text-sm">4–8 weeks (before cutting)</p>
+    </div>
+  </div>
+
+  <!-- Step-by-step -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <h3 class="serif text-xl font-[800] mb-1" style="color:var(--text);">Step-by-Step: Water Propagation</h3>
+    <p class="text-sm text-muted mb-5">The foolproof method for 90% of Hoyas — and the most satisfying to watch.</p>
+
+    <ol class="space-y-5">
+      <li class="flex gap-4">
+        <div class="step-num">1</div>
+        <div>
+          <h4 class="font-[600] mb-1" style="color:var(--text);">Choose a healthy cutting</h4>
+          <p class="text-sm text-muted">Pick a vine with at least <strong style="color:var(--text);">2–3 nodes</strong> (the bumps where leaves attach). Avoid flowering spurs — leave those intact so your mother plant can rebloom. Use clean, sharp snips and cut about ½" below a node.</p>
+        </div>
+      </li>
+      <li class="flex gap-4">
+        <div class="step-num">2</div>
+        <div>
+          <h4 class="font-[600] mb-1" style="color:var(--text);">Strip the lower leaves</h4>
+          <p class="text-sm text-muted">Remove leaves from the bottom 1–2 nodes. These nodes are where roots will emerge — leaves submerged in water will rot and cloud everything.</p>
+        </div>
+      </li>
+      <li class="flex gap-4">
+        <div class="step-num">3</div>
+        <div>
+          <h4 class="font-[600] mb-1" style="color:var(--text);">Callous (optional but recommended)</h4>
+          <p class="text-sm text-muted">Let the fresh cut air-dry for 1–2 hours. This seals the wound and dramatically reduces rot, especially for thick-stemmed species like <em>H. kerrii</em> and <em>H. pachyclada</em>.</p>
+        </div>
+      </li>
+      <li class="flex gap-4">
+        <div class="step-num">4</div>
+        <div>
+          <h4 class="font-[600] mb-1" style="color:var(--text);">Submerge the nodes</h4>
+          <p class="text-sm text-muted">Place in room-temperature filtered or rainwater with bare nodes fully submerged and leaves above the water line. A clear glass jar lets you monitor progress.</p>
+        </div>
+      </li>
+      <li class="flex gap-4">
+        <div class="step-num">5</div>
+        <div>
+          <h4 class="font-[600] mb-1" style="color:var(--text);">Warmth + bright indirect light</h4>
+          <p class="text-sm text-muted">Target <strong style="color:var(--text);">70–80°F</strong>. A heat mat speeds things up noticeably. Bright indirect light — never direct sun, which cooks roots in water.</p>
+        </div>
+      </li>
+      <li class="flex gap-4">
+        <div class="step-num">6</div>
+        <div>
+          <h4 class="font-[600] mb-1" style="color:var(--text);">Refresh water weekly</h4>
+          <p class="text-sm text-muted">Swap water every 5–7 days to keep oxygen levels up and prevent stagnation. If it turns cloudy, change sooner and give the cutting a quick rinse.</p>
+        </div>
+      </li>
+      <li class="flex gap-4">
+        <div class="step-num">7</div>
+        <div>
+          <h4 class="font-[600] mb-1" style="color:var(--text);">Wait for 1–2" of roots</h4>
+          <p class="text-sm text-muted">Don't pot up too early. You want roots with visible fine hairs and multiple branches — usually 2–6 weeks in.</p>
+        </div>
+      </li>
+      <li class="flex gap-4">
+        <div class="step-num">8</div>
+        <div>
+          <h4 class="font-[600] mb-1" style="color:var(--text);">Transition to soil gradually</h4>
+          <p class="text-sm text-muted">Water roots are structurally different from soil roots. Pot into a chunky, airy mix (orchid bark + perlite + a little coco coir), keep evenly moist for the first 2 weeks, then resume normal Hoya care.</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+
+  <!-- Do's and Don'ts -->
+  <div class="grid md:grid-cols-2 gap-4 mb-6">
+    <div class="panel p-5">
+      <h3 class="serif text-lg font-[700] mb-3 flex items-center gap-2" style="color:var(--text);"><i data-lucide="check-circle-2" class="w-5 h-5" style="color:var(--accent);"></i>Do</h3>
+      <ul class="space-y-2 text-sm">
+        <li class="flex gap-2"><span class="text-accent mt-0.5">✓</span><span>Use cuttings with <strong>2+ nodes</strong> — single-leaf cuttings rarely vine.</span></li>
+        <li class="flex gap-2"><span class="text-accent mt-0.5">✓</span><span>Propagate in <strong>spring or summer</strong> during active growth.</span></li>
+        <li class="flex gap-2"><span class="text-accent mt-0.5">✓</span><span>Keep humidity <strong>60–80%</strong> (a plastic bag or prop box works).</span></li>
+        <li class="flex gap-2"><span class="text-accent mt-0.5">✓</span><span>Use <strong>bottom heat</strong> (heat mat) — it halves rooting time.</span></li>
+        <li class="flex gap-2"><span class="text-accent mt-0.5">✓</span><span>Label with date + species so you can track what's working.</span></li>
+      </ul>
+    </div>
+    <div class="panel p-5">
+      <h3 class="serif text-lg font-[700] mb-3 flex items-center gap-2" style="color:var(--text);"><i data-lucide="x-circle" class="w-5 h-5" style="color:#f43f5e;"></i>Don't</h3>
+      <ul class="space-y-2 text-sm">
+        <li class="flex gap-2"><span style="color:#f43f5e;" class="mt-0.5">✗</span><span>Cut through or remove flowering <strong>peduncles</strong> — Hoyas rebloom on the same spur for years.</span></li>
+        <li class="flex gap-2"><span style="color:#f43f5e;" class="mt-0.5">✗</span><span>Propagate single heart leaves of <em>H. kerrii</em> and expect a vine (they almost never grow).</span></li>
+        <li class="flex gap-2"><span style="color:#f43f5e;" class="mt-0.5">✗</span><span>Use dense potting soil — Hoyas are epiphytes and will rot in it.</span></li>
+        <li class="flex gap-2"><span style="color:#f43f5e;" class="mt-0.5">✗</span><span>Unpot freshly rooted cuttings to "check" progress — disturbance stalls them.</span></li>
+        <li class="flex gap-2"><span style="color:#f43f5e;" class="mt-0.5">✗</span><span>Over-fertilize new roots — wait 4+ weeks after potting up.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Troubleshooting -->
+  <div class="panel p-6 md:p-8">
+    <h3 class="serif text-xl font-[800] mb-4" style="color:var(--text);">Troubleshooting</h3>
+    <div class="space-y-3">
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);">
+        <summary class="font-[600] flex items-center justify-between" style="color:var(--text);">Cutting is mushy or blackening <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary>
+        <p class="text-sm text-muted mt-2">Rot, usually from a pathogen entering the cut or from cold water. Trim back above the damage until you hit clean green tissue, dust with cinnamon (a natural antifungal), let it callous for a few hours, then restart in fresh water.</p>
+      </details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);">
+        <summary class="font-[600] flex items-center justify-between" style="color:var(--text);">No roots after 6+ weeks <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary>
+        <p class="text-sm text-muted mt-2">Most likely too cold. Hoyas stall below 65°F. Move the prop to a warmer spot or add a heat mat. Also check that at least one node is actually submerged or in contact with moist medium.</p>
+      </details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);">
+        <summary class="font-[600] flex items-center justify-between" style="color:var(--text);">Leaves wrinkling on the cutting <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary>
+        <p class="text-sm text-muted mt-2">Normal — the cutting is drawing on leaf reserves while rooting. Boost humidity (loose plastic bag over the setup) and it'll recover once roots establish.</p>
+      </details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);">
+        <summary class="font-[600] flex items-center justify-between" style="color:var(--text);">Roots in water but declining after potting <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary>
+        <p class="text-sm text-muted mt-2">Water roots shocked by soil. Keep the mix lightly moist (not wet) for 2 weeks, raise humidity, and avoid fertilizer. Some water roots will die back and be replaced by new soil-adapted ones — this is normal.</p>
+      </details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);">
+        <summary class="font-[600] flex items-center justify-between" style="color:var(--text);">Algae in the propagation jar <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary>
+        <p class="text-sm text-muted mt-2">Harmless but a sign light is too strong. Move to slightly less bright spot, switch to an opaque container, or wrap the jar in paper.</p>
+      </details>
+    </div>
+  </div>
+</section>
+</div><!-- /view-propagation -->
+
+<!-- DETAIL MODAL -->
+<div id="modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="absolute inset-0 modal-backdrop" data-close></div>
+  <div class="relative panel max-w-3xl w-full max-h-[90vh] overflow-auto scroll-thin fade-in">
+    <button class="absolute top-3 right-3 w-9 h-9 rounded-full grid place-items-center" style="background:var(--bg-subtle);color:var(--text);" data-close aria-label="Close details">
+      <i data-lucide="x" class="w-5 h-5"></i>
+    </button>
+    <div id="modal-body" class="p-6 md:p-8"></div>
+  </div>
+</div>
+
+<footer class="max-w-7xl mx-auto px-5 pb-10 text-xs text-dim">
+  <p>Dataset curated from commonly available US nursery & collector sources. Rankings are approximate and reflect general cultivation prevalence. Images fetched from Wikimedia Commons where available.</p>
+</footer>
+
+<script>
+/* =========================================================================
+   HOYA DATASET — edit or extend this array to change the dashboard content.
+   Fields:
+     rank, sci, common, origin, region, habitat, elev,
+     light, water, humidity, temp, soil, fert,
+     prop, propDiff, rootTime,
+     bloomColor, fragrant, peduncle, bloomSeason,
+     habit, size, growth, difficulty, fact, img
+   ========================================================================= */
+const HOYAS = [
+  {rank:1,sci:"Hoya carnosa",common:"Wax Plant",origin:"Southern China, Taiwan, N. Australia",region:"SE Asia",habitat:"Rainforest epiphyte",elev:"0–900 m",light:"Bright indirect",water:"When dry",humidity:"40–60%",temp:"60–80°F",soil:"Chunky aroid mix",fert:"Monthly, spring–fall",prop:"Stem cuttings (water/sphagnum)",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms on same spur",bloomSeason:"Spring–summer",habit:"Vining",size:"6–12 ft",growth:"Fast",difficulty:"Beginner",fact:"The original ‘Porcelain Flower’ grown in homes since the 1800s."},
+  {rank:2,sci:"Hoya kerrii",common:"Sweetheart Hoya",origin:"SE Asia (Thailand, Vietnam, Cambodia)",region:"SE Asia",habitat:"Tropical forest",elev:"200–800 m",light:"Bright indirect",water:"Sparingly",humidity:"40–60%",temp:"65–85°F",soil:"Very well-draining",fert:"Lightly monthly",prop:"Cuttings with a node (heart leaves alone rarely grow)",propDiff:"Moderate",rootTime:"4–8 weeks",bloomColor:"White/pink",fragrant:true,peduncle:"Thick, persistent",bloomSeason:"Summer",habit:"Vining",size:"3–10 ft",growth:"Slow–moderate",difficulty:"Beginner",fact:"Single-leaf ‘heart’ cuttings are popular but won’t vine."},
+  {rank:3,sci:"Hoya pubicalyx",common:"Silver Pink Hoya",origin:"Philippines",region:"SE Asia",habitat:"Lowland forest",elev:"50–500 m",light:"Bright indirect to some direct",water:"When dry",humidity:"50%",temp:"65–85°F",soil:"Chunky mix",fert:"Bi-weekly in growth",prop:"Stem cuttings",propDiff:"Easy",rootTime:"2–3 weeks",bloomColor:"Dusty pink to near-black",fragrant:true,peduncle:"Reblooms",bloomSeason:"Spring–summer",habit:"Vining",size:"8–20 ft",growth:"Very fast",difficulty:"Beginner",fact:"One of the fastest-growing Hoyas; many cultivars (Royal Hawaiian, Red Buttons)."},
+  {rank:4,sci:"Hoya australis",common:"Common Waxflower",origin:"Australia, Pacific Is.",region:"Australia",habitat:"Coastal & rainforest",elev:"0–600 m",light:"Bright indirect to direct",water:"When dry",humidity:"40–60%",temp:"60–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"White w/ red center",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer–fall",habit:"Vining",size:"10–30 ft",growth:"Fast",difficulty:"Beginner",fact:"Intensely fragrant at night — chocolate/honey notes."},
+  {rank:5,sci:"Hoya obovata",common:"Round Leaf Hoya",origin:"India, Indonesia, Fiji",region:"SE Asia",habitat:"Tropical forest",elev:"100–800 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Pale pink w/ red center",fragrant:true,peduncle:"Reblooms",bloomSeason:"Spring–summer",habit:"Vining",size:"6–15 ft",growth:"Moderate",difficulty:"Beginner",fact:"Silver flecking increases in bright light."},
+  {rank:6,sci:"Hoya linearis",common:"Linear-Leaf Hoya",origin:"Himalayas (India, Nepal)",region:"S. Asia",habitat:"Cool montane epiphyte",elev:"1500–2500 m",light:"Bright indirect",water:"Keep lightly moist",humidity:"60–80%",temp:"55–75°F",soil:"Mossy, airy",fert:"Light, frequent",prop:"Cuttings in sphagnum",propDiff:"Moderate",rootTime:"3–6 weeks",bloomColor:"White",fragrant:true,peduncle:"Reblooms",bloomSeason:"Fall",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Advanced",fact:"Prefers cool nights — dislikes US summer heat."},
+  {rank:7,sci:"Hoya carnosa 'Compacta'",common:"Hindu Rope",origin:"Cultivar of H. carnosa",region:"SE Asia",habitat:"Cultivar",elev:"n/a",light:"Bright indirect",water:"When fully dry",humidity:"40–50%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"4–8 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–5 ft",growth:"Slow",difficulty:"Beginner",fact:"Curled leaves hold water — don’t overwater!"},
+  {rank:8,sci:"Hoya curtisii",common:"Fung Wax Flower",origin:"Malaysia, Philippines, Thailand",region:"SE Asia",habitat:"Lowland epiphyte",elev:"100–600 m",light:"Bright indirect",water:"When mostly dry",humidity:"60%",temp:"65–85°F",soil:"Fine bark mix",fert:"Light monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"3–5 weeks",bloomColor:"Yellow-green",fragrant:false,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"1–3 ft",growth:"Slow",difficulty:"Intermediate",fact:"Tiny silver-splashed leaves look like stained glass."},
+  {rank:9,sci:"Hoya lanceolata ssp. bella",common:"Miniature Wax Plant",origin:"Himalayas, Myanmar",region:"S. Asia",habitat:"Cool epiphyte",elev:"1000–1800 m",light:"Bright indirect",water:"Lightly moist",humidity:"60–70%",temp:"60–80°F",soil:"Airy mossy mix",fert:"Light frequent",prop:"Cuttings",propDiff:"Moderate",rootTime:"3–6 weeks",bloomColor:"White w/ magenta crown",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"1–2 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Best grown as a basket plant — resents dry air."},
+  {rank:10,sci:"Hoya carnosa 'Krimson Queen'",common:"Variegated Wax Plant",origin:"Cultivar",region:"SE Asia",habitat:"Cultivar",elev:"n/a",light:"Bright indirect",water:"When dry",humidity:"40–60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings (green sections)",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Beginner",fact:"Creamy white leaf margins with pink new growth."},
+  {rank:11,sci:"Hoya carnosa 'Krimson Princess'",common:"Tricolor Hoya",origin:"Cultivar",region:"SE Asia",habitat:"Cultivar",elev:"n/a",light:"Bright indirect",water:"When dry",humidity:"40–60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings (green sections)",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Beginner",fact:"Inverse of Krimson Queen — cream centers, green edges."},
+  {rank:12,sci:"Hoya retusa",common:"Grass-Leaved Hoya",origin:"India",region:"S. Asia",habitat:"Epiphyte",elev:"500–1500 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"60–85°F",soil:"Airy bark mix",fert:"Light monthly",prop:"Cuttings in sphagnum",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"White w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–3 ft",growth:"Slow",difficulty:"Intermediate",fact:"Solitary flowers (not umbels) — unusual for Hoya."},
+  {rank:13,sci:"Hoya macrophylla",common:"Big Leaf Hoya",origin:"Indonesia, Malaysia",region:"SE Asia",habitat:"Lowland forest",elev:"0–800 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky aroid mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"White/cream",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Beginner",fact:"Prominent venation — ‘Albo Marginata’ cultivar is highly sought."},
+  {rank:14,sci:"Hoya lacunosa",common:"Cinnamon Hoya",origin:"Malaysia, Thailand, Indonesia",region:"SE Asia",habitat:"Humid forest",elev:"300–1200 m",light:"Medium to bright indirect",water:"Keep lightly moist",humidity:"60–70%",temp:"65–85°F",soil:"Airy mix",fert:"Bi-weekly in growth",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"White",fragrant:true,peduncle:"Reblooms",bloomSeason:"Year-round",habit:"Trailing",size:"2–4 ft",growth:"Fast",difficulty:"Beginner",fact:"Flowers smell like cinnamon, especially at night."},
+  {rank:15,sci:"Hoya shepherdii",common:"String Bean Hoya",origin:"Himalayas",region:"S. Asia",habitat:"Cool forest",elev:"900–1800 m",light:"Bright indirect",water:"When mostly dry",humidity:"50–60%",temp:"60–80°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"White w/ pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"3–6 ft",growth:"Moderate",difficulty:"Beginner",fact:"Long bean-shaped leaves hang beautifully from baskets."},
+  {rank:16,sci:"Hoya multiflora",common:"Shooting Stars Hoya",origin:"Malaysia, Thailand",region:"SE Asia",habitat:"Lowland forest",elev:"0–500 m",light:"Bright indirect",water:"Keep evenly moist",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Yellow-white",fragrant:true,peduncle:"Fast rebloomer",bloomSeason:"Year-round",habit:"Upright shrubby",size:"2–4 ft",growth:"Fast",difficulty:"Beginner",fact:"One of the few upright, shrub-form Hoyas."},
+  {rank:17,sci:"Hoya cumingiana",common:"Cuming's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"100–800 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Yellow w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Upright shrubby",size:"2–3 ft",growth:"Moderate",difficulty:"Beginner",fact:"Great compact bloomer for small spaces."},
+  {rank:18,sci:"Hoya wayetii",common:"Wayetii Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"100–700 m",light:"Bright indirect",water:"When dry",humidity:"50%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Red-burgundy",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Beginner",fact:"Often confused with H. kentiana — wayetii has darker leaf margins."},
+  {rank:19,sci:"Hoya kentiana",common:"Kentiana Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"100–700 m",light:"Bright indirect",water:"When dry",humidity:"50%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Dark red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Beginner",fact:"Variegated forms (‘Variegata’) are strikingly tricolor."},
+  {rank:20,sci:"Hoya 'Rosita'",common:"Rosita Hoya",origin:"Hybrid (wayetii × tsangii)",region:"SE Asia",habitat:"Hybrid",elev:"n/a",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Deep red-pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Beginner",fact:"New growth emerges a gorgeous reddish-bronze."},
+  {rank:21,sci:"Hoya 'Mathilde'",common:"Mathilde Hoya",origin:"Hybrid (serpens × carnosa)",region:"SE Asia",habitat:"Hybrid",elev:"n/a",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–80°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"White w/ pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"Round silver-splashed leaves; easier than H. serpens parent."},
+  {rank:22,sci:"Hoya 'Sunrise'",common:"Sunrise Hoya",origin:"Hybrid (obscura × carnosa)",region:"SE Asia",habitat:"Hybrid",elev:"n/a",light:"Bright indirect to direct",water:"When dry",humidity:"50%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Pink-red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"Leaves ‘sun stress’ to brilliant red in bright light."},
+  {rank:23,sci:"Hoya fitchii",common:"Fitch's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest epiphyte",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Peach to pink",fragrant:false,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"Color-changing blooms go from pale yellow to rosy pink."},
+  {rank:24,sci:"Hoya serpens",common:"Serpens Hoya",origin:"Himalayas",region:"S. Asia",habitat:"Cool montane",elev:"1500–2500 m",light:"Bright indirect",water:"Lightly moist",humidity:"70–80%",temp:"55–75°F",soil:"Airy mossy mix",fert:"Light frequent",prop:"Cuttings in sphagnum",propDiff:"Hard",rootTime:"4–8 weeks",bloomColor:"Fuzzy green-white",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Slow",difficulty:"Advanced",fact:"Fuzzy pea-green blooms — loves terrarium culture."},
+  {rank:25,sci:"Hoya bilobata",common:"Bilobata Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"100–500 m",light:"Bright indirect",water:"When dry",humidity:"50%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Red",fragrant:false,peduncle:"Fast rebloomer",bloomSeason:"Year-round",habit:"Trailing",size:"1–3 ft",growth:"Moderate",difficulty:"Beginner",fact:"Blooms very young — tiny red waxy flowers."},
+  {rank:26,sci:"Hoya burtoniae",common:"Burton's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"100–500 m",light:"Bright indirect to direct",water:"When dry",humidity:"50%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–3 weeks",bloomColor:"Burgundy w/ yellow center",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Beginner",fact:"Fuzzy leaves turn coppery red in strong light."},
+  {rank:27,sci:"Hoya caudata",common:"Caudata Hoya",origin:"Malaysia, Sumatra, Borneo",region:"SE Asia",habitat:"Lowland forest",elev:"0–600 m",light:"Bright indirect",water:"When mostly dry",humidity:"60–70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"White w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Leaves are heavily silver-splashed and textured."},
+  {rank:28,sci:"Hoya crassicaulis",common:"Thick Stem Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–700 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Cream",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Beginner",fact:"Notably thick stems store water like a succulent."},
+  {rank:29,sci:"Hoya diversifolia",common:"Diversifolia Hoya",origin:"Malaysia, Thailand",region:"SE Asia",habitat:"Mangrove & lowland",elev:"0–400 m",light:"Bright indirect to direct",water:"When dry",humidity:"50–60%",temp:"65–90°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"10–20 ft",growth:"Fast",difficulty:"Beginner",fact:"Tolerates salt spray — grows on mangroves in the wild."},
+  {rank:30,sci:"Hoya elliptica",common:"Elliptica Hoya",origin:"Thailand, Malaysia",region:"SE Asia",habitat:"Rainforest",elev:"100–800 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"3–5 weeks",bloomColor:"Pale pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Prized for dramatic silvery leaf venation."},
+  {rank:31,sci:"Hoya finlaysonii",common:"Finlayson's Hoya",origin:"Thailand, Malaysia",region:"SE Asia",habitat:"Lowland forest",elev:"0–800 m",light:"Bright indirect",water:"When dry",humidity:"60–70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"White w/ red center",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Slow–moderate",difficulty:"Intermediate",fact:"Large leaves with bold dark-green vein network."},
+  {rank:32,sci:"Hoya globulosa",common:"Globulosa Hoya",origin:"India, China, Vietnam",region:"S. Asia",habitat:"Montane forest",elev:"800–1800 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"60–80°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Cream-yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Slow",difficulty:"Intermediate",fact:"Large ribbed leaves look almost corrugated."},
+  {rank:33,sci:"Hoya heuschkeliana",common:"Heuschkeliana Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Pink urn-shaped",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Beginner",fact:"Tiny pitcher-shaped flowers smell like butterscotch."},
+  {rank:34,sci:"Hoya imbricata",common:"Shingle Hoya",origin:"Philippines, Indonesia",region:"SE Asia",habitat:"Ant-plant on tree trunks",elev:"100–800 m",light:"Bright indirect",water:"Evenly moist",humidity:"70–80%",temp:"70–85°F",soil:"Mounted on bark",fert:"Light foliar",prop:"Cuttings on mount",propDiff:"Hard",rootTime:"6–10 weeks",bloomColor:"Pink",fragrant:false,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Climbing shingler",size:"3–6 ft",growth:"Slow",difficulty:"Advanced",fact:"Round leaves lie flat against a mount — houses ants in the wild."},
+  {rank:35,sci:"Hoya incrassata",common:"Incrassata Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"100–800 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Cream/yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Beginner",fact:"Variegated form has showy pink/cream leaves."},
+  {rank:36,sci:"Hoya polyneura",common:"Fishtail Hoya",origin:"Himalayas",region:"S. Asia",habitat:"Cool montane",elev:"1200–2200 m",light:"Bright indirect",water:"Lightly moist",humidity:"60–70%",temp:"55–78°F",soil:"Airy mossy mix",fert:"Light frequent",prop:"Cuttings in sphagnum",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"White/yellow w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Slow",difficulty:"Intermediate",fact:"Leaves look like fishbones — unique in the genus."},
+  {rank:37,sci:"Hoya latifolia",common:"Dinner Plate Hoya",origin:"Malaysia, Indonesia",region:"SE Asia",habitat:"Lowland forest",elev:"0–500 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Pale pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Beginner",fact:"Among the largest leaves of any Hoya — up to 10 in."},
+  {rank:38,sci:"Hoya macgillivrayi",common:"Macgillivray's Hoya",origin:"N. Queensland, Australia",region:"Australia",habitat:"Tropical forest",elev:"100–600 m",light:"Bright indirect to direct",water:"When dry",humidity:"50–60%",temp:"65–90°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Dark red-purple",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"8–15 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Huge, dramatic flowers — a ‘holy grail’ for collectors."},
+  {rank:39,sci:"Hoya megalaster",common:"Megalaster Hoya",origin:"New Guinea",region:"Pacific",habitat:"Rainforest",elev:"200–1000 m",light:"Bright indirect",water:"When dry",humidity:"70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Deep red",fragrant:false,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Enormous star-shaped red flowers."},
+  {rank:40,sci:"Hoya 'Memoria' (gracilis)",common:"Memoria Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"50%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Pink w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"3–6 ft",growth:"Moderate",difficulty:"Beginner",fact:"Formerly sold as H. gracilis; new leaves are freckled."},
+  {rank:41,sci:"Hoya meredithii",common:"Meredith's Hoya",origin:"Borneo",region:"SE Asia",habitat:"Rainforest",elev:"200–1000 m",light:"Bright indirect",water:"When dry",humidity:"60–70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Yellow w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Large textured leaves with prominent pale veins."},
+  {rank:42,sci:"Hoya mindorensis",common:"Mindoro Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–1000 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Red/pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"Several color forms from pale pink to crimson."},
+  {rank:43,sci:"Hoya nummularioides",common:"Nummularioides Hoya",origin:"Thailand, Laos",region:"SE Asia",habitat:"Forest",elev:"200–900 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"White",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Beginner",fact:"Small fuzzy leaves; blooms heavily in baskets."},
+  {rank:44,sci:"Hoya obscura",common:"Obscura Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"100–600 m",light:"Bright indirect to direct",water:"When dry",humidity:"50%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Cream/pink",fragrant:true,peduncle:"Fast rebloomer",bloomSeason:"Year-round",habit:"Vining",size:"4–8 ft",growth:"Fast",difficulty:"Beginner",fact:"Stresses to a gorgeous coppery color in sunlight."},
+  {rank:45,sci:"Hoya onychoides",common:"Onychoides Hoya",origin:"New Guinea",region:"Pacific",habitat:"Rainforest",elev:"100–900 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Dark purple-red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Dramatic pointed ‘claw’ flowers — the name means ‘claw-like’."},
+  {rank:46,sci:"Hoya pachyclada",common:"Thick-Stem Hoya",origin:"Thailand",region:"SE Asia",habitat:"Limestone outcrops",elev:"200–800 m",light:"Bright indirect to direct",water:"When fully dry",humidity:"40–50%",temp:"65–90°F",soil:"Cactus mix",fert:"Lightly monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"White w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Upright compact",size:"1–2 ft",growth:"Very slow",difficulty:"Beginner",fact:"Succulent-like — thrives on neglect."},
+  {rank:47,sci:"Hoya parasitica",common:"Parasitica Hoya",origin:"S. Asia, SE Asia",region:"SE Asia",habitat:"Forest epiphyte",elev:"100–1500 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Cream/white",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Beginner",fact:"‘Black Margin’ and ‘Splash’ cultivars are collector favorites."},
+  {rank:48,sci:"Hoya patella",common:"Patella Hoya",origin:"New Guinea",region:"Pacific",habitat:"Rainforest",elev:"200–1000 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Yellow-orange",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Slow",difficulty:"Intermediate",fact:"Flat dish-shaped flowers — the name means ‘small plate’."},
+  {rank:49,sci:"Hoya rotundiflora",common:"Square Leaf Hoya",origin:"Thailand",region:"SE Asia",habitat:"Forest",elev:"500–1200 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"White w/ red center",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"3–6 ft",growth:"Slow",difficulty:"Intermediate",fact:"Leaves are nearly perfectly square — unique in Hoya."},
+  {rank:50,sci:"Hoya siariae",common:"Siar's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"Prolific bloomer with soft pink ball umbels."},
+  {rank:51,sci:"Hoya sigillatis",common:"Sigillatis Hoya",origin:"Borneo",region:"SE Asia",habitat:"Rainforest",elev:"200–900 m",light:"Bright indirect",water:"When dry",humidity:"60–70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Yellow/orange",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"3–6 ft",growth:"Slow",difficulty:"Intermediate",fact:"Leaves are heavily silver-speckled like stars."},
+  {rank:52,sci:"Hoya subcalva",common:"Subcalva Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–900 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"White/cream",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Beginner",fact:"Vigorous grower with felty young leaves."},
+  {rank:53,sci:"Hoya thomsonii",common:"Thomson's Hoya",origin:"India, Bhutan, China",region:"S. Asia",habitat:"Montane forest",elev:"1000–2000 m",light:"Bright indirect",water:"Lightly moist",humidity:"60–70%",temp:"55–78°F",soil:"Airy mossy mix",fert:"Light frequent",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"White/cream",fragrant:true,peduncle:"Reblooms",bloomSeason:"Spring",habit:"Trailing",size:"2–4 ft",growth:"Slow",difficulty:"Intermediate",fact:"Fuzzy leaves and cool-temperature preference."},
+  {rank:54,sci:"Hoya tsangii",common:"Tsang's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–700 m",light:"Bright indirect",water:"When dry",humidity:"50%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Red/maroon",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Beginner",fact:"Small leaves, stunning dark red flowers."},
+  {rank:55,sci:"Hoya undulata",common:"Undulata Hoya",origin:"Borneo",region:"SE Asia",habitat:"Rainforest",elev:"500–1500 m",light:"Bright indirect",water:"When mostly dry",humidity:"70–80%",temp:"65–85°F",soil:"Chunky mossy mix",fert:"Monthly",prop:"Cuttings",propDiff:"Hard",rootTime:"6–10 weeks",bloomColor:"Yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"3–6 ft",growth:"Slow",difficulty:"Advanced",fact:"Rippled, silver-speckled leaves — a holy grail Hoya."},
+  {rank:56,sci:"Hoya vitellina",common:"Vitellina Hoya",origin:"Malaysia, Sumatra",region:"SE Asia",habitat:"Rainforest",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Orange-yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Leaves stress a pretty wine-red in bright light."},
+  {rank:57,sci:"Hoya walliniana",common:"Walliniana Hoya",origin:"Thailand",region:"SE Asia",habitat:"Forest",elev:"500–1200 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"White",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Beginner",fact:"Delicate needle-shaped leaves similar to H. linearis."},
+  {rank:58,sci:"Hoya wibergiae",common:"Wiberg's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Pink/red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"Produces large clusters of deep pink flowers."},
+  {rank:59,sci:"Hoya archboldiana",common:"Archbold's Hoya",origin:"New Guinea",region:"Pacific",habitat:"Rainforest",elev:"100–900 m",light:"Bright indirect",water:"When dry",humidity:"60–70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"White/pink/red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"8–15 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Bell-shaped flowers up to 3 inches across."},
+  {rank:60,sci:"Hoya benguetensis",common:"Benguet Hoya",origin:"Philippines",region:"SE Asia",habitat:"Montane forest",elev:"800–1800 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"60–80°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Yellow",fragrant:false,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Slow",difficulty:"Intermediate",fact:"Enjoys cooler nights thanks to its high-elevation origin."},
+  {rank:61,sci:"Hoya bordenii",common:"Borden's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"White w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"Often confused with H. obscura — pointier leaves."},
+  {rank:62,sci:"Hoya brevialata",common:"Brevialata Hoya",origin:"Sumatra",region:"SE Asia",habitat:"Rainforest",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Cream/yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Beginner",fact:"Tiny ‘starburst’ flowers with intensely sweet scent."},
+  {rank:63,sci:"Hoya buotii",common:"Buot's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–900 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Cream",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Compact umbels with a distinct citrus fragrance."},
+  {rank:64,sci:"Hoya callistophylla",common:"Callistophylla Hoya",origin:"Borneo",region:"SE Asia",habitat:"Rainforest",elev:"500–1200 m",light:"Bright indirect",water:"When mostly dry",humidity:"70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Hard",rootTime:"6–10 weeks",bloomColor:"Yellow w/ dark center",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"3–6 ft",growth:"Slow",difficulty:"Advanced",fact:"Name means ‘beautiful leaf’ — bold dark-green venation."},
+  {rank:65,sci:"Hoya cinnamomifolia",common:"Cinnamon Leaf Hoya",origin:"Java, Sumatra",region:"SE Asia",habitat:"Forest",elev:"300–1200 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Green w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Intermediate",fact:"One of the few Hoyas with greenish flowers."},
+  {rank:66,sci:"Hoya coronaria",common:"Coronaria Hoya",origin:"Malaysia, Indonesia",region:"SE Asia",habitat:"Coastal",elev:"0–200 m",light:"Bright indirect to direct",water:"When dry",humidity:"50–60%",temp:"70–90°F",soil:"Sandy well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Cream/yellow/red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–15 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Enormous 2-inch waxy flowers in color-variable forms."},
+  {rank:67,sci:"Hoya coriacea",common:"Leather Hoya",origin:"Malaysia, Indonesia",region:"SE Asia",habitat:"Lowland forest",elev:"0–600 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Yellow w/ black center",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"10–20 ft",growth:"Fast",difficulty:"Beginner",fact:"Thick leathery leaves; massive flower umbels (50+ blooms)."},
+  {rank:68,sci:"Hoya darwinii",common:"Darwin's Hoya",origin:"Philippines, Borneo",region:"SE Asia",habitat:"Ant-plant epiphyte",elev:"100–700 m",light:"Bright indirect",water:"Evenly moist",humidity:"70%",temp:"70–85°F",soil:"Chunky mossy mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Has hollow ‘domatia’ on leaves where ants nest."},
+  {rank:69,sci:"Hoya davidcummingii",common:"David Cumming's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Fast rebloomer",bloomSeason:"Summer",habit:"Vining",size:"3–6 ft",growth:"Moderate",difficulty:"Beginner",fact:"Blooms young and often — perfect first ‘bloomer’."},
+  {rank:70,sci:"Hoya densifolia",common:"Densifolia Hoya",origin:"Malaysia",region:"SE Asia",habitat:"Forest",elev:"500–1200 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Stiff upright leaves give a sculptural look."},
+  {rank:71,sci:"Hoya dischorensis",common:"Dischorensis Hoya",origin:"New Guinea",region:"Pacific",habitat:"Rainforest",elev:"200–1000 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Intermediate",fact:"New leaves emerge a rich copper-red."},
+  {rank:72,sci:"Hoya endauensis",common:"Endau Hoya",origin:"Malaysia",region:"SE Asia",habitat:"Lowland forest",elev:"100–500 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Slow",difficulty:"Intermediate",fact:"Named for the Endau-Rompin rainforest."},
+  {rank:73,sci:"Hoya erythrina",common:"Erythrina Hoya",origin:"Thailand",region:"SE Asia",habitat:"Forest",elev:"500–1500 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"White/cream",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"New growth is a striking burgundy-red."},
+  {rank:74,sci:"Hoya excavata",common:"Excavata Hoya",origin:"Indonesia",region:"SE Asia",habitat:"Forest",elev:"300–1000 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Yellow-green",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Leaves have deeply sunken veins — ‘excavated’ look."},
+  {rank:75,sci:"Hoya fischeriana",common:"Fischer's Hoya",origin:"New Guinea",region:"Pacific",habitat:"Rainforest",elev:"200–1000 m",light:"Bright indirect",water:"When dry",humidity:"60–70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Large silver-green leaves with pink-flushed undersides."},
+  {rank:76,sci:"Hoya fungii",common:"Fung's Hoya",origin:"S. China, Vietnam",region:"SE Asia",habitat:"Forest",elev:"500–1500 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"60–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"White",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Beginner",fact:"Tolerates lower temperatures better than most Hoyas."},
+  {rank:77,sci:"Hoya fusca",common:"Fusca Hoya",origin:"Java, Sumatra",region:"SE Asia",habitat:"Montane forest",elev:"500–1500 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"60–80°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Dark red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Slow",difficulty:"Intermediate",fact:"Dark brooding flowers — looks almost black in low light."},
+  {rank:78,sci:"Hoya golamcoana",common:"Golamco's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"300–900 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Cream/yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Thick textured leaves with a pebbled surface."},
+  {rank:79,sci:"Hoya griffithii",common:"Griffith's Hoya",origin:"India, Bhutan",region:"S. Asia",habitat:"Montane forest",elev:"1000–2000 m",light:"Bright indirect",water:"When mostly dry",humidity:"60%",temp:"60–80°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"White w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Cool-growing — does well in terrariums."},
+  {rank:80,sci:"Hoya halconensis",common:"Halcon Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"300–1200 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Named for Mt. Halcon on Mindoro island."},
+  {rank:81,sci:"Hoya hypolasia",common:"Hypolasia Hoya",origin:"New Guinea, Australia",region:"Pacific",habitat:"Rainforest",elev:"200–900 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Yellow/orange",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Hairy leaf undersides — name means ‘hairy below’."},
+  {rank:82,sci:"Hoya ilagiorum",common:"Ilagi's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Yellow w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"Fast-growing bloomer; flowers age from yellow to orange."},
+  {rank:83,sci:"Hoya ischnopus",common:"Ischnopus Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–700 m",light:"Bright indirect",water:"When dry",humidity:"50%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"White w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"2–4 ft",growth:"Moderate",difficulty:"Beginner",fact:"Slender stems — the name means ‘thin-footed’."},
+  {rank:84,sci:"Hoya lambii",common:"Lamb's Hoya",origin:"Borneo",region:"SE Asia",habitat:"Rainforest",elev:"300–1000 m",light:"Bright indirect",water:"When mostly dry",humidity:"70–80%",temp:"65–85°F",soil:"Chunky mossy mix",fert:"Monthly",prop:"Cuttings",propDiff:"Hard",rootTime:"6–10 weeks",bloomColor:"Dark red",fragrant:false,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Slow",difficulty:"Advanced",fact:"Gigantic deep red flowers — a collector prize."},
+  {rank:85,sci:"Hoya lauterbachii",common:"Lauterbach's Hoya",origin:"New Guinea",region:"Pacific",habitat:"Rainforest",elev:"200–1000 m",light:"Bright indirect",water:"When dry",humidity:"60–70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Cream/pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"10–20 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Huge bell-shaped blooms up to 3 in across."},
+  {rank:86,sci:"Hoya leucorhoda",common:"Leucorhoda Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"300–1000 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Pink/white",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Stunning silver-splashed leaves with pink undertones."},
+  {rank:87,sci:"Hoya lobbii",common:"Lobb's Hoya",origin:"Thailand, Myanmar",region:"SE Asia",habitat:"Forest",elev:"300–1200 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Deep red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Intense scarlet-red blooms — very photogenic."},
+  {rank:88,sci:"Hoya longifolia",common:"Long-Leaf Hoya",origin:"Himalayas",region:"S. Asia",habitat:"Montane forest",elev:"800–1800 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"60–80°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"White",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"3–6 ft",growth:"Moderate",difficulty:"Beginner",fact:"Closely related to — and often mistaken for — H. shepherdii."},
+  {rank:89,sci:"Hoya merrillii",common:"Merrill's Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–900 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Prominent venation and leathery texture."},
+  {rank:90,sci:"Hoya micrantha",common:"Small-Flower Hoya",origin:"Thailand, Malaysia",region:"SE Asia",habitat:"Forest",elev:"300–1200 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Yellow-green",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"Tiny flowers but massive umbels — 40+ per cluster."},
+  {rank:91,sci:"Hoya neoebudica",common:"Neoebudica Hoya",origin:"Vanuatu",region:"Pacific",habitat:"Rainforest",elev:"100–800 m",light:"Bright indirect",water:"When dry",humidity:"60–70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"6–12 ft",growth:"Moderate",difficulty:"Intermediate",fact:"One of the few Hoyas native to the Vanuatu islands."},
+  {rank:92,sci:"Hoya odorata",common:"Fragrant Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–900 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"White",fragrant:true,peduncle:"Reblooms",bloomSeason:"Year-round",habit:"Upright shrubby",size:"2–4 ft",growth:"Fast",difficulty:"Beginner",fact:"Arguably the most strongly fragrant Hoya — lemony sweet."},
+  {rank:93,sci:"Hoya praetorii",common:"Praetor's Hoya",origin:"Sumatra",region:"SE Asia",habitat:"Rainforest",elev:"300–1000 m",light:"Bright indirect",water:"When dry",humidity:"60–70%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Yellow w/ red center",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Large glossy leaves on reddish stems."},
+  {rank:94,sci:"Hoya pubicorolla",common:"Pubicorolla Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"200–800 m",light:"Bright indirect",water:"When dry",humidity:"50–60%",temp:"65–85°F",soil:"Well-draining",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"2–4 weeks",bloomColor:"Red/pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"Fuzzy flower coronas — the species name means ‘hairy corolla’."},
+  {rank:95,sci:"Hoya pusilla",common:"Pusilla Hoya",origin:"Borneo",region:"SE Asia",habitat:"Forest",elev:"200–900 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Fine bark mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"White w/ red",fragrant:false,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Trailing",size:"1–2 ft",growth:"Slow",difficulty:"Intermediate",fact:"Dainty miniature — great for small terrariums."},
+  {rank:96,sci:"Hoya ranauensis",common:"Ranau Hoya",origin:"Borneo (Sabah)",region:"SE Asia",habitat:"Montane forest",elev:"800–1500 m",light:"Bright indirect",water:"When mostly dry",humidity:"70%",temp:"60–80°F",soil:"Chunky mossy mix",fert:"Monthly",prop:"Cuttings",propDiff:"Hard",rootTime:"6–10 weeks",bloomColor:"Yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"3–6 ft",growth:"Slow",difficulty:"Advanced",fact:"Prized silver-spotted leaves; notoriously slow."},
+  {rank:97,sci:"Hoya kanyakumariana",common:"Kanyakumariana Hoya",origin:"S. India",region:"S. Asia",habitat:"Dry forest",elev:"200–800 m",light:"Bright indirect to direct",water:"When fully dry",humidity:"40–50%",temp:"65–90°F",soil:"Sandy well-draining",fert:"Lightly monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"White",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"3–6 ft",growth:"Slow",difficulty:"Beginner",fact:"Succulent-leaved drought survivor."},
+  {rank:98,sci:"Hoya clandestina",common:"Clandestina Hoya",origin:"Philippines",region:"SE Asia",habitat:"Forest",elev:"300–1000 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Moderate",rootTime:"4–6 weeks",bloomColor:"Cream/yellow",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Intermediate",fact:"Large silvery leaves that catch light dramatically."},
+  {rank:99,sci:"Hoya 'Chouke'",common:"Chouke Hoya",origin:"Hybrid (carnosa × serpens)",region:"SE Asia",habitat:"Hybrid",elev:"n/a",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"60–80°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"Pink",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"4–8 ft",growth:"Moderate",difficulty:"Beginner",fact:"All the charm of serpens without the cool-grower demands."},
+  {rank:100,sci:"Hoya verticillata",common:"Verticillata Hoya",origin:"Thailand, Malaysia, Indonesia",region:"SE Asia",habitat:"Lowland forest",elev:"0–700 m",light:"Bright indirect",water:"When dry",humidity:"60%",temp:"65–85°F",soil:"Chunky mix",fert:"Monthly",prop:"Cuttings",propDiff:"Easy",rootTime:"3–5 weeks",bloomColor:"White w/ red",fragrant:true,peduncle:"Reblooms",bloomSeason:"Summer",habit:"Vining",size:"8–15 ft",growth:"Fast",difficulty:"Beginner",fact:"Extremely variable — many named forms circulate in the trade."}
+];
+
+/* =========================================================================
+   IMAGES — verified Wikimedia Commons URLs. Species without a confirmed
+   photo fall back to a gradient placeholder automatically.
+   ========================================================================= */
+const IMAGES = {
+  "Hoya carnosa":"https://plantproper.com/cdn/shop/products/1610642941.jpg?v=1610651066",
+  "Hoya kerrii":"https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Hoya_kerrii_in_plant_nursery.jpg/960px-Hoya_kerrii_in_plant_nursery.jpg",
+  "Hoya pubicalyx":"https://canopyplantco.com/cdn/shop/files/FullSizeRender_1c35d116-e8b3-48f4-aa34-5a6ecbeb4ef9_grande.heic?v=1762001716",
+  "Hoya australis":"https://inaturalist-open-data.s3.amazonaws.com/photos/54925056/medium.jpg",
+  "Hoya obovata":"https://inaturalist-open-data.s3.amazonaws.com/photos/113858392/medium.jpg",
+  "Hoya linearis":"https://inaturalist-open-data.s3.amazonaws.com/photos/142056409/medium.jpg",
+  "Hoya carnosa 'Compacta'":"https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Hoya_compacta_19.JPG/960px-Hoya_compacta_19.JPG",
+  "Hoya curtisii":"https://inaturalist-open-data.s3.amazonaws.com/photos/1539228/medium.jpg",
+  "Hoya lanceolata ssp. bella":"https://canopyplantco.com/cdn/shop/files/FullSizeRender_b67052ac-4c89-4dcd-913d-f1a1281733e0.heic?v=1770568571",
+  "Hoya carnosa 'Krimson Queen'":"https://www.gabriellaplants.com/cdn/shop/files/gabriella-plants-hoya-carnosa-krimson-queen-4-1227204915.jpg?v=1773434168",
+  "Hoya carnosa 'Krimson Princess'":"https://www.gabriellaplants.com/cdn/shop/files/gabriella-plants-hoya-carnosa-tricolor-krimson-princess-4-1227204921.jpg?v=1773433988",
+  "Hoya retusa":"https://inaturalist-open-data.s3.amazonaws.com/photos/87927959/medium.jpg",
+  "Hoya macrophylla":"https://inaturalist-open-data.s3.amazonaws.com/photos/26035994/medium.jpeg",
+  "Hoya lacunosa":"https://canopyplantco.com/cdn/shop/files/FullSizeRender_8e28c1bb-680f-4e85-8360-22984d572e28.heic?v=1757511998",
+  "Hoya shepherdii":"https://inaturalist-open-data.s3.amazonaws.com/photos/423176464/medium.jpeg",
+  "Hoya multiflora":"https://sprouthome.com/cdn/shop/products/HoyaM4detail_sprout.jpg?v=1765728888",
+  "Hoya cumingiana":"https://www.gabriellaplants.com/cdn/shop/files/gabriella-plants-hoya-cumingiana-1160082446.jpg?v=1746048300",
+  "Hoya wayetii":"https://inaturalist-open-data.s3.amazonaws.com/photos/60429544/medium.jpeg",
+  "Hoya kentiana":"https://inaturalist-open-data.s3.amazonaws.com/photos/1539225/medium.jpg",
+  "Hoya 'Rosita'":"https://foliage-factory.com/cdn/shop/files/Hoya_Rosita_01.webp?v=1772574666",
+  "Hoya 'Mathilde'":"https://upload.wikimedia.org/wikipedia/commons/c/cb/Hoya_cv_Mathilde.jpg",
+  "Hoya 'Sunrise'":"https://plantproper.com/cdn/shop/files/Hoya_Sunrise.jpg?v=1772734314",
+  "Hoya serpens":"https://static.inaturalist.org/photos/298437232/medium.jpeg",
+  "Hoya bilobata":"https://upload.wikimedia.org/wikipedia/commons/4/44/Hoya_bilobata.jpg",
+  "Hoya burtoniae":"https://hoyastoreaustralia.com.au/cdn/shop/files/B5AF821E-CD22-415C-A222-6B2D096367BB.jpg?v=1770669469",
+  "Hoya caudata":"https://inaturalist-open-data.s3.amazonaws.com/photos/1448367/medium.jpg",
+  "Hoya crassicaulis":"https://inaturalist-open-data.s3.amazonaws.com/photos/49576113/medium.jpg",
+  "Hoya diversifolia":"https://plantproper.com/cdn/shop/files/Plant-Proper-Hoya-Diversifolia-Albomarginata--4.jpg?v=1773334019",
+  "Hoya elliptica":"https://www.gabriellaplants.com/cdn/shop/files/gabriella-plants-hoya-elliptica-3-1183396126.jpg?v=1754514889",
+  "Hoya finlaysonii":"https://www.gabriellaplants.com/cdn/shop/products/gabriella-plants-4-hoya-finlaysonii-38084889215221.jpg?v=1663332727",
+  "Hoya globulosa":"https://static.inaturalist.org/photos/473337377/medium.jpeg",
+  "Hoya heuschkeliana":"https://canopyplantco.com/cdn/shop/files/F49B8191-50C8-4A2A-92FB-8385F95E71B8.jpg?v=1763142394",
+  "Hoya imbricata":"https://static.inaturalist.org/photos/194615086/medium.jpg",
+  "Hoya incrassata":"https://www.gabriellaplants.com/cdn/shop/files/gabriella-plants-hoya-incrassata-3-42313884467445.jpg?v=1731541768",
+  "Hoya polyneura":"https://inaturalist-open-data.s3.amazonaws.com/photos/177118344/medium.jpg",
+  "Hoya latifolia":"https://inaturalist-open-data.s3.amazonaws.com/photos/218732209/medium.jpg",
+  "Hoya macgillivrayi":"https://inaturalist-open-data.s3.amazonaws.com/photos/371203826/medium.jpg",
+  "Hoya megalaster":"https://canopyplantco.com/cdn/shop/files/6A8527BD-0241-4300-8463-ACEA1098F0BA_grande.jpg?v=1757607324",
+  "Hoya 'Memoria' (gracilis)":"https://static.inaturalist.org/photos/412197169/medium.jpeg",
+  "Hoya meredithii":"https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/%E6%AF%AC%E8%98%AD%E5%B1%AC_Hoya_meredithii_-%E6%B3%A2%E8%98%AD_Krakow_Jagiellonian_University_Botanic_Garden%2C_Poland-_%2836375333290%29.jpg/960px-%E6%AF%AC%E8%98%AD%E5%B1%AC_Hoya_meredithii_-%E6%B3%A2%E8%98%AD_Krakow_Jagiellonian_University_Botanic_Garden%2C_Poland-_%2836375333290%29.jpg",
+  "Hoya mindorensis":"https://plantproper.com/cdn/shop/files/Plant-Proper-Hoya-Mindorensis-Red--4_de1b5bb8-e0f8-471c-8856-5df7469b0c48.jpg?v=1772734406",
+  "Hoya nummularioides":"https://inaturalist-open-data.s3.amazonaws.com/photos/586393681/medium.jpg",
+  "Hoya obscura":"https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/210205_019_San_Diego_Botanic_Gdn_-_Dickinson_Family_Conservatory%2C_Plant_Collection_Table%2C_Hoya_obscura_Red_Wax_Plant.jpg/960px-210205_019_San_Diego_Botanic_Gdn_-_Dickinson_Family_Conservatory%2C_Plant_Collection_Table%2C_Hoya_obscura_Red_Wax_Plant.jpg",
+  "Hoya onychoides":"https://plantproper.com/cdn/shop/files/Plant-Proper-Hoya-Onychoides--3.5.jpg?v=1760022810",
+  "Hoya pachyclada":"https://canopyplantco.com/cdn/shop/files/FullSizeRender_fd563ead-229e-4a1c-b214-e2c6a34b936c_grande.heic?v=1755127265",
+  "Hoya parasitica":"https://canopyplantco.com/cdn/shop/files/9FCEADC3-7C75-43F0-9918-4AC2705B140C.jpg?v=1762373836",
+  "Hoya patella":"https://plantproper.com/cdn/shop/files/Plant-Proper-Hoya-Patella-Pink--4HB_66f4e5b8-8766-4057-a61c-4c5f33221f13.jpg?v=1774545109",
+  "Hoya rotundiflora":"https://static.inaturalist.org/photos/576507228/medium.jpg",
+  "Hoya siariae":"https://plantproper.com/cdn/shop/products/1684431816.jpg?v=1684433313",
+  "Hoya sigillatis":"https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Hoya_at_Portland_Nursery%2C_2025_-_17.jpg/960px-Hoya_at_Portland_Nursery%2C_2025_-_17.jpg",
+  "Hoya subcalva":"https://hoyastoreaustralia.com.au/cdn/shop/files/DD04EA6E-1A7F-43A6-BED6-6722DF0E8CE3.jpg?v=1711866524",
+  "Hoya thomsonii":"https://www.gabriellaplants.com/cdn/shop/files/gabriella-plants-hoya-thomsonii-2-1178441912.jpg?v=1752690768",
+  "Hoya tsangii":"https://inaturalist-open-data.s3.amazonaws.com/photos/104471814/medium.jpeg",
+  "Hoya vitellina":"https://www.myhomenature.com/cdn/shop/products/hoya_vitellina_blume_211f3dc7-a641-405b-96b9-7b92a1e5c9e3.jpg?v=1692881563",
+  "Hoya wibergiae":"https://inaturalist-open-data.s3.amazonaws.com/photos/317869571/medium.jpeg",
+  "Hoya archboldiana":"https://inaturalist-open-data.s3.amazonaws.com/photos/484332403/medium.jpg",
+  "Hoya benguetensis":"https://hoyastoreaustralia.com.au/cdn/shop/files/3D893CFA-DEDE-41EA-888A-FD03D73FA7B3.jpg?v=1710933313",
+  "Hoya bordenii":"https://canopyplantco.com/cdn/shop/files/8171C9E3-53B6-446F-8264-7CF285B480FC.jpg?v=1729783360",
+  "Hoya brevialata":"https://inaturalist-open-data.s3.amazonaws.com/photos/360001485/medium.jpg",
+  "Hoya buotii":"https://inaturalist-open-data.s3.amazonaws.com/photos/25154715/medium.jpeg",
+  "Hoya callistophylla":"https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Hoya_callistophylla_T.Green_in_Fraterna_13%284%29-_2_%282000%29_20260205_105611.jpg/800px-Hoya_callistophylla_T.Green_in_Fraterna_13%284%29-_2_%282000%29_20260205_105611.jpg",
+  "Hoya cinnamomifolia":"https://static.inaturalist.org/photos/352774365/medium.jpeg",
+  "Hoya coronaria":"https://www.gabriellaplants.com/cdn/shop/products/gabriella-plants-4-hoya-coronaria-38094031094005.jpg?v=1663187680",
+  "Hoya coriacea":"https://inaturalist-open-data.s3.amazonaws.com/photos/457370131/medium.jpg",
+  "Hoya darwinii":"https://static.inaturalist.org/photos/617282360/medium.jpg",
+  "Hoya davidcummingii":"https://gardinonursery.com/wp-content/uploads/IMG_5969.jpg",
+  "Hoya densifolia":"https://bwhplantco.com/cdn/shop/files/image_cdf4fc9f-be87-44ac-ac95-97e08d8b687e.jpg?v=1690394789",
+  "Hoya dischorensis":"https://hoyastoreaustralia.com.au/cdn/shop/files/34235281-2496-4097-95D2-255FE34F4499.jpg?v=1712366920",
+  "Hoya endauensis":"https://media-plants.earth.com/images/2018/11/15/9174797456108912/button-wax-vine-hoya-endauensis.jpg",
+  "Hoya erythrina":"https://inaturalist-open-data.s3.amazonaws.com/photos/2857565/medium.jpg",
+  "Hoya fischeriana":"https://i0.wp.com/vermonthoyas.com/vhwp/wp-content/uploads/2013/07/P1040259-1.jpg?fit=960%2C720&ssl=1",
+  "Hoya fungii":"https://media-plants.earth.com/images/2019/5/14/26227379678169105/hoyafungii.jpg",
+  "Hoya fusca":"https://inaturalist-open-data.s3.amazonaws.com/photos/239487039/medium.jpeg",
+  "Hoya golamcoana":"https://inaturalist-open-data.s3.amazonaws.com/photos/394370100/medium.jpg",
+  "Hoya griffithii":"https://inaturalist-open-data.s3.amazonaws.com/photos/454157419/medium.jpeg",
+  "Hoya halconensis":"https://static.inaturalist.org/photos/60059355/medium.jpeg",
+  "Hoya hypolasia":"https://hoyastoreaustralia.com.au/cdn/shop/files/25C59364-2B72-4CDB-AB96-08DFC6357B22.jpg?v=1710503560",
+  "Hoya ischnopus":"https://static.inaturalist.org/photos/373653531/medium.jpeg",
+  "Hoya lauterbachii":"https://inaturalist-open-data.s3.amazonaws.com/photos/240807426/medium.jpg",
+  "Hoya leucorhoda":"https://hoyastoreaustralia.com.au/cdn/shop/files/7383B378-2CFC-4C50-BBE4-3F3567429151.jpg?v=1710844657",
+  "Hoya lobbii":"https://www.gabriellaplants.com/cdn/shop/files/gabriella-plants-hoya-lobbii-3-1149855494.jpg?v=1742481305",
+  "Hoya longifolia":"https://inaturalist-open-data.s3.amazonaws.com/photos/65117775/medium.jpeg",
+  "Hoya merrillii":"https://inaturalist-open-data.s3.amazonaws.com/photos/60221471/medium.jpg",
+  "Hoya micrantha":"https://inaturalist-open-data.s3.amazonaws.com/photos/287345339/medium.jpeg",
+  "Hoya neoebudica":"http://plumerin.com/hoya/picture/neo_ebudica/5_neo_ebudica.jpg",
+  "Hoya odorata":"https://inaturalist-open-data.s3.amazonaws.com/photos/597233879/medium.jpg",
+  "Hoya praetorii":"https://tropicsathome.com/wp-content/uploads/2017/10/Hoya-praetorii-buy-online.jpg",
+  "Hoya pubicorolla":"https://hoyastoreaustralia.com.au/cdn/shop/files/9CAD53C5-B76D-4F9B-AF8F-7D49548FA230.jpg?v=1711852534",
+  "Hoya pusilla":"https://media-plants.earth.com/images/2019/5/14/7527104289537963/hoyapusilla.jpg",
+  "Hoya kanyakumariana":"https://inaturalist-open-data.s3.amazonaws.com/photos/237295232/medium.jpeg",
+  "Hoya clandestina":"https://plantproper.com/cdn/shop/files/Plant-Proper-Hoya-Clandestina-Yellow--6.jpg?v=1737039248",
+  "Hoya 'Chouke'":"https://www.provenwinners.com/sites/provenwinners.com/files/imagecache/500x500/ifa_upload/65026_cvchouke_endlesscascades_image_1_072024.jpg",
+  "Hoya verticillata":"https://inaturalist-open-data.s3.amazonaws.com/photos/317869571/medium.jpeg",
+  "Hoya fitchii":"https://foliage-factory.com/cdn/shop/files/Hoya_fitchii_02.webp?v=1772574594",
+  "Hoya undulata":"https://foliage-factory.com/cdn/shop/files/Hoya_undulata_02.webp?v=1772574103",
+  "Hoya walliniana":"https://hoyastoreaustralia.com.au/cdn/shop/files/61723AB4-ABC7-4D57-8280-D1EBE0D5BE0D.jpg?v=1710905862",
+  "Hoya excavata":"https://flori-culture.com/cdn/shop/products/HoyaexcavataA1_2048x.jpg?v=1634515253",
+  "Hoya ilagiorum":"https://plumerin.com/hoya/hoya_2/picture/ilagiorum/ilagiorum_4.jpg",
+  "Hoya lambii":"https://i0.wp.com/vermonthoyas.com/vhwp/wp-content/uploads/2011/07/7.12.11-028-1024x768.jpg",
+  "Hoya ranauensis":"https://foliage-factory.com/cdn/shop/files/Hoya_ranauensis_01.webp?v=1772574986"
+};
+// Flower/bloom images for detail modal
+const FLOWER_IMAGES = {
+  "Hoya carnosa":"https://upload.wikimedia.org/wikipedia/commons/1/19/Hoya_carnosa_-_flower_view_01.jpg",
+  "Hoya kerrii":"https://upload.wikimedia.org/wikipedia/commons/b/b2/Hoya-kerrii_flowers_op.jpg",
+  "Hoya pubicalyx":"https://upload.wikimedia.org/wikipedia/commons/e/e4/Hoya_pubicalyx_%27Pink_Silver%27-IMG_0433.jpg",
+  "Hoya australis":"https://upload.wikimedia.org/wikipedia/commons/d/da/Hoya_australis_%2823741638141%29.jpg",
+  "Hoya obovata":"https://inaturalist-open-data.s3.amazonaws.com/photos/465681873/medium.jpg",
+  "Hoya linearis":"https://upload.wikimedia.org/wikipedia/commons/e/ef/Hoya_linearis_BotGardBln1105Inflorescence.JPG",
+  "Hoya carnosa 'Compacta'":"https://upload.wikimedia.org/wikipedia/commons/7/77/Hoya_compacta_11.JPG",
+  "Hoya curtisii":"https://inaturalist-open-data.s3.amazonaws.com/photos/1539228/medium.jpg",
+  "Hoya lanceolata ssp. bella":"https://upload.wikimedia.org/wikipedia/commons/c/ce/Hoya_bella.JPG",
+  "Hoya carnosa 'Krimson Queen'":"https://upload.wikimedia.org/wikipedia/commons/1/19/Hoya_carnosa_-_flower_view_01.jpg",
+  "Hoya carnosa 'Krimson Princess'":"https://upload.wikimedia.org/wikipedia/commons/1/19/Hoya_carnosa_-_flower_view_01.jpg",
+  "Hoya retusa":"https://inaturalist-open-data.s3.amazonaws.com/photos/87927959/medium.jpg",
+  "Hoya macrophylla":"https://static.inaturalist.org/photos/352774365/medium.jpeg",
+  "Hoya lacunosa":"https://upload.wikimedia.org/wikipedia/commons/8/8c/Hoya_lacunosa.JPG",
+  "Hoya shepherdii":"https://inaturalist-open-data.s3.amazonaws.com/photos/423176464/medium.jpeg",
+  "Hoya multiflora":"https://upload.wikimedia.org/wikipedia/commons/8/8d/Hoya_multiflora1a.UME.JPG",
+  "Hoya cumingiana":"https://inaturalist-open-data.s3.amazonaws.com/photos/95984210/medium.jpeg",
+  "Hoya wayetii":"https://inaturalist-open-data.s3.amazonaws.com/photos/545610482/medium.jpg",
+  "Hoya kentiana":"https://inaturalist-open-data.s3.amazonaws.com/photos/261725604/medium.jpeg",
+  "Hoya serpens":"https://upload.wikimedia.org/wikipedia/commons/0/0d/Hoya_serpens.jpg",
+  "Hoya polyneura":"https://static.inaturalist.org/photos/373848990/medium.jpeg",
+  "Hoya caudata":"https://inaturalist-open-data.s3.amazonaws.com/photos/443491789/medium.jpeg",
+  "Hoya diversifolia":"https://static.inaturalist.org/photos/106351479/medium.jpeg",
+  "Hoya elliptica":"https://inaturalist-open-data.s3.amazonaws.com/photos/716280/medium.JPG",
+  "Hoya finlaysonii":"https://static.inaturalist.org/photos/118542624/medium.jpeg",
+  "Hoya lobbii":"https://upload.wikimedia.org/wikipedia/commons/8/83/Hoya_lobbii_dark_red.jpg",
+  "Hoya pachyclada":"https://inaturalist-open-data.s3.amazonaws.com/photos/70338099/medium.jpg",
+  "Hoya heuschkeliana":"https://inaturalist-open-data.s3.amazonaws.com/photos/269809273/medium.jpeg",
+  "Hoya coronaria":"https://inaturalist-open-data.s3.amazonaws.com/photos/63096733/medium.jpeg"
+};
+// Attach images
+HOYAS.forEach(h=>{
+  h.img = IMAGES[h.sci] || "ph:"+h.sci;
+  h.flowerImg = FLOWER_IMAGES[h.sci] || null;
+});
+
+/* ---------- UI state ---------- */
+const state = {
+  search:"",
+  sort:"rank",
+  filters:{difficulty:new Set(),light:new Set(),water:new Set(),region:new Set(),bloom:new Set(),fragrant:new Set()},
+  compare:new Set(),
+  compareMode:false
+};
+
+/* ---------- Helpers ---------- */
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>Array.from(el.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const italicSci = sci => {
+  // italicize the Latin parts, leave cultivar 'xxx' and subsp. markers upright
+  return sci.replace(/Hoya\s+[a-z×\.\- ]+(?:\sssp\.\s[a-z\-]+)?/i, m => `<em>${m}</em>`);
+};
+const bloomBucket = c => {
+  c=c.toLowerCase();
+  if(/pink/.test(c))return"Pink";
+  if(/white|cream/.test(c))return"White";
+  if(/yellow|gold|orange|peach/.test(c))return"Yellow";
+  if(/red|burgundy|maroon|crimson/.test(c))return"Red";
+  if(/purple|black/.test(c))return"Purple";
+  if(/green/.test(c))return"Green";
+  return"Other";
+};
+const sizeMax = s => {const m=String(s).match(/(\d+)(?!.*\d)/);return m?+m[1]:0;};
+const diffOrder = {"Beginner":1,"Intermediate":2,"Advanced":3};
+const careIcons = h => `
+  <span class="inline-flex items-center gap-1 text-[11px] text-muted" title="Light: ${esc(h.light)}"><i data-lucide="sun" class="care-icon" style="color:#f59e0b;"></i>${esc(h.light.split(" ")[0])}</span>
+  <span class="inline-flex items-center gap-1 text-[11px] text-muted" title="Water: ${esc(h.water)}"><i data-lucide="droplets" class="care-icon" style="color:#0ea5e9;"></i>${esc(h.water.split(" ")[0])}</span>
+  <span class="inline-flex items-center gap-1 text-[11px] text-muted" title="Humidity: ${esc(h.humidity)}"><i data-lucide="wind" class="care-icon" style="color:var(--accent);"></i>${esc(h.humidity)}</span>
+`;
+const diffBadge = d => {
+  const cls = d==="Beginner"?"badge-beg":d==="Intermediate"?"badge-int":"badge-adv";
+  return `<span class="badge ${cls}">${esc(d)}</span>`;
+};
+const imgFor = h => {
+  if(h.img && h.img.startsWith("http")){
+    return `<div class="w-full aspect-[4/3] rounded-t-xl overflow-hidden" style="background:var(--bg-subtle);">
+      <img src="${esc(h.img)}" alt="${esc(h.sci)}" loading="lazy" class="w-full h-full object-cover"
+        onerror="this.outerHTML='<div class=&quot;img-ph w-full h-full&quot;><span>${esc(h.sci)}</span></div>'" />
+    </div>`;
+  }
+  return `<div class="img-ph w-full aspect-[4/3] rounded-t-xl" role="img" aria-label="Illustration of ${esc(h.sci)}"><span>${esc(h.sci)}</span></div>`;
+};
+
+/* ---------- Filter option builders ---------- */
+function uniq(arr){return [...new Set(arr)];}
+function buildFilters(){
+  const diff = ["Beginner","Intermediate","Advanced"];
+  const light = uniq(HOYAS.map(h=>h.light)).sort();
+  const water = uniq(HOYAS.map(h=>h.water)).sort();
+  const region = uniq(HOYAS.map(h=>h.region)).sort();
+  const bloom = uniq(HOYAS.map(h=>bloomBucket(h.bloomColor))).sort();
+  const frag = ["Fragrant","Not fragrant"];
+  renderChipGroup("#f-difficulty","difficulty",diff);
+  renderChipGroup("#f-light","light",light);
+  renderChipGroup("#f-water","water",water);
+  renderChipGroup("#f-region","region",region);
+  renderChipGroup("#f-bloom","bloom",bloom);
+  renderChipGroup("#f-fragrant","fragrant",frag);
+}
+function renderChipGroup(sel,key,vals){
+  const host=$(sel);host.innerHTML="";
+  vals.forEach(v=>{
+    const b=document.createElement("button");
+    b.className="chip";b.type="button";b.dataset.key=key;b.dataset.val=v;
+    b.setAttribute("aria-pressed","false");
+    b.textContent=v;
+    b.addEventListener("click",()=>{
+      const set=state.filters[key];
+      if(set.has(v))set.delete(v);else set.add(v);
+      b.dataset.active=set.has(v);
+      b.setAttribute("aria-pressed",set.has(v));
+      render();
+    });
+    host.appendChild(b);
+  });
+}
+
+/* ---------- Filter + sort pipeline ---------- */
+function filtered(){
+  const q=state.search.trim().toLowerCase();
+  return HOYAS.filter(h=>{
+    if(q){
+      const hay = (h.sci+" "+h.common).toLowerCase();
+      // simple fuzzy: every char sequence in order, or substring
+      if(!hay.includes(q)){
+        let i=0;for(const c of q){i=hay.indexOf(c,i);if(i===-1)return false;i++;}
+      }
+    }
+    const f=state.filters;
+    if(f.difficulty.size && !f.difficulty.has(h.difficulty))return false;
+    if(f.light.size && !f.light.has(h.light))return false;
+    if(f.water.size && !f.water.has(h.water))return false;
+    if(f.region.size && !f.region.has(h.region))return false;
+    if(f.bloom.size && !f.bloom.has(bloomBucket(h.bloomColor)))return false;
+    if(f.fragrant.size){
+      const want=f.fragrant.has("Fragrant")?true:false;
+      const wantNo=f.fragrant.has("Not fragrant");
+      if(f.fragrant.size===1){
+        if(want && !h.fragrant)return false;
+        if(wantNo && h.fragrant)return false;
+      }
+    }
+    return true;
+  }).sort((a,b)=>{
+    switch(state.sort){
+      case "name":return a.sci.localeCompare(b.sci);
+      case "difficulty":return diffOrder[a.difficulty]-diffOrder[b.difficulty]||a.rank-b.rank;
+      case "size":return sizeMax(b.size)-sizeMax(a.size)||a.rank-b.rank;
+      default:return a.rank-b.rank;
+    }
+  });
+}
+
+/* ---------- Renderers ---------- */
+function render(){
+  const list=filtered();
+  const grid=$("#grid");grid.innerHTML="";
+  $("#empty").classList.toggle("hidden",list.length>0);
+  $("#result-count").textContent=`Showing ${list.length} of ${HOYAS.length} species`;
+  const frag=document.createDocumentFragment();
+  list.forEach(h=>{
+    const selected=state.compare.has(h.rank);
+    const card=document.createElement("article");
+    card.className="card rounded-xl overflow-hidden flex flex-col fade-in";
+    card.tabIndex=0;
+    card.setAttribute("role","button");
+    card.setAttribute("aria-label",`${h.common} — ${h.sci}. ${h.difficulty}. Press to open details.`);
+    card.innerHTML=`
+      ${imgFor(h)}
+      <div class="p-3 flex-1 flex flex-col gap-2">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-[10px] uppercase tracking-wider text-dim">#${h.rank}</div>
+            <div class="serif text-[15px] font-[700] leading-tight truncate" style="color:var(--text);">${h.common}</div>
+            <div class="text-[12px] text-muted truncate">${italicSci(h.sci)}</div>
+          </div>
+          ${diffBadge(h.difficulty)}
+        </div>
+        <div class="flex flex-wrap gap-x-3 gap-y-1 mt-auto">${careIcons(h)}</div>
+        <div class="flex items-center justify-between pt-1">
+          <span class="text-[11px] text-dim">${esc(h.region)}</span>
+          ${state.compareMode
+            ? `<button class="cmp-btn text-[11px] inline-flex items-center gap-1 ${selected?"text-accent font-semibold":"text-muted"}" data-rank="${h.rank}" aria-pressed="${selected}">
+                 <span class="cmp-dot ${selected?"on":""}"></span>${selected?"Selected":"Compare"}
+               </button>`
+            : `<span class="text-[11px] text-accent">Details →</span>`}
+        </div>
+      </div>`;
+    card.addEventListener("click",e=>{
+      if(e.target.closest(".cmp-btn"))return;
+      openModal(h);
+    });
+    card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openModal(h);}});
+    frag.appendChild(card);
+  });
+  grid.appendChild(frag);
+  grid.querySelectorAll(".cmp-btn").forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();
+    const r=+b.dataset.rank;
+    if(state.compare.has(r))state.compare.delete(r);
+    else if(state.compare.size<3)state.compare.add(r);
+    updateCompareUI();render();
+  }));
+  lucide.createIcons();
+  renderStats();
+}
+
+function renderStats(){
+  $("#stat-total").textContent=HOYAS.length;
+  // difficulty
+  const d={Beginner:0,Intermediate:0,Advanced:0};
+  HOYAS.forEach(h=>d[h.difficulty]++);
+  $("#stat-difficulty").innerHTML=Object.entries(d).map(([k,v])=>{
+    const pct=Math.round(v/HOYAS.length*100);
+    return `<div>
+      <div class="flex justify-between text-[11px]"><span style="color:var(--text);">${k}</span><span class="text-dim">${v}</span></div>
+      <div class="stat-bar"><span style="width:${pct}%"></span></div>
+    </div>`;
+  }).join("");
+  // region
+  const r={};
+  HOYAS.forEach(h=>r[h.region]=(r[h.region]||0)+1);
+  const top=Object.entries(r).sort((a,b)=>b[1]-a[1])[0];
+  $("#stat-region").textContent=top[0];
+  $("#stat-region-sub").textContent=`${top[1]} species`;
+  // fragrant
+  $("#stat-fragrant").textContent=HOYAS.filter(h=>h.fragrant).length;
+}
+
+/* ---------- Modal ---------- */
+function openModal(h){
+  const modal=$("#modal");
+  $("#modal-body").innerHTML=`
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);">
+          ${imgFor(h)}
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          ${diffBadge(h.difficulty)}
+          <span class="chip">#${h.rank} commonality</span>
+          ${h.fragrant?'<span class="chip">Fragrant</span>':""}
+          <span class="chip">${esc(h.region)}</span>
+        </div>
+      </div>
+      <div>
+        <div class="text-[11px] uppercase tracking-wider text-dim">Rank #${h.rank}</div>
+        <h2 id="modal-title" class="serif text-2xl font-[800] leading-tight" style="color:var(--text);">${esc(h.common)}</h2>
+        <div class="text-muted text-sm mb-3">${italicSci(h.sci)}</div>
+        <p class="text-sm text-muted italic mb-4">${esc(h.fact)}</p>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-3">Origin</h3>
+        <dl class="text-sm grid grid-cols-[110px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Native range</dt><dd>${esc(h.origin)}</dd>
+          <dt>Region</dt><dd>${esc(h.region)}</dd>
+          <dt>Habitat</dt><dd>${esc(h.habitat)}</dd>
+          <dt>Elevation</dt><dd>${esc(h.elev)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">Care</h3>
+        <dl class="text-sm grid grid-cols-[110px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Light</dt><dd>${esc(h.light)}</dd>
+          <dt>Water</dt><dd>${esc(h.water)}</dd>
+          <dt>Humidity</dt><dd>${esc(h.humidity)}</dd>
+          <dt>Temperature</dt><dd>${esc(h.temp)}</dd>
+          <dt>Soil</dt><dd>${esc(h.soil)}</dd>
+          <dt>Fertilizer</dt><dd>${esc(h.fert)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">Propagation</h3>
+        <dl class="text-sm grid grid-cols-[110px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Methods</dt><dd>${esc(h.prop)}</dd>
+          <dt>Difficulty</dt><dd>${esc(h.propDiff)}</dd>
+          <dt>Rooting time</dt><dd>${esc(h.rootTime)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">Bloom</h3>
+        ${h.flowerImg?`<div class="mt-2 mb-3 rounded-lg overflow-hidden" style="border:1px solid var(--border);max-width:220px;">
+          <img src="${esc(h.flowerImg)}" alt="Flower of ${esc(h.sci)}" loading="lazy" class="w-full object-cover" style="aspect-ratio:4/3;"
+            onerror="this.parentElement.style.display='none'" />
+          <div class="px-2 py-1 text-[10px] text-center" style="background:var(--bg-subtle);color:var(--text-dim);">Bloom close-up</div>
+        </div>`:""}
+        <dl class="text-sm grid grid-cols-[110px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Color</dt><dd>${esc(h.bloomColor)}</dd>
+          <dt>Fragrant</dt><dd>${h.fragrant?"Yes":"No"}</dd>
+          <dt>Peduncle</dt><dd>${esc(h.peduncle)}</dd>
+          <dt>Season</dt><dd>${esc(h.bloomSeason)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">Growth</h3>
+        <dl class="text-sm grid grid-cols-[110px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Habit</dt><dd>${esc(h.habit)}</dd>
+          <dt>Mature size</dt><dd>${esc(h.size)}</dd>
+          <dt>Rate</dt><dd>${esc(h.growth)}</dd>
+        </dl>
+      </div>
+    </div>`;
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  lucide.createIcons();
+  modal.querySelector("[data-close]").focus();
+}
+function closeModal(){const m=$("#modal");m.classList.add("hidden");m.classList.remove("flex");}
+
+/* ---------- Compare ---------- */
+function updateCompareUI(){
+  $("#cmp-count").textContent=state.compare.size;
+  const tray=$("#cmp-tray");
+  if(state.compareMode && state.compare.size>0){
+    tray.classList.remove("hidden");
+    renderCompareTable();
+  } else {
+    tray.classList.add("hidden");
+  }
+}
+function renderCompareTable(){
+  const items=[...state.compare].map(r=>HOYAS.find(h=>h.rank===r));
+  const rows=[
+    ["Scientific",h=>italicSci(h.sci)],
+    ["Common",h=>esc(h.common)],
+    ["Difficulty",h=>diffBadge(h.difficulty)],
+    ["Origin",h=>esc(h.origin)],
+    ["Light",h=>esc(h.light)],
+    ["Water",h=>esc(h.water)],
+    ["Humidity",h=>esc(h.humidity)],
+    ["Temperature",h=>esc(h.temp)],
+    ["Soil",h=>esc(h.soil)],
+    ["Fertilizer",h=>esc(h.fert)],
+    ["Propagation",h=>esc(h.prop)],
+    ["Bloom color",h=>esc(h.bloomColor)],
+    ["Fragrant",h=>h.fragrant?"Yes":"No"],
+    ["Habit",h=>esc(h.habit)],
+    ["Mature size",h=>esc(h.size)],
+  ];
+  $("#cmp-table").innerHTML=`
+    <table class="w-full text-sm">
+      <thead><tr>
+        <th class="text-left text-xs uppercase tracking-wider text-dim p-2 w-32">Attribute</th>
+        ${items.map(h=>`<th class="text-left p-2 serif text-accent">${esc(h.common)}<br><span class="text-[11px] text-dim">${italicSci(h.sci)}</span></th>`).join("")}
+      </tr></thead>
+      <tbody>
+        ${rows.map(([label,fn])=>`
+          <tr style="border-top:1px solid var(--border);">
+            <td class="p-2 text-dim">${label}</td>
+            ${items.map(h=>`<td class="p-2 align-top">${fn(h)}</td>`).join("")}
+          </tr>`).join("")}
+      </tbody>
+    </table>`;
+}
+
+/* ---------- Theme ---------- */
+function setTheme(t){
+  if(t==="dark")document.documentElement.classList.add("dark");
+  else document.documentElement.classList.remove("dark");
+  localStorage.setItem("hoya-theme",t);
+}
+$("#theme-toggle").addEventListener("click",()=>{
+  const isDark=document.documentElement.classList.contains("dark");
+  setTheme(isDark?"light":"dark");
+});
+
+/* ---------- Tabs ---------- */
+function setTab(tab){
+  $$(".tab-btn").forEach(b=>b.dataset.active=(b.dataset.tab===tab));
+  $("#view-catalog").classList.toggle("hidden",tab!=="catalog");
+  $("#view-care").classList.toggle("hidden",tab!=="care");
+  $("#view-propagation").classList.toggle("hidden",tab!=="propagation");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$$(".tab-btn").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+setTab("catalog");
+
+/* ---------- Events ---------- */
+$("#search").addEventListener("input",e=>{state.search=e.target.value;render();});
+$("#sort").addEventListener("change",e=>{state.sort=e.target.value;render();});
+$("#clear-filters").addEventListener("click",()=>{
+  Object.values(state.filters).forEach(s=>s.clear());
+  $$(".chip[data-key]").forEach(c=>{c.dataset.active="false";c.setAttribute("aria-pressed","false");});
+  render();
+});
+$("#cmp-toggle").addEventListener("click",()=>{
+  state.compareMode=!state.compareMode;
+  $("#cmp-toggle").classList.toggle("ring-2",state.compareMode);
+  $("#cmp-toggle").classList.toggle("ring-offset-2",state.compareMode);
+  if(!state.compareMode)state.compare.clear();
+  updateCompareUI();render();
+});
+$("#cmp-clear").addEventListener("click",()=>{state.compare.clear();updateCompareUI();render();});
+$$("#modal [data-close]").forEach(el=>el.addEventListener("click",closeModal));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+
+/* ---------- Init ---------- */
+buildFilters();
+render();
+lucide.createIcons();
+</script>
+</body>
+</html>

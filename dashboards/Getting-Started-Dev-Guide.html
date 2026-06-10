@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Getting Started as a Developer — Field Guide</title>
+<style>
+  @page { size: Letter; margin: 0.7in 0.62in; }
+  /* On-screen (browser) view — print/PDF output is unaffected by @media screen.
+     Selector `html body` (specificity 0,0,2) so it beats the `html, body` reset below
+     and the auto-centering margin is not clobbered. */
+  @media screen {
+    html { background:#e9edf2; }
+    html body { max-width:8.5in; margin:32px auto; padding:0.7in 0.62in; background:#fff;
+                box-shadow:0 4px 28px rgba(15,23,42,.16); border-radius:6px; }
+    .cheat{ margin-top:40px; padding-top:8px; border-top:1px dashed #cbd5e1; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  :root{
+    --ink:#1f2937; --head:#0f172a; --accent:#2563eb; --accent2:#1e3a8a;
+    --muted:#64748b; --line:#e2e8f0; --code:#f1f5f9;
+  }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink); font-size:10.5pt; line-height:1.5;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  code,pre{ font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; }
+
+  /* ---------- Cover ---------- */
+  .cover{ break-after:page; }
+  .hero{ background:#0f172a; color:#fff; border-radius:16px; padding:44px 40px; margin-top:6px; }
+  .hero .eyebrow{ letter-spacing:.18em; font-size:9pt; color:#93c5fd; text-transform:uppercase; font-weight:700; }
+  .hero h1{ font-size:30pt; line-height:1.07; margin:14px 0 0; letter-spacing:-.02em; }
+  .hero .tagline{ font-size:12pt; color:#cbd5e1; margin-top:14px; max-width:32em; line-height:1.45; }
+  .hero .ethos{ margin-top:22px; font-size:11pt; color:#eef2ff; border-left:3px solid #3b82f6; padding-left:14px; }
+  .meta{ margin-top:24px; font-size:9.5pt; color:#64748b; }
+  .meta b{ color:#334155; }
+
+  .toc{ margin-top:26px; }
+  .toc h3{ font-size:9pt; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin:0 0 10px; }
+  .toc ol{ margin:0; padding:0; list-style:none; column-count:2; column-gap:30px; font-size:10pt; }
+  .toc li{ padding:4px 0; color:#334155; break-inside:avoid; }
+  .toc li b{ color:var(--accent2); display:inline-block; width:1.6em; }
+
+  /* ---------- Sections ---------- */
+  h2.sec{
+    display:flex; align-items:center; gap:12px;
+    font-size:15pt; color:var(--head); margin:20px 0 10px; letter-spacing:-.01em;
+    padding-bottom:8px; border-bottom:2px solid var(--line); break-after:avoid;
+  }
+  h2.sec .num{
+    flex:none; width:26px; height:26px; border-radius:7px; background:var(--accent);
+    color:#fff; font-size:11pt; font-weight:700; display:inline-flex; align-items:center; justify-content:center;
+  }
+  h3.sub{ font-size:11pt; color:var(--accent2); margin:15px 0 5px; break-after:avoid; }
+  p{ margin:8px 0; }
+  .lead{ font-size:11pt; color:#334155; }
+  ul,ol{ margin:8px 0; padding-left:20px; }
+  li{ margin:4px 0; }
+  strong{ color:#0f172a; }
+  code{ background:var(--code); color:#0f172a; padding:1px 5px; border-radius:4px; font-size:9pt; }
+  a{ color:var(--accent); text-decoration:none; }
+
+  pre{
+    background:var(--code); border:1px solid #e2e8f0; border-left:3px solid var(--accent);
+    border-radius:8px; padding:11px 14px; margin:10px 0;
+    font-size:8.8pt; line-height:1.6; color:#0f172a; break-inside:avoid; white-space:pre-wrap;
+  }
+  pre .c{ color:#64748b; }
+  pre b{ color:#1e3a8a; }
+
+  .callout{ border-radius:8px; padding:11px 14px; margin:12px 0; font-size:9.8pt; break-inside:avoid; border:1px solid; }
+  .callout .lbl{ font-weight:700; font-size:8pt; letter-spacing:.08em; text-transform:uppercase; display:block; margin-bottom:4px; }
+  .callout p{ margin:4px 0 0; }
+  .tip{ background:#eff6ff; border-color:#bfdbfe; } .tip .lbl{ color:#1d4ed8; }
+  .warn{ background:#fffbeb; border-color:#fde68a; } .warn .lbl{ color:#b45309; }
+  .danger{ background:#fef2f2; border-color:#fecaca; } .danger .lbl{ color:#b91c1c; }
+
+  table.cmp{ width:100%; border-collapse:collapse; margin:10px 0; font-size:9.5pt; break-inside:avoid; }
+  table.cmp th, table.cmp td{ text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.cmp th{ background:#f8fafc; color:#334155; font-size:8.3pt; text-transform:uppercase; letter-spacing:.05em; }
+  table.cmp td.bad{ color:#b91c1c; font-weight:600; } table.cmp td.good{ color:#15803d; font-weight:600; }
+  table.cmp tr td:first-child{ font-weight:600; color:#0f172a; }
+
+  .flow{ display:flex; align-items:stretch; margin:14px 0 4px; break-inside:avoid; }
+  .flow .node{ flex:1; background:#f8fafc; border:1px solid #e2e8f0; border-top:3px solid var(--accent); border-radius:10px; padding:11px 8px; text-align:center; }
+  .flow .node .ic{ font-size:17pt; line-height:1; }
+  .flow .node .t{ font-weight:700; color:#0f172a; margin-top:5px; font-size:9.6pt; }
+  .flow .node .s{ color:var(--muted); font-size:8pt; margin-top:3px; line-height:1.3; }
+  .flow .arr{ display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:16pt; font-weight:700; padding:0 7px; }
+  .flow-cap{ text-align:center; color:var(--muted); font-size:8.6pt; margin:4px 0 0; }
+
+  pre.tree{ background:#0f172a; color:#e2e8f0; border:none; border-left:3px solid #3b82f6; }
+  pre.tree b{ color:#93c5fd; } pre.tree .c{ color:#7c889c; }
+
+  /* ---------- Cheat sheet ---------- */
+  .cheat{ break-before:page; }
+  .cheat .ch-head{ background:#0f172a; color:#fff; border-radius:12px; padding:15px 20px; margin-bottom:13px; }
+  .cheat .ch-head h2{ margin:0; font-size:18pt; color:#fff; border:none; padding:0; display:block; }
+  .cheat .ch-head p{ margin:4px 0 0; color:#cbd5e1; font-size:9.5pt; }
+  .cheat .cols{ column-count:2; column-gap:16px; }
+  .cheat .box{ break-inside:avoid; border:1px solid #e2e8f0; border-radius:8px; padding:9px 11px; margin-bottom:11px; }
+  .cheat .box h4{ margin:0 0 6px; font-size:9pt; color:var(--accent2); text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); padding-bottom:5px; }
+  .cheat pre{ margin:5px 0; padding:8px 10px; font-size:7.8pt; line-height:1.5; }
+  .cheat .k{ font-size:8.6pt; margin:4px 0; color:#334155; }
+  .cheat code{ font-size:8pt; }
+  .footer-note{ text-align:center; color:#94a3b8; font-size:8pt; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<div class="cover">
+  <div class="hero">
+    <div class="eyebrow">Field Guide</div>
+    <h1>Getting Started<br>as a Developer</h1>
+    <div class="tagline">A practical playbook for your stack — macOS, Git, GitHub, Vercel &amp; Claude Code.</div>
+    <div class="ethos">Keep your code <b>local</b>, let <b>GitHub be your cloud</b>, and ship with a single <b>push</b>.</div>
+  </div>
+  <div class="meta">
+    Prepared for <b>Jerzy Klosin</b> &nbsp;·&nbsp; GitHub <b>@pmjzzvs89z</b> &nbsp;·&nbsp; June 2026<br>
+    Live project: <b>html-dashboards.vercel.app</b>
+  </div>
+
+  <div class="toc">
+    <h3>What's inside</h3>
+    <ol>
+      <li><b>1</b> The one big idea: GitHub is your cloud</li>
+      <li><b>2</b> Your folder setup (<code>~/Developer</code>)</li>
+      <li><b>3</b> Starting a project with <code>gh</code></li>
+      <li><b>4</b> The daily loop</li>
+      <li><b>5</b> Deploying with Vercel</li>
+      <li><b>6</b> Secrets &amp; safety</li>
+      <li><b>7</b> Good git habits &amp; branching</li>
+      <li><b>8</b> Backups &amp; undo</li>
+      <li><b>9</b> Troubleshooting cheatsheet</li>
+      <li><b>★</b> One-page cheat sheet (last page)</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============ 1 ============ -->
+<section>
+  <h2 class="sec"><span class="num">1</span> The one big idea: GitHub is your cloud</h2>
+  <p class="lead">The single mental shift that makes everything else click: <strong>your code lives on your Mac, and GitHub is its cloud backup</strong> — not iCloud, not Dropbox.</p>
+  <p>Git + GitHub already give you backup, a full history of every change, and sync across machines — the same things iCloud does for documents, but purpose-built for code and standard across the industry. So you don't need a sync service on top; it's redundant and it actively causes problems.</p>
+
+  <div class="flow">
+    <div class="node"><div class="ic">💻</div><div class="t">Your Mac</div><div class="s"><code>~/Developer</code><br>where you write code</div></div>
+    <div class="arr">→</div>
+    <div class="node"><div class="ic">☁️</div><div class="t">GitHub</div><div class="s"><code>origin</code><br>backup + full history</div></div>
+    <div class="arr">→</div>
+    <div class="node"><div class="ic">🚀</div><div class="t">Vercel</div><div class="s">your live site<br>auto-deploys</div></div>
+  </div>
+  <p class="flow-cap">You <code>git push</code> once → GitHub stores it forever → Vercel ships it in ~30–60s.</p>
+
+  <h3 class="sub">Why not keep code in iCloud?</h3>
+  <table class="cmp">
+    <tr><th>For your code…</th><th>iCloud / Dropbox</th><th>Git + GitHub</th></tr>
+    <tr><td>Version history</td><td class="bad">Last copy only</td><td class="good">Every change, forever</td></tr>
+    <tr><td>The <code>.git</code> folder</td><td class="bad">Can corrupt mid-sync</td><td class="good">Designed for it</td></tr>
+    <tr><td>Big folders (<code>node_modules</code>)</td><td class="bad">Chokes, burns storage</td><td class="good">Ignored entirely</td></tr>
+    <tr><td>"Optimize Storage"</td><td class="bad">Evicts files → builds break</td><td class="good">N/A</td></tr>
+  </table>
+
+  <div class="callout warn">
+    <span class="lbl">Your setup right now</span>
+    <p>Your projects sit in <code>~/Documents/Coding&nbsp;Projects/</code>, and iCloud's "Desktop &amp; Documents Folders" sync is <b>on</b> — so your code is syncing to iCloud today. Nothing's broken yet, but Section 2 moves it somewhere safe. You can keep iCloud for real documents; just not for code.</p>
+  </div>
+</section>
+
+<!-- ============ 2 ============ -->
+<section>
+  <h2 class="sec"><span class="num">2</span> Your folder setup</h2>
+  <p class="lead">One home for everything you build: <strong><code>~/Developer</code></strong>. macOS even gives it a special icon, and it's never touched by iCloud.</p>
+  <p><strong>The golden rule:</strong> 1 project = 1 folder = 1 git repo = 1 GitHub repo. Never nest one repo inside another.</p>
+
+  <pre class="tree">~/Developer/
+├── HTML-Dashboards/        <span class="c"># a repo → GitHub → Vercel</span>
+│   ├── .git/               <span class="c"># the history (git's, not yours to touch)</span>
+│   ├── index.html
+│   └── dashboards/
+└── Literature-Tracker/     <span class="c"># your second project, its own repo</span>
+    └── .git/</pre>
+
+  <h3 class="sub">Move your projects out of iCloud (one time)</h3>
+  <p>Do this <em>after</em> each project is committed and pushed, so GitHub holds a safe copy first:</p>
+  <pre>mkdir -p ~/Developer
+mv ~/Documents/Coding\ Projects/HTML-Dashboards   ~/Developer/
+mv ~/Documents/Coding\ Projects/Literature-Tracker ~/Developer/</pre>
+
+  <div class="callout tip">
+    <span class="lbl">Naming</span>
+    <p>Name folders in <code>lowercase-with-hyphens</code> (e.g. <code>literature-tracker</code>) — the same tidy convention you already use for your dashboard files. Moving a folder won't affect Vercel: it deploys from GitHub, not from your Mac.</p>
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section>
+  <h2 class="sec"><span class="num">3</span> Starting a project with <code>gh</code></h2>
+  <p class="lead">You're signed in to the GitHub CLI (<code>gh</code>) as <b>@pmjzzvs89z</b>, so creating and connecting a repo is one command. Which one depends on whether code already exists.</p>
+
+  <h3 class="sub">A · Brand-new project — let the clone create the folder</h3>
+  <pre>cd ~/Developer
+gh repo create my-project --private --clone --add-readme
+cd my-project          <span class="c"># already wired to GitHub — just start coding</span></pre>
+  <p>Best default: the folder is <em>born connected</em>, so you can never forget to link it.</p>
+
+  <h3 class="sub">B · Code already exists in a folder</h3>
+  <pre>cd ~/Developer/my-project
+git init -b main                       <span class="c"># skip if it's already a repo</span>
+git add -A &amp;&amp; git commit -m "Initial commit"
+gh repo create my-project --private --source=. --remote=origin --push</pre>
+  <p>That last line creates the GitHub repo <em>from</em> your folder, names the remote <code>origin</code>, and pushes — all at once. Swap <code>--private</code> for <code>--public</code> to make it world-readable (Vercel deploys either).</p>
+
+  <h3 class="sub">What "connected" actually means</h3>
+  <pre>git remote -v              <span class="c"># the link:     origin → github.com/you/repo</span>
+git status -sb | head -1   <span class="c"># the tracking: ## main...origin/main</span></pre>
+  <p><b>remote</b> = <em>where</em> to push. <b>tracking</b> = so a bare <code>git push</code> knows where to go without arguments.</p>
+</section>
+
+<!-- ============ 4 ============ -->
+<section>
+  <h2 class="sec"><span class="num">4</span> The daily loop</h2>
+  <p class="lead">Three moves, every working session. Think of <code>push</code> as "save to the cloud."</p>
+  <pre>git pull                              <span class="c"># START — grab the latest (safe even solo)</span>
+<span class="c"># … make your changes …</span>
+git add -A
+git commit -m "Add contact form"      <span class="c"># say WHAT changed, present tense</span>
+git push                              <span class="c"># END — back it up to GitHub</span></pre>
+
+  <div class="callout tip">
+    <span class="lbl">Your shortcut with Claude Code</span>
+    <p>For your dashboards, that whole end-of-session step is one word: drop the file in <code>dashboards/</code> and say <b>"publish."</b> Claude rebuilds the index, commits, and pushes — and Vercel deploys.</p>
+  </div>
+
+  <h3 class="sub">Writing a good commit message</h3>
+  <ul>
+    <li><strong>Small &amp; often</strong> beats one giant commit — each is a save point you can return to.</li>
+    <li><strong>Present tense, what changed:</strong> "Fix mobile layout", not "fixed stuff".</li>
+    <li>If <em>why</em> isn't obvious, add a second line explaining it.</li>
+  </ul>
+</section>
+
+<!-- ============ 5 ============ -->
+<section>
+  <h2 class="sec"><span class="num">5</span> Deploying with Vercel</h2>
+  <p class="lead">Your Vercel project is connected to your GitHub repo, so there's nothing manual to "deploy."</p>
+  <ul>
+    <li><strong>Push to <code>main</code> = live.</strong> Every push auto-builds and updates <b>html-dashboards.vercel.app</b> in ~30–60s.</li>
+    <li><strong>What goes up:</strong> <em>everything committed to the repo</em> — not just HTML. Static files are served as-is at their path.</li>
+    <li><strong>Watch a build:</strong> Vercel dashboard → your project → <em>Deployments</em>.</li>
+  </ul>
+  <div class="callout warn">
+    <span class="lbl">Committed = public</span>
+    <p>On a public deploy, <em>any</em> file you commit is fetchable by URL — even ones nothing links to (e.g. a stray notes file becomes <code>your-site.vercel.app/notes.txt</code>). Commit deliberately. This leads straight to the next section.</p>
+  </div>
+</section>
+
+<!-- ============ 6 ============ -->
+<section>
+  <h2 class="sec"><span class="num">6</span> Secrets &amp; safety</h2>
+  <p class="lead">The one rule that saves real money and headaches: <strong>never commit secrets.</strong> API keys, passwords, tokens, <code>.env</code> files — none of it belongs in git.</p>
+
+  <h3 class="sub">Keep them out with <code>.gitignore</code></h3>
+  <p>Put a <code>.gitignore</code> in every repo. Anything listed is invisible to git, so it never gets committed or deployed:</p>
+  <pre><span class="c"># .gitignore</span>
+.env
+.env.local
+*.key
+.DS_Store
+node_modules/</pre>
+
+  <div class="callout danger">
+    <span class="lbl">If you ever commit a secret</span>
+    <p>Removing it from git isn't enough — it stays in the history. <b>Rotate the key</b> (regenerate it at the provider) immediately, then stop tracking the file:</p>
+  </div>
+  <pre>git rm --cached .env                 <span class="c"># stop tracking it (keeps your local copy)</span>
+echo ".env" &gt;&gt; .gitignore
+git commit -m "Stop tracking .env"
+<span class="c"># …then ROTATE the exposed key at the provider — assume it's compromised.</span></pre>
+</section>
+
+<!-- ============ 7 ============ -->
+<section>
+  <h2 class="sec"><span class="num">7</span> Good git habits &amp; branching</h2>
+  <ul>
+    <li><strong><code>main</code> stays shippable.</strong> Since <code>main</code> auto-deploys, keep it in a working state.</li>
+    <li><strong>Commit at every "save point"</strong> — a finished thought, a working feature, before a risky change.</li>
+    <li><strong>Push when you step away</strong> so your work is backed up off your laptop.</li>
+  </ul>
+
+  <h3 class="sub">Branch when you want to experiment safely</h3>
+  <p>A branch is a private sandbox — play without touching the live site, then merge when happy. For solo static sites, committing straight to <code>main</code> is fine; reach for a branch when a change is big or risky.</p>
+  <pre>git switch -c try-new-header     <span class="c"># branch off main</span>
+<span class="c"># … experiment, commit …</span>
+git push -u origin try-new-header
+gh pr create --fill              <span class="c"># open a pull request to review &amp; merge</span>
+git switch main &amp;&amp; git pull       <span class="c"># back to main once it's merged</span></pre>
+</section>
+
+<!-- ============ 8 ============ -->
+<section>
+  <h2 class="sec"><span class="num">8</span> Backups &amp; undo</h2>
+  <p class="lead">Once it's pushed, it's safe — <strong>GitHub is your backup.</strong> If your laptop vanished, <code>git clone</code> brings every pushed project back. And almost anything can be undone:</p>
+  <pre>git restore FILE                 <span class="c"># discard unsaved changes to one file</span>
+git restore .                    <span class="c"># discard ALL unsaved changes (careful)</span>
+git restore --staged FILE        <span class="c"># unstage a file (keeps your edits)</span>
+git commit --amend -m "Better message"   <span class="c"># fix the last message (if not pushed)</span>
+git revert HASH                  <span class="c"># undo a pushed commit — safely, as a new commit</span>
+git restore --source HASH FILE   <span class="c"># bring an old version of a file back</span></pre>
+  <div class="callout tip">
+    <span class="lbl">Find a HASH</span>
+    <p><code>git log --oneline</code> lists recent commits with their short hashes (like <code>9b17bb5</code>). Copy one into the commands above.</p>
+  </div>
+</section>
+
+<!-- ============ 9 ============ -->
+<section>
+  <h2 class="sec"><span class="num">9</span> Troubleshooting cheatsheet</h2>
+  <table class="cmp">
+    <tr><th>You see…</th><th>What it means &amp; the fix</th></tr>
+    <tr><td>fatal: not a git repository</td><td>You're not in a project folder (or it isn't a repo). <code>cd</code> into it, or run <code>git init -b main</code>.</td></tr>
+    <tr><td>Authentication failed</td><td>Check <code>gh auth status</code>; re-login with <code>gh auth login</code>.</td></tr>
+    <tr><td>Updates were rejected (non-fast-forward)</td><td>GitHub has changes you don't. <code>git pull --rebase</code>, then <code>git push</code>.</td></tr>
+    <tr><td><code>.icloud</code> files / files "missing"</td><td>Code is in iCloud and got evicted. Move the project to <code>~/Developer</code> (Section 2).</td></tr>
+    <tr><td>You're in 'detached HEAD' state</td><td>You checked out a commit, not a branch. <code>git switch main</code> to get back.</td></tr>
+    <tr><td>Vercel didn't update</td><td>Did you push to <code>main</code>? Confirm with <code>git status -sb</code>, then check the Vercel <em>Deployments</em> tab.</td></tr>
+  </table>
+  <div class="callout tip">
+    <span class="lbl">When in doubt</span>
+    <p><code>git status</code> is your best friend — it tells you what branch you're on, what's changed, and what to do next. Run it often.</p>
+  </div>
+</section>
+
+<!-- ============ CHEAT SHEET ============ -->
+<div class="cheat">
+  <div class="ch-head">
+    <h2>One-Page Cheat Sheet</h2>
+    <p>Print this and keep it next to you · Jerzy Klosin · @pmjzzvs89z</p>
+  </div>
+  <div class="cols">
+
+    <div class="box">
+      <h4>One-time setup</h4>
+      <pre>mkdir -p ~/Developer        <span class="c"># your home for code</span>
+gh auth status              <span class="c"># confirm GitHub login</span></pre>
+    </div>
+
+    <div class="box">
+      <h4>New project</h4>
+      <pre>cd ~/Developer
+gh repo create NAME --private --clone --add-readme
+cd NAME</pre>
+    </div>
+
+    <div class="box">
+      <h4>Existing folder → GitHub</h4>
+      <pre>cd ~/Developer/NAME
+git init -b main
+git add -A &amp;&amp; git commit -m "Initial commit"
+gh repo create NAME --private --source=. \
+  --remote=origin --push</pre>
+    </div>
+
+    <div class="box">
+      <h4>Daily loop</h4>
+      <pre>git pull                  <span class="c"># start</span>
+git add -A
+git commit -m "What changed"
+git push                  <span class="c"># save to cloud</span></pre>
+    </div>
+
+    <div class="box">
+      <h4>Deploy (Vercel)</h4>
+      <p class="k">Push to <code>main</code> → live in ~30–60s.<br>Everything committed is served. Watch it in the Vercel <b>Deployments</b> tab.</p>
+    </div>
+
+    <div class="box">
+      <h4>Undo / oops</h4>
+      <pre>git restore FILE          <span class="c"># drop changes</span>
+git restore --staged FILE <span class="c"># unstage</span>
+git revert HASH           <span class="c"># undo pushed commit</span>
+git log --oneline         <span class="c"># find a HASH</span></pre>
+    </div>
+
+    <div class="box">
+      <h4>Stay safe</h4>
+      <p class="k">Never commit <code>.env</code> / keys. Add them to <code>.gitignore</code>. On a public repo, <b>anything committed is fetchable by URL.</b> Leaked a key? <b>Rotate it.</b></p>
+    </div>
+
+    <div class="box">
+      <h4>Check where you stand</h4>
+      <pre>git status                <span class="c"># what's changed</span>
+git remote -v             <span class="c"># the GitHub link</span>
+git status -sb | head -1  <span class="c"># tracking branch</span></pre>
+    </div>
+
+    <div class="box">
+      <h4>With Claude Code</h4>
+      <p class="k">Drop a file in <code>dashboards/</code> and say <b>"publish"</b> — index rebuilt, committed, pushed, deployed.</p>
+    </div>
+
+  </div>
+  <p class="footer-note">Getting Started as a Developer · Field Guide · June 2026</p>
+</div>
+
+</body>
+</html>
