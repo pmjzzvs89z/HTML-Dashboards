@@ -1,0 +1,3150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Bond Strength ↔ Half-Life Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #181b22;
+    --panel-2: #1f232c;
+    --border: #2a2f3a;
+    --text: #e6e8ee;
+    --muted: #8a93a6;
+    --accent: #6ea8ff;
+    --accent-2: #ffb86b;
+    --good: #7ee2a8;
+    --warn: #ff8a8a;
+    --grid: #2a2f3a;
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f7fb;
+    --panel: #ffffff;
+    --panel-2: #f0f2f7;
+    --border: #d8dbe3;
+    --text: #1c1e26;
+    --muted: #6b7180;
+    --accent: #2563eb;
+    --accent-2: #d97706;
+    --good: #15803d;
+    --warn: #dc2626;
+    --grid: #d8dbe3;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    overflow-anchor: none; /* prevent browser from auto-scrolling when DOM mutates */
+  }
+  .wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  h1 {
+    margin: 0 0 4px 0;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .subtitle {
+    color: var(--muted);
+    margin: 0 0 20px 0;
+    font-size: 13px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 20px;
+    align-items: start; /* keep right column anchored at top so left-column growth doesn't shift it */
+  }
+  @media (max-width: 1000px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .panel h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin: 0 0 14px 0;
+    font-weight: 600;
+  }
+  .control {
+    margin-bottom: 16px;
+  }
+  .control-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .control-label {
+    font-size: 13px;
+    color: var(--text);
+  }
+  .control-value {
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 13px;
+  }
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+  input[type="number"], select {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .row2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .row3 {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 8px;
+  }
+  .seg {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .seg.seg3 { grid-template-columns: 1fr 1fr 1fr; }
+  .seg button {
+    background: transparent; border: 0; color: var(--muted);
+    padding: 8px 10px; font-size: 12px; cursor: pointer;
+    font-family: inherit; font-weight: 600;
+  }
+  .seg button.active {
+    background: var(--accent); color: #0f1115;
+  }
+  .result {
+    background: linear-gradient(135deg, #1c2230, #1a1f2a);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    margin-top: 8px;
+    text-align: center;
+  }
+  .result .big {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--accent-2);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+  .result .unit {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 2px;
+  }
+  .result .sub {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  .charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 1100px) {
+    .charts { grid-template-columns: 1fr; }
+  }
+  .chart-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .chart-card h3 {
+    font-size: 13px;
+    margin: 0 0 6px 0;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .chart-card .desc {
+    color: var(--muted);
+    font-size: 11px;
+    margin: 0 0 10px 0;
+  }
+  canvas {
+    width: 100%;
+    height: 280px;
+    display: block;
+  }
+  .heatmap {
+    grid-column: 1 / -1;
+  }
+  .heatmap canvas {
+    height: 432px;
+  }
+  @media (max-width: 600px) {
+    .wrap { padding: 12px; }
+    h1 { font-size: 18px; }
+    .subtitle { font-size: 12px; }
+    .panel { padding: 12px; }
+    .charts { grid-template-columns: 1fr; gap: 12px; }
+    .chart-card { padding: 10px; }
+    canvas { height: 220px; }
+    .heatmap canvas { height: 384px; }
+    .seg button { font-size: 11px; padding: 6px 6px; }
+    .result .big { font-size: 28px; }
+    .refs-grid { gap: 12px; margin-top: 14px; }
+    table { font-size: 11px; }
+    th, td { padding: 4px 6px; }
+  }
+  .refs-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1.6fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  @media (max-width: 1200px) {
+    .refs-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 800px) {
+    .refs-grid { grid-template-columns: 1fr; }
+  }
+  .refs-grid > details { margin-top: 0; }
+
+  kbd {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 11px;
+    color: var(--text);
+  }
+  #userGuide[open] > summary { margin-bottom: 4px; }
+  #userGuide summary::-webkit-details-marker { display: none; }
+  #userGuide kbd + kbd { margin-left: 2px; }
+  /* Collapsed state: whole panel is the click target — pointer cursor everywhere on hover */
+  #userGuide:not([open]) { cursor: pointer; }
+  /* Expanded state: text cursor in the readable body so users see they can select text */
+  #userGuide[open] .guide-grid { cursor: text; }
+  #userGuide[open] .guide-grid kbd,
+  #userGuide[open] .guide-grid code { cursor: text; }
+  #userGuide .guide-grid {
+    grid-template-columns: 1fr 1fr 1.5fr;
+    grid-template-rows: auto auto auto auto;
+    grid-auto-flow: column;
+  }
+  #userGuide .guide-heatmap { grid-column: 3 / 4; grid-row: 1 / 4; }
+  #userGuide .guide-shortcuts { grid-column: 1 / -1; grid-row: 4 / 5; }
+  @media (max-width: 1100px) {
+    #userGuide .guide-grid {
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: none;
+      grid-auto-flow: row;
+    }
+    #userGuide .guide-heatmap { grid-column: auto; grid-row: auto; }
+    #userGuide .guide-shortcuts { grid-column: 1 / -1; grid-row: auto; }
+  }
+  @media (max-width: 700px) {
+    #userGuide .guide-grid { grid-template-columns: 1fr; }
+  }
+  th.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+  }
+  th.sortable:hover { color: var(--accent); }
+  th.sortable .sort-arrow {
+    display: inline-block;
+    width: 8px;
+    margin-left: 2px;
+    color: var(--accent);
+  }
+
+  /* Dark scrollbars for the reference panel scroll containers */
+  .scroll-box {
+    background: var(--panel-2);
+    scrollbar-color: #3a4150 var(--panel-2);
+    scrollbar-width: thin;
+  }
+  .scroll-box::-webkit-scrollbar { width: 10px; height: 10px; }
+  .scroll-box::-webkit-scrollbar-track { background: var(--panel-2); }
+  .scroll-box::-webkit-scrollbar-thumb {
+    background: #3a4150; border-radius: 5px; border: 2px solid var(--panel-2);
+  }
+  .scroll-box::-webkit-scrollbar-thumb:hover { background: #4a5263; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  th, td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    color: var(--muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+  }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.centered th, table.centered td {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  table.centered tr.subhead td {
+    text-align: center;
+    background: var(--panel-2);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 6px 8px;
+  }
+  table.centered tbody tr:not(.subhead):hover {
+    background: rgba(110, 168, 255, 0.08);
+    cursor: pointer;
+  }
+  /* When a row has an inline background (active compound), keep that color on hover */
+  table.centered tbody tr[style*="background"]:hover {
+    filter: brightness(1.15);
+  }
+  /* Smooth banner appearance so the left-column shift below it isn't a sudden snap */
+  #activeCompoundBanner {
+    transition: opacity 180ms ease, transform 180ms ease;
+  }
+  #activeCompoundBanner[data-anim="enter"] {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  details.collapsible > summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+    margin: 0 0 14px 0;
+    user-select: none;
+  }
+  details.collapsible > summary::-webkit-details-marker { display: none; }
+  details.collapsible > summary .sum-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  details.collapsible > summary .sum-caret {
+    color: var(--accent);
+    font-size: 22px;
+    line-height: 1;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--panel-2);
+    transition: transform 0.18s ease, background 0.18s ease;
+  }
+  details.collapsible > summary:hover .sum-caret {
+    background: rgba(110, 168, 255, 0.15);
+    color: var(--accent);
+  }
+  details.collapsible[open] > summary .sum-caret {
+    transform: rotate(180deg);
+  }
+  details.collapsible:not([open]) > summary { margin-bottom: 0; }
+  .ref-controls {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .exp-badge {
+    display: inline-block;
+    background: rgba(126, 226, 168, 0.15);
+    color: var(--good);
+    border: 1px solid rgba(126, 226, 168, 0.4);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .data-source {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--good);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .data-source strong { color: var(--good); }
+  .ref-controls select {
+    width: auto;
+    display: inline-block;
+    margin-left: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .legend {
+    display: flex; flex-wrap: wrap; gap: 14px;
+    font-size: 11px; color: var(--muted);
+    margin-top: 8px;
+  }
+  .legend .dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; margin-right: 5px; vertical-align: middle;
+  }
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  summary:hover { color: var(--text); }
+  .formula {
+    font-family: 'SF Mono', Menlo, monospace;
+    background: var(--panel-2);
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin: 8px 0;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .pill {
+    display: inline-block;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+  .eq-block {
+    margin-bottom: 14px;
+  }
+  .eq-block:last-child { margin-bottom: 0; }
+  .eq-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .eq-note {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-top: 4px;
+  }
+  .eq-const {
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 11px;
+    color: var(--text);
+    background: var(--panel-2);
+    padding: 8px 10px;
+    border-radius: 6px;
+    line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+    <div style="flex: 1;">
+      <h1>Bond Strength ↔ Half-Life Dashboard</h1>
+    </div>
+    <button id="themeToggle" title="Toggle theme"
+            style="background: var(--panel-2); border: 1px solid var(--border);
+                   color: var(--text); padding: 6px 12px; border-radius: 6px;
+                   cursor: pointer; font-family: inherit; font-size: 12px;">
+      <span id="themeToggleIcon">☾</span> <span id="themeToggleLabel">Light</span>
+    </button>
+  </div>
+  <p class="subtitle">
+    For a unimolecular homolytic bond cleavage at temperature T, what bond dissociation energy gives a half-life of t?
+    Uses Arrhenius: k = A·exp(−Eₐ/RT), with t₁/₂ = ln(2)/k.
+  </p>
+
+  <details id="userGuide" class="panel" style="margin-bottom: 14px; padding: 10px 16px;">
+    <summary style="cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 0.02em;">Quick Start Guide</span>
+      <span style="color: var(--muted); font-size: 11px;">click to expand / collapse</span>
+    </summary>
+    <div class="guide-grid" style="display: grid; grid-template-columns: 1fr 1fr 1.5fr; grid-template-rows: auto auto auto auto; grid-auto-flow: column; gap: 10px 16px; margin-top: 8px;">
+
+      <div>
+        <div style="font-size: 10px; color: var(--accent-2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 2px;">1 · What it does</div>
+        <p style="font-size: 11px; color: var(--text); line-height: 1.4; margin: 0;">
+          Connects <strong>T</strong>, <strong>t₁/₂</strong>, and <strong>Eₐ ≈ BDE</strong> for first-order thermal decomposition. Pick the unknown; the dashboard solves for it.
+        </p>
+      </div>
+
+      <div>
+        <div style="font-size: 10px; color: var(--accent-2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 2px;">2 · Solve modes</div>
+        <p style="font-size: 11px; color: var(--text); line-height: 1.4; margin: 0;">
+          <strong>BDE / Eₐ</strong> from T &amp; t · <strong>Half-life</strong> from T &amp; Eₐ · <strong>Temperature</strong> from t &amp; Eₐ
+        </p>
+      </div>
+
+      <div>
+        <div style="font-size: 10px; color: var(--accent-2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 2px;">3 · Inputs &amp; result</div>
+        <p style="font-size: 11px; color: var(--text); line-height: 1.4; margin: 0;">
+          Sliders for T, t₁/₂ (log-scale), Eₐ, and A (or ΔS‡ in Eyring). Big orange number = answer. Charts &amp; heatmap update live with crosshair.
+        </p>
+      </div>
+
+      <div>
+        <div style="font-size: 10px; color: var(--accent-2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 2px;">4 · Reference rows</div>
+        <p style="font-size: 11px; color: var(--text); line-height: 1.4; margin: 0;">
+          <strong>Click on peroxide</strong> to load Eₐ &amp; A, overlay t(T) curve · <strong>⌘/Ctrl+click</strong> adds more (up to 8) · <strong>click again</strong> de-selects.
+        </p>
+      </div>
+
+      <div>
+        <div style="font-size: 10px; color: var(--accent-2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 2px;">5 · Tables &amp; theme</div>
+        <p style="font-size: 11px; color: var(--text); line-height: 1.4; margin: 0;">
+          <strong>Initiators</strong> (19) · <strong>Luperox®</strong> (50) · <strong>BDEs</strong> — sortable &amp; filterable. ☾/☀ toggle in top-right swaps dark/light theme.
+        </p>
+      </div>
+
+      <div class="guide-heatmap">
+        <div style="font-size: 10px; color: var(--accent-2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 2px;">6 · Heatmap probe &amp; zoom</div>
+        <p style="font-size: 11px; color: var(--text); line-height: 1.4; margin: 0;">
+          <strong>Long-press</strong> a heatmap point to pin its T, t₁/₂, BDE · <strong>⌘/Ctrl+long-press</strong> adds another · click or <kbd>Esc</kbd> clears. <strong>Double-click</strong> any compound dot to move the crosshair to that compound. <strong style="color:#6ea8ff;">Box select</strong> (light blue) → drag a T × t₁/₂ window → lists every initiator whose curve crosses it (click any chip to load it); the button turns <span style="color:#7ee2a8;">green</span> while drawing. <strong>Wheel</strong> zooms · <strong>Shift+drag</strong> pans · the <strong style="color:#6ea8ff;">Reset zoom</strong> button (light blue) turns <span style="color:#7ee2a8;">green</span> when the view is zoomed/panned — click it or press <kbd>0</kbd> to restore.
+        </p>
+      </div>
+
+      <div class="guide-shortcuts" style="padding-top: 8px; border-top: 1px solid var(--border);
+                  font-size: 12px; color: var(--muted); line-height: 1.5;">
+        <strong style="color: var(--text);">Shortcuts:</strong>
+        <kbd>T</kbd>/<kbd>H</kbd>/<kbd>E</kbd>/<kbd>A</kbd> focus inputs · <kbd>S</kbd> cycle solve · <kbd>M</kbd> toggle model · <kbd>/</kbd> filter · <kbd>0</kbd> reset zoom · <kbd>Esc</kbd> clear probes · <kbd>?</kbd> help.
+        &nbsp; <strong style="color: var(--text);">Tips:</strong> <strong>Copy</strong> grabs state + URL · <strong>Show uncertainty</strong> propagates ±10% Eₐ · URL <code style="background: var(--panel-2); padding: 1px 4px; border-radius: 3px;">#hash</code> bookmarks state.
+        <div style="font-size: 10px; line-height: 1.4; margin-top: 4px;">
+          <strong style="color: var(--text);">Caveat:</strong> Eₐ ≈ BDE only for clean unimolecular homolysis.
+          <div style="margin-top: 4px;">Designed by Jerzy Klosin</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <div class="grid">
+    <div>
+      <div class="panel">
+        <h2>Model</h2>
+        <div class="seg" id="modelSeg">
+          <button data-model="arrhenius" class="active">Arrhenius</button>
+          <button data-model="eyring">Eyring (TST)</button>
+        </div>
+
+        <h2>Solve for</h2>
+        <div class="seg seg3" id="solveSeg">
+          <button data-solve="bde" class="active">BDE / Eₐ</button>
+          <button data-solve="time">Half-life</button>
+          <button data-solve="temp">Temperature</button>
+        </div>
+
+        <div id="activeCompoundBanner" style="display:none; background: var(--panel-2);
+              border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+              margin-bottom: 12px; font-size: 12px; color: var(--text);">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;">
+            <div style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;">
+              Active compounds
+            </div>
+            <button id="clearCompound" style="background: transparent; border: 1px solid var(--border);
+                    color: var(--muted); padding: 3px 8px; border-radius: 4px; cursor: pointer;
+                    font-family: inherit; font-size: 11px;">Clear all</button>
+          </div>
+          <div id="activeCompoundList" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+          <div style="color: var(--muted); font-size: 10px; margin-top:6px;">
+            Click a row to focus · ⌘/Ctrl+click to compare · click again to deselect
+          </div>
+        </div>
+
+        <h2>Inputs</h2>
+
+        <div class="control" id="tempControlWrap">
+          <div class="control-row">
+            <span class="control-label">Temperature</span>
+            <span class="control-value" id="tempLabel">200 °C  (473.15 K)</span>
+          </div>
+          <input type="range" id="tempSlider" min="-50" max="800" step="1" value="200" />
+          <div class="row3" style="margin-top: 8px;">
+            <input type="number" id="tempInput" value="200" step="any" />
+            <select id="tempUnit">
+              <option value="C" selected>°C</option>
+              <option value="K">K</option>
+              <option value="F">°F</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control" id="timeControlWrap">
+          <div class="control-row">
+            <span class="control-label">Half-life (t₁/₂)</span>
+            <span class="control-value" id="timeLabel">1 h</span>
+          </div>
+          <input type="range" id="timeSlider" min="-6" max="12" step="0.01" value="3.5563" />
+          <div class="row2" style="margin-top: 8px;">
+            <input type="number" id="timeValue" value="1" min="0.0001" step="any" />
+            <select id="timeUnit">
+              <option value="1">seconds</option>
+              <option value="60">minutes</option>
+              <option value="3600" selected>hours</option>
+              <option value="86400">days</option>
+              <option value="31557600">years</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="control" id="eaControlWrap">
+          <div class="control-row">
+            <span class="control-label">Activation energy Eₐ (kcal/mol)</span>
+            <span class="control-value" id="eaLabel">30.0</span>
+          </div>
+          <input type="range" id="eaSlider" min="10" max="60" step="0.1" value="30" />
+          <div style="color: var(--muted); font-size: 11px; margin-top: 4px;">
+            Typical: 25–32 (peroxyesters/azo), 33–40 (dialkyl peroxides, hydroperoxides).
+          </div>
+        </div>
+
+        <div class="control" id="arrParamWrap">
+          <div class="control-row">
+            <span class="control-label">Pre-exponential A (s⁻¹)</span>
+            <span class="control-value" id="aLabel">1×10¹⁵</span>
+          </div>
+          <input type="range" id="aSlider" min="10" max="18" step="0.1" value="15" />
+          <div style="color: var(--muted); font-size: 11px; margin-top: 4px;">
+            Typical: 10¹³–10¹⁴ (loose TS), 10¹⁵–10¹⁶ (tight, most homolyses)
+          </div>
+        </div>
+
+        <div class="control" id="eyrParamWrap" style="display:none;">
+          <div class="control-row">
+            <span class="control-label">Activation entropy ΔS‡ (cal·mol⁻¹·K⁻¹, "e.u.")</span>
+            <span class="control-value" id="dsLabel">+10.0</span>
+          </div>
+          <input type="range" id="dsSlider" min="-20" max="30" step="0.5" value="10" />
+          <div style="color: var(--muted); font-size: 11px; margin-top: 4px;">
+            Homolysis: +5 to +15 (loose TS). Concerted/cyclic: −10 to 0. Bimolecular: more negative.
+          </div>
+          <div style="background: rgba(255,184,107,0.08); border: 1px solid rgba(255,184,107,0.35);
+                      border-left: 3px solid var(--accent-2); border-radius: 4px;
+                      padding: 6px 8px; margin-top: 8px; font-size: 11px; color: var(--text); line-height: 1.5;">
+            <strong style="color: var(--accent-2);">Note:</strong> In Eyring, A and ΔS‡ are linked
+            through A = (e·k<sub>B</sub>T/h)·exp(ΔS‡/R). Don't compare numerical A and ΔS‡
+            directly across modes — switching changes which knob the model uses.
+          </div>
+        </div>
+
+        <div class="result">
+          <div class="big" id="bdeValue">—</div>
+          <div class="unit" id="bdeUnit">kcal/mol  ·  Eₐ ≈ BDE</div>
+          <div class="sub" id="bdeKj">— kJ/mol</div>
+          <div class="sub" id="bdeExtra" style="margin-top:6px;"></div>
+          <div style="margin-top: 10px; display: flex; justify-content: center; gap: 10px; align-items: center;">
+            <button id="copyResult" title="Copy result to clipboard"
+                    style="background: var(--panel-2); border: 1px solid var(--border);
+                           color: var(--muted); padding: 4px 10px; border-radius: 4px;
+                           cursor: pointer; font-family: inherit; font-size: 11px;">Copy</button>
+            <label style="font-size: 11px; color: var(--muted); cursor: pointer;">
+              <input type="checkbox" id="uncertaintyToggle" style="vertical-align: middle; margin-right: 4px;" />
+              Show uncertainty (±10% Eₐ)
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <details class="panel collapsible" open style="margin-top: 16px;">
+        <summary><span class="sum-title">Equations</span><span class="sum-caret">▾</span></summary>
+
+        <div class="eq-block">
+          <div class="eq-label">Arrhenius rate law <span style="margin-left:6px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); font-size: 10px;">— empirical</span></div>
+          <div class="formula">k = A · exp( −Eₐ / RT )</div>
+          <div class="eq-note">First-order rate constant. A is treated as T-independent.</div>
+        </div>
+
+        <div class="eq-block">
+          <div class="eq-label">Eyring (transition-state theory) <span style="margin-left:6px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted); font-size: 10px;">— mechanistic (TST)</span></div>
+          <div class="formula">k = (k_B T / h) · exp( ΔS‡ / R ) · exp( −ΔH‡ / RT )</div>
+          <div class="eq-note">From TST. The (k_B T / h) prefactor ≈ 10¹³ s⁻¹ at 300 K, T-dependent. ΔG‡ = ΔH‡ − TΔS‡.</div>
+        </div>
+
+        <div class="eq-block">
+          <div class="eq-label">Relationship between the two</div>
+          <div class="formula">Eₐ = ΔH‡ + RT &nbsp;&nbsp;·&nbsp;&nbsp; A = (e · k_B T / h) · exp( ΔS‡ / R )</div>
+          <div class="eq-note">Identical when calibrated. ΔS‡ folds into A. RT term ≈ 0.6 kcal/mol at 300 K — usually within model uncertainty.</div>
+        </div>
+
+        <div class="eq-block">
+          <div class="eq-label">First-order half-life</div>
+          <div class="formula">t₁/₂ = ln(2) / k</div>
+        </div>
+
+        <div class="eq-block">
+          <div class="eq-label">Solved for bond strength &mdash; what this dashboard computes</div>
+          <div class="formula" style="color: var(--accent-2); border-left: 3px solid var(--accent-2);">
+            <strong>Arrhenius:</strong>&nbsp; Eₐ = RT · ln( A · t₁/₂ / ln 2 )
+          </div>
+          <div class="formula" style="color: var(--accent-2); border-left: 3px solid var(--accent-2);">
+            <strong>Eyring:</strong>&nbsp; ΔH‡ = RT · [ ln(k_B T / h) + ΔS‡ / R + ln( t₁/₂ / ln 2 ) ]
+          </div>
+          <div class="eq-note">For homolytic bond cleavage, radical recombination is barrierless ⇒ Eₐ ≈ ΔH‡ ≈ BDE.</div>
+        </div>
+
+        <div class="eq-block">
+          <div class="eq-label">Constants</div>
+          <div class="eq-const">R = 1.987 cal·mol⁻¹·K⁻¹ &nbsp; · &nbsp; k_B = 1.381×10⁻²³ J·K⁻¹ &nbsp; · &nbsp; h = 6.626×10⁻³⁴ J·s &nbsp; · &nbsp; T(K) = T(°C) + 273.15</div>
+        </div>
+
+        <div class="eq-block">
+          <div class="eq-label">When to prefer which</div>
+          <div class="eq-note">
+            • <strong>Arrhenius</strong> is fine when you have an empirical A from kinetic data (e.g. published initiator decomposition tables).<br/>
+            • <strong>Eyring</strong> is preferred when you want to reason about the transition state — separating ΔH‡ (≈ BDE for homolysis) from ΔS‡ (geometry/looseness of TS). Concerted/cyclic TSs have negative ΔS‡; loose homolytic TSs have positive ΔS‡.<br/>
+            • <strong>Caveat:</strong> Eₐ ≈ BDE only for clean unimolecular homolysis. Polar pathways, cage recombination, and concerted mechanisms break this approximation.
+          </div>
+        </div>
+      </details>
+
+    </div>
+
+    <div>
+      <div class="charts">
+        <div class="chart-card heatmap">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <h3 style="margin:0;">BDE Heatmap (T × t₁/₂)</h3>
+            <div style="display:flex; gap:6px;">
+              <button id="boxSelectBtn" title="Drag to select a T × t₁/₂ box; lists initiators whose curve crosses it"
+                      style="background: rgba(110, 168, 255, 0.18); border: 1px solid rgba(110, 168, 255, 0.7);
+                             color: #6ea8ff; padding: 3px 10px; border-radius: 4px;
+                             cursor: pointer; font-family: inherit; font-size: 11px;">Box select</button>
+              <button id="resetZoomBtn" title="Reset zoom (or press 0)"
+                      style="background: rgba(110, 168, 255, 0.18); border: 1px solid rgba(110, 168, 255, 0.7);
+                             color: #6ea8ff; padding: 3px 10px; border-radius: 4px;
+                             cursor: pointer; font-family: inherit; font-size: 11px;">Reset zoom</button>
+            </div>
+          </div>
+          <p class="desc">Full landscape. Crosshair shows your selection — its color matches the focused compound. Contour lines mark common BDEs (kcal/mol). <strong>Long-press</strong> (or right-click) any point to pin its readout · <strong>⌘/Ctrl+long-press</strong> adds another · click anywhere or press <kbd>Esc</kbd> to clear. <strong>Double-click</strong> a compound's 10-h dot to switch the crosshair (and Eₐ/A lock) to that compound without losing the others. <strong>Box select</strong> (toggle, then drag) lists every initiator whose t(T) curve passes through the chosen window. <strong>Wheel</strong> to zoom · <strong>Shift+drag</strong> to pan.</p>
+          <canvas id="chartHeat"></canvas>
+          <div class="legend">
+            <span><span class="dot" style="background:#3b1f4d"></span>Weak (~20)</span>
+            <span><span class="dot" style="background:#5a2a8c"></span>30</span>
+            <span><span class="dot" style="background:#1f4ea0"></span>40</span>
+            <span><span class="dot" style="background:#1f8c7a"></span>60</span>
+            <span><span class="dot" style="background:#a07020"></span>80</span>
+            <span><span class="dot" style="background:#c04030"></span>Strong (100+)</span>
+          </div>
+          <div id="boxMatchesPanel" style="display:none; margin-top: 8px; padding: 8px 10px;
+                  background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
+                  font-size: 11px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+              <strong id="boxMatchesTitle" style="font-size: 11px; color: #6ea8ff;">Initiators in selection</strong>
+              <button id="boxMatchesClose" title="Clear selection (Esc)"
+                      style="background:transparent; border:0; color:var(--muted);
+                             cursor:pointer; padding:0 4px; font-size:14px; line-height:1;">×</button>
+            </div>
+            <div id="boxRangeForm" style="display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom: 8px; color: var(--muted);">
+              <span style="color: #6ea8ff;">T (°C):</span>
+              <input type="number" id="boxTempMin" step="1"
+                     style="width: 64px; padding: 2px 4px; background: var(--panel); color: #6ea8ff;
+                            border: 1px solid var(--border); border-radius: 3px; font-size: 11px;" />
+              <span style="color: #6ea8ff;">–</span>
+              <input type="number" id="boxTempMax" step="1"
+                     style="width: 64px; padding: 2px 4px; background: var(--panel); color: #6ea8ff;
+                            border: 1px solid var(--border); border-radius: 3px; font-size: 11px;" />
+              <span style="margin-left: 10px; color: #6ea8ff;" title="e.g. 30min, 5h, 2d, 1y">t½:</span>
+              <input type="text" id="boxTimeMin" placeholder="e.g. 1h"
+                     style="width: 78px; padding: 2px 4px; background: var(--panel); color: #6ea8ff;
+                            border: 1px solid var(--border); border-radius: 3px; font-size: 11px;" />
+              <span style="color: #6ea8ff;">–</span>
+              <input type="text" id="boxTimeMax" placeholder="e.g. 5h"
+                     style="width: 78px; padding: 2px 4px; background: var(--panel); color: #6ea8ff;
+                            border: 1px solid var(--border); border-radius: 3px; font-size: 11px;" />
+            </div>
+            <div id="boxMatchesList" style="display:flex; flex-wrap:wrap; gap:5px;"></div>
+          </div>
+        </div>
+        <div class="chart-card">
+          <h3>BDE vs Temperature <span class="pill" id="pill1"></span></h3>
+          <p class="desc">At your selected half-life. Shows what bond strength gives that t₁/₂ across temperatures.</p>
+          <canvas id="chartT"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>BDE vs Half-life <span class="pill" id="pill2"></span></h3>
+          <p class="desc">At your selected temperature. Log scale on time.</p>
+          <canvas id="chartTime"></canvas>
+        </div>
+      </div>
+
+      <div class="refs-grid">
+        <details class="panel collapsible" open>
+          <summary><span class="sum-title">Reference: Common Initiators <span class="exp-badge" title="Experimentally determined values">EXP</span></span><span class="sum-caret">▾</span></summary>
+          <details class="data-source" style="padding: 0; border: 1px solid var(--border); border-left: 3px solid var(--good); background: var(--panel-2); margin-bottom: 12px;">
+            <summary style="cursor: pointer; padding: 8px 12px; list-style: none; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+              <strong style="color: var(--good);">About this data</strong>
+              <span style="color: var(--muted); font-size: 10px;">click to expand</span>
+            </summary>
+            <div style="padding: 0 12px 10px; font-size: 11px; color: var(--muted); line-height: 1.5;">
+              10 h half-life temperatures and Eₐ values are measured in solution decomposition kinetics
+              (UV/IR spectroscopy or DSC), reported by manufacturers (Wako/FUJIFILM, Akzo Nobel,
+              Arkema, Pergan) and the primary kinetic literature. Solvent: typically toluene,
+              benzene, or chlorobenzene at ≤ 0.2 M; values can shift ±5 °C in different solvents.
+            </div>
+          </details>
+          <div class="ref-controls">
+            <label>Reference half-life:
+              <select id="refHalfLife">
+                <option value="360">0.1 h (6 min)</option>
+                <option value="3600">1 h</option>
+                <option value="36000" selected>10 h</option>
+                <option value="360000">100 h</option>
+              </select>
+            </label>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <input type="text" id="initFilter" placeholder="Filter initiators…"
+                   style="width:100%; background: var(--panel-2); border: 1px solid var(--border);
+                          color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: 12px;
+                          font-family: inherit;" />
+          </div>
+          <div class="scroll-box" style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px;">
+            <table class="centered">
+              <thead style="position: sticky; top: 0; background: var(--panel-2); z-index: 1;">
+                <tr>
+                  <th class="sortable" data-sort="name">Initiator <span class="sort-arrow"></span></th>
+                  <th class="sortable" data-sort="t" id="initTempHead">10 h t₁/₂ (°C) <span class="sort-arrow"></span></th>
+                  <th class="sortable" data-sort="ea">Eₐ (kcal/mol) <span class="sort-arrow"></span></th>
+                </tr>
+              </thead>
+              <tbody id="initTable"></tbody>
+            </table>
+          </div>
+          <div style="color: var(--muted); font-size: 11px; margin-top: 8px; text-align:center;">
+            Click any row to load those conditions into the dashboard. Temperatures at half-lives other than 10 h are extrapolated from each initiator's measured Eₐ.
+          </div>
+        </details>
+
+        <details class="panel collapsible" open>
+          <summary><span class="sum-title">Reference: Luperox® Peroxide Database <span class="exp-badge" title="Experimentally determined values">EXP</span></span><span class="sum-caret">▾</span></summary>
+          <details class="data-source" style="padding: 0; border: 1px solid var(--border); border-left: 3px solid var(--good); background: var(--panel-2); margin-bottom: 12px;">
+            <summary style="cursor: pointer; padding: 8px 12px; list-style: none; display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+              <strong style="color: var(--good);">About this data</strong>
+              <span style="color: var(--muted); font-size: 10px;">click to expand</span>
+            </summary>
+            <div style="padding: 0 12px 10px; font-size: 11px; color: var(--muted); line-height: 1.5;">
+              <strong style="color: var(--text);">Arkema Luperox technical bulletin (Peroxide HalfLife).</strong>
+              50 commercial organic peroxides with measured Arrhenius parameters
+              (Eₐ, A) and 10-hour half-life temperatures in the indicated solvent.
+              Click a row to load that peroxide's <em>own</em> A value into the Arrhenius slider.
+            </div>
+          </details>
+          <div style="margin-bottom: 10px; display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="luperoxFilter" placeholder="Filter by trade name, chemical, or solvent…"
+                   style="flex:1; background: var(--panel-2); border: 1px solid var(--border);
+                          color: var(--text); padding: 8px 10px; border-radius: 6px; font-size: 12px;
+                          font-family: inherit;" />
+            <label style="font-size: 11px; color: var(--muted); white-space: nowrap; cursor: pointer;">
+              <input type="checkbox" id="showSolventToggle" style="vertical-align: middle; margin-right: 4px;" />
+              Show solvent
+            </label>
+          </div>
+          <div class="scroll-box" style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px;">
+            <table class="centered" id="luperoxTable">
+              <thead style="position: sticky; top: 0; background: var(--panel-2); z-index: 1;">
+                <tr>
+                  <th class="sortable" data-sort="name" style="text-align:left;">Trade name <span class="sort-arrow"></span></th>
+                  <th class="sortable" data-sort="chem" style="text-align:left;">Chemical <span class="sort-arrow"></span></th>
+                  <th class="sortable" data-sort="solv" style="text-align:left; display:none;">Solvent <span class="sort-arrow"></span></th>
+                  <th class="sortable" data-sort="t">10 h t₁/₂ (°C) <span class="sort-arrow"></span></th>
+                  <th class="sortable" data-sort="ea">Eₐ (kcal/mol) <span class="sort-arrow"></span></th>
+                  <th class="sortable" data-sort="loga">log A <span class="sort-arrow"></span></th>
+                </tr>
+              </thead>
+              <tbody id="luperoxBody"></tbody>
+            </table>
+          </div>
+          <div style="color: var(--muted); font-size: 11px; margin-top: 8px; text-align:center;">
+            Click any row to load 10 h half-life at the listed T <em>and</em> that peroxide's pre-exponential A. Solvent is shown on hover.
+          </div>
+        </details>
+
+        <details class="panel collapsible" open>
+          <summary><span class="sum-title">Reference: Bond Dissociation Energies</span><span class="sum-caret">▾</span></summary>
+          <div style="color: var(--muted); font-size: 11px; margin-bottom: 8px;">
+            Click a bond to compute its half-life at the current temperature.
+          </div>
+          <div class="scroll-box" style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px;">
+            <table class="centered">
+              <thead style="position: sticky; top: 0; background: var(--panel-2); z-index: 1;">
+                <tr>
+                  <th class="sortable" data-sort="name">Bond <span class="sort-arrow"></span></th>
+                  <th class="sortable" data-sort="bde">BDE (kcal/mol) <span class="sort-arrow"></span></th>
+                </tr>
+              </thead>
+              <tbody id="bdeTable"></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const R = 1.98720425864083; // cal/mol/K
+const R_J = 8.31446261815324; // J/mol/K
+const KB = 1.380649e-23; // J/K
+const H_PLANCK = 6.62607015e-34; // J·s
+const LN2 = Math.log(2);
+
+let THEME = 'dark';
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+const tempSlider = document.getElementById('tempSlider');
+const tempLabel = document.getElementById('tempLabel');
+const tempInput = document.getElementById('tempInput');
+const tempUnit = document.getElementById('tempUnit');
+const timeValue = document.getElementById('timeValue');
+const timeUnit = document.getElementById('timeUnit');
+const timeLabel = document.getElementById('timeLabel');
+const timeSlider = document.getElementById('timeSlider');
+const aSlider = document.getElementById('aSlider');
+const aLabel = document.getElementById('aLabel');
+const eaSlider = document.getElementById('eaSlider');
+const eaLabel = document.getElementById('eaLabel');
+const dsSlider = document.getElementById('dsSlider');
+const dsLabel = document.getElementById('dsLabel');
+const tempControlWrap = document.getElementById('tempControlWrap');
+const timeControlWrap = document.getElementById('timeControlWrap');
+const eaControlWrap = document.getElementById('eaControlWrap');
+const solveSeg = document.getElementById('solveSeg');
+const activeCompoundBanner = document.getElementById('activeCompoundBanner');
+const activeCompoundList = document.getElementById('activeCompoundList');
+const clearCompoundBtn = document.getElementById('clearCompound');
+const uncertaintyToggle = document.getElementById('uncertaintyToggle');
+const copyResultBtn = document.getElementById('copyResult');
+const bdeValue = document.getElementById('bdeValue');
+const bdeUnit = document.getElementById('bdeUnit');
+const bdeKj = document.getElementById('bdeKj');
+const bdeExtra = document.getElementById('bdeExtra');
+const pill1 = document.getElementById('pill1');
+const pill2 = document.getElementById('pill2');
+const modelSeg = document.getElementById('modelSeg');
+const arrParamWrap = document.getElementById('arrParamWrap');
+const eyrParamWrap = document.getElementById('eyrParamWrap');
+
+let MODEL = 'arrhenius'; // or 'eyring'
+let SOLVE = 'bde'; // 'bde' | 'time' | 'temp'
+let activeCompounds = []; // array of {name, chem, solv, Ea, logA, t10hC, color}
+let UPDATING = false; // guard against feedback loops when update() writes to inputs
+let pinnedProbes = []; // array of {Tc, t_s} when user has long-pressed the heatmap
+let heatmapBox = null; // populated by drawHeatmap so the inverse mapping is consistent
+let heatmapCompoundDots = []; // [{name, px, py}] — populated by drawHeatmap for dblclick hit-testing
+let boxSelectActive = false; // toolbar toggle: drag-to-select-a-box mode
+let boxSelectDragging = false; // true while user is dragging out a fresh box
+let boxSelectDragStart = null; // {Tc, lg} of drag origin in data coords
+let boxSelectDragCurrent = null; // {Tc, lg} of drag tip in data coords
+let boxSelection = null; // committed selection: {tempC_min, tempC_max, logMin, logMax}
+// Independent zoom/pan state for the heatmap (axis bounds in data coords)
+const HEATMAP_DEFAULT_BOUNDS = { tempC_min: -50, tempC_max: 800, logMin: -6, logMax: 12 };
+let heatmapView = { ...HEATMAP_DEFAULT_BOUNDS };
+
+// Distinct color palette for overlaid compound curves
+const COMPOUND_COLORS = ['#7ee2a8', '#ffb86b', '#6ea8ff', '#ff8a8a', '#c084fc', '#facc15', '#22d3ee', '#f472b6'];
+function nextCompoundColor() {
+  const used = new Set(activeCompounds.map(c => c.color));
+  return COMPOUND_COLORS.find(c => !used.has(c)) || COMPOUND_COLORS[activeCompounds.length % COMPOUND_COLORS.length];
+}
+
+// Convert any temperature input to Kelvin
+function toKelvin(value, unit) {
+  if (unit === 'K') return value;
+  if (unit === 'F') return (value - 32) * 5/9 + 273.15;
+  return value + 273.15; // C
+}
+function fromKelvin(K, unit) {
+  if (unit === 'K') return K;
+  if (unit === 'F') return (K - 273.15) * 9/5 + 32;
+  return K - 273.15;
+}
+
+// ---- Arrhenius: Eₐ from T,t,A ----
+function bdeArrhenius(T_K, t_s, A) {
+  if (T_K <= 0 || t_s <= 0) return NaN;
+  const arg = A * t_s / LN2;
+  if (arg <= 0) return NaN;
+  return R * T_K * Math.log(arg) / 1000; // kcal/mol
+}
+function halfLifeArrhenius(T_K, Ea_kcal, A) {
+  return LN2 / (A * Math.exp(-Ea_kcal * 1000 / (R * T_K)));
+}
+
+// ---- Eyring: ΔH‡ from T,t,ΔS‡ ----
+// k = (k_B T / h) · exp(ΔS‡/R) · exp(−ΔH‡/RT)
+// t = ln2/k  →  ΔH‡ = RT · [ ln(k_B T / h) + ΔS‡/R + ln(t/ln2) ]
+function dhEyring(T_K, t_s, dS_cal) {
+  if (T_K <= 0 || t_s <= 0) return NaN;
+  // ln(k_B T / h) — k_B T / h has units s⁻¹
+  const lnPref = Math.log(KB * T_K / H_PLANCK);
+  const dH_cal = R * T_K * (lnPref + dS_cal / R + Math.log(t_s / LN2));
+  return dH_cal / 1000; // kcal/mol
+}
+function halfLifeEyring(T_K, dH_kcal, dS_cal) {
+  const k = (KB * T_K / H_PLANCK) * Math.exp(dS_cal / R) * Math.exp(-dH_kcal * 1000 / (R * T_K));
+  return LN2 / k;
+}
+
+// Unified API: returns "bond-strength-like" energy (kcal/mol) for current model
+function bdeFromConditions(T_K, t_s) {
+  if (MODEL === 'eyring') return dhEyring(T_K, t_s, +dsSlider.value);
+  return bdeArrhenius(T_K, t_s, Math.pow(10, +aSlider.value));
+}
+function halfLifeFromBde(T_K, BDE_kcal) {
+  if (MODEL === 'eyring') return halfLifeEyring(T_K, BDE_kcal, +dsSlider.value);
+  return halfLifeArrhenius(T_K, BDE_kcal, Math.pow(10, +aSlider.value));
+}
+
+// Solve for temperature (K) given a target half-life and BDE/Eₐ
+// Arrhenius: t = ln2/(A·exp(-Ea/RT)) → T = Ea / (R·ln(A·t/ln2))
+function tempArrhenius(t_s, Ea_kcal, A) {
+  const arg = A * t_s / LN2;
+  if (arg <= 1) return NaN;
+  const Ea_cal = Ea_kcal * 1000;
+  return Ea_cal / (R * Math.log(arg));
+}
+// Eyring: solve numerically because kBT/h is T-dependent
+function tempEyring(t_s, dH_kcal, dS_cal) {
+  // Bisection on T over a wide range
+  const f = (T) => halfLifeEyring(T, dH_kcal, dS_cal) - t_s; // halfLife strictly decreases with T
+  let lo = 100, hi = 5000;
+  let flo = f(lo), fhi = f(hi);
+  if (!isFinite(flo) || !isFinite(fhi)) return NaN;
+  if (flo * fhi > 0) return NaN; // no root in range
+  for (let i = 0; i < 80; i++) {
+    const mid = 0.5 * (lo + hi);
+    const fm = f(mid);
+    if (!isFinite(fm)) return NaN;
+    if (fm * flo <= 0) { hi = mid; fhi = fm; } else { lo = mid; flo = fm; }
+    if (hi - lo < 1e-4) break;
+  }
+  return 0.5 * (lo + hi);
+}
+function tempFromBde(t_s, BDE_kcal) {
+  if (MODEL === 'eyring') return tempEyring(t_s, BDE_kcal, +dsSlider.value);
+  return tempArrhenius(t_s, BDE_kcal, Math.pow(10, +aSlider.value));
+}
+function formatTime(s) {
+  if (!isFinite(s)) return '—';
+  if (s < 1e-9) return s.toExponential(2) + ' s';
+  if (s < 1e-3) return (s*1e6).toFixed(1) + ' µs';
+  if (s < 1) return (s*1e3).toFixed(1) + ' ms';
+  if (s < 60) return s.toFixed(1) + ' s';
+  if (s < 3600) return (s/60).toFixed(1) + ' min';
+  if (s < 86400) return (s/3600).toFixed(2) + ' h';
+  if (s < 31557600) return (s/86400).toFixed(2) + ' d';
+  if (s < 31557600*1000) return (s/31557600).toFixed(2) + ' y';
+  return (s/31557600).toExponential(2) + ' y';
+}
+function formatTimeShort(s) {
+  if (!isFinite(s)) return '—';
+  if (s < 1) return s.toPrecision(2) + 's';
+  if (s < 60) return s.toFixed(0) + 's';
+  if (s < 3600) return (s/60).toFixed(0) + 'm';
+  if (s < 86400) return (s/3600).toFixed(1) + 'h';
+  if (s < 31557600) return (s/86400).toFixed(1) + 'd';
+  return (s/31557600).toPrecision(2) + 'y';
+}
+
+// Reference data — t10hC anchored at 10h half-life in solvent (literature)
+const initiators = [
+  // --- Azo initiators ---
+  // Wako-sourced kinetics (V-70, V-65, V-601, VA-044, VA-086) from Fujifilm Wako product pages.
+  { group: 'Azo initiators' },
+  { name: 'V-70 (low-temp azo)',                 t10hC: 30,  Ea: 26.10 },
+  { name: 'VA-044 (water-soluble, imidazoline)', t10hC: 44,  Ea: 25.86 },
+  { name: 'V-65 (AMBN)',                          t10hC: 51,  Ea: 28.15 },
+  { name: 'V-50 / AAPH (water-soluble)',          t10hC: 56,  Ea: 28.0 },
+  { name: 'AIBN (V-60)',                          t10hC: 65,  Ea: 30.7 },
+  { name: 'V-601 (AIBME)',                        t10hC: 66,  Ea: 31.36 },
+  { name: 'VA-086 (water-soluble, hydroxyethylamide)', t10hC: 86, Ea: 25.05 },
+  { name: 'V-40 / ABCN (cyclohexyl azo)',         t10hC: 88,  Ea: 32.0 },
+  { name: 'V-30 (high-temp azo)',                 t10hC: 104, Ea: 34.0 },
+  // --- Diacyl peroxides ---
+  { group: 'Diacyl peroxides' },
+  { name: 'Lauroyl peroxide (LPO)',               t10hC: 64,  Ea: 30.0 },
+  { name: 'Benzoyl peroxide (BPO)',               t10hC: 73,  Ea: 30.0 },
+  // --- Peroxyesters ---
+  { group: 'Peroxyesters' },
+  { name: 't-Butyl peroctoate (TBPO)',            t10hC: 73,  Ea: 31.0 },
+  { name: 't-Butyl peroxypivalate',               t10hC: 55,  Ea: 30.0 },
+  { name: 't-Butyl peroxybenzoate (TBPB)',        t10hC: 105, Ea: 35.0 },
+  // --- Dialkyl peroxides ---
+  { group: 'Dialkyl peroxides' },
+  { name: 'Dicumyl peroxide (DCP)',               t10hC: 117, Ea: 37.0 },
+  { name: 'Di-t-butyl peroxide (DTBP)',           t10hC: 126, Ea: 37.0 },
+  // --- Hydroperoxides ---
+  { group: 'Hydroperoxides' },
+  { name: 'Cumene hydroperoxide (CHP)',           t10hC: 158, Ea: 40.0 },
+  { name: 't-Butyl hydroperoxide (TBHP)',         t10hC: 172, Ea: 42.0 },
+  // --- Inorganic / aqueous ---
+  { group: 'Inorganic (aqueous)' },
+  { name: 'Potassium persulfate (K₂S₂O₈)',        t10hC: 70,  Ea: 33.0 },
+  { name: 'Ammonium persulfate ((NH₄)₂S₂O₈)',     t10hC: 65,  Ea: 33.0 },
+];
+
+const bonds = [
+  // --- C–H bonds ---
+  { group: 'C–H bonds' },
+  { name: 'C–H (methane, CH₃–H)',         bde: 105 },
+  { name: 'C–H (primary alkyl)',          bde: 101 },
+  { name: 'C–H (secondary alkyl)',        bde: 99  },
+  { name: 'C–H (tertiary alkyl)',         bde: 96  },
+  { name: 'C–H (allylic / benzylic)',     bde: 88  },
+  { name: 'C–H (α to carbonyl)',          bde: 92  },
+  { name: 'C–H (vinyl, sp²)',             bde: 110 },
+  { name: 'C–H (aromatic)',               bde: 113 },
+  { name: 'C–H (acetylenic, sp)',         bde: 133 },
+  { name: 'C–H (formyl, CHO)',            bde: 88  },
+  // --- C–C / C–X bonds ---
+  { group: 'C–C and C–X single bonds' },
+  { name: 'C–C (alkane)',                 bde: 85  },
+  { name: 'C–C (benzyl–benzyl)',          bde: 65  },
+  { name: 'C–N (azo, AIBN-like)',         bde: 31  },
+  { name: 'C–N (amine)',                  bde: 73  },
+  { name: 'C–O (alcohol)',                bde: 92  },
+  { name: 'C–O (ether)',                  bde: 84  },
+  { name: 'C–S (thiol/sulfide)',          bde: 73  },
+  { name: 'C–F',                          bde: 116 },
+  { name: 'C–Cl',                         bde: 81  },
+  { name: 'C–Br',                         bde: 68  },
+  { name: 'C–I',                          bde: 56  },
+  { name: 'C–Si',                         bde: 90  },
+  { name: 'C–B',                          bde: 88  },
+  { name: 'C–P',                          bde: 65  },
+  // --- Heteroatom–H bonds ---
+  { group: 'X–H bonds' },
+  { name: 'O–H (water)',                  bde: 119 },
+  { name: 'O–H (alcohol)',                bde: 105 },
+  { name: 'O–H (phenol)',                 bde: 88  },
+  { name: 'O–H (carboxylic acid)',        bde: 112 },
+  { name: 'O–H (hydroperoxide, ROO–H)',   bde: 88  },
+  { name: 'N–H (ammonia)',                bde: 107 },
+  { name: 'N–H (amine, R₂N–H)',           bde: 100 },
+  { name: 'S–H (thiol)',                  bde: 87  },
+  { name: 'Si–H',                         bde: 90  },
+  { name: 'P–H',                          bde: 76  },
+  { name: 'H–H',                          bde: 104 },
+  { name: 'H–F',                          bde: 136 },
+  { name: 'H–Cl',                         bde: 103 },
+  { name: 'H–Br',                         bde: 87  },
+  { name: 'H–I',                          bde: 71  },
+  // --- X–X / weak bonds ---
+  { group: 'Heteroatom–heteroatom (single)' },
+  { name: 'O–O (peroxide, ROO–OR)',       bde: 35  },
+  { name: 'O–O (HOOH)',                   bde: 51  },
+  { name: 'N–N (hydrazine)',              bde: 66  },
+  { name: 'S–S (disulfide)',              bde: 65  },
+  { name: 'Si–Si',                        bde: 78  },
+  { name: 'P–P',                          bde: 50  },
+  { name: 'F–F',                          bde: 38  },
+  { name: 'Cl–Cl',                        bde: 58  },
+  { name: 'Br–Br',                        bde: 46  },
+  { name: 'I–I',                          bde: 36  },
+  // --- multiple bonds ---
+  { group: 'Multiple bonds' },
+  { name: 'C=C (alkene)',                 bde: 174 },
+  { name: 'C=O (ketone)',                 bde: 179 },
+  { name: 'C=O (aldehyde)',               bde: 178 },
+  { name: 'C=N (imine)',                  bde: 147 },
+  { name: 'N=N (diazene)',                bde: 109 },
+  { name: 'Si–O',                         bde: 110 },
+  { name: 'C≡C (alkyne)',                 bde: 230 },
+  { name: 'C≡N (nitrile)',                bde: 213 },
+  { name: 'N≡N (dinitrogen)',             bde: 226 },
+];
+
+// Luperox peroxide kinetic data (51 entries) — Arkema "Peroxide HalfLife" technical bulletin
+// Each entry: name (trade), chem (chemical name), solv (solvent), t10hC (°C 10-hr half-life),
+// Ea (kcal/mol), logA (log10 of pre-exponential A in s⁻¹)
+const luperox = [
+  { name: 'Luperox 610', chem: '3-hydroxy-1,1-dimethylbutyl peroxyneodecanoate', solv: 'trichloroethylene', t10hC: 36.6, Ea: 26.557, logA: 14.023 },
+  { name: 'Luperox 188', chem: 'a-cumyl peroxyneodecanoate', solv: 'trichloroethylene', t10hC: 38.4, Ea: 26.560, logA: 13.916 },
+  { name: 'Luperox 688', chem: '2-hydroxy-1,1-dimethylbutyl peroxyneoheptanoate', solv: 'alpha-methylstyrene', t10hC: 40.9, Ea: 27.526, logA: 14.441 },
+  { name: 'Luperox 288', chem: 'a-cumyl peroxyneoheptanoate', solv: 'trichloroethylene', t10hC: 42.6, Ea: 27.740, logA: 14.484 },
+  { name: 'Luperox 546', chem: 't-amyl peroxyneodecanoate', solv: 'trichloroethylene', t10hC: 46.4, Ea: 28.781, logA: 14.967 },
+  { name: 'Luperox 10', chem: 't-butyl peroxyneodecanoate', solv: 'trichloroethylene', t10hC: 48.3, Ea: 28.492, logA: 14.655 },
+  { name: 'Luperox 223', chem: 'di(2-ethylhexyl) peroxydicarbonate', solv: 'trichloroethylene', t10hC: 49.1, Ea: 30.462, logA: 15.944 },
+  { name: 'Luperox 221', chem: 'di(n-propyl) peroxydicarbonate', solv: 'trichloroethylene', t10hC: 49.5, Ea: 30.738, logA: 16.106 },
+  { name: 'Luperox 225', chem: 'di(sec-butyl) peroxydicarbonate', solv: 'trichloroethylene', t10hC: 50.9, Ea: 27.942, logA: 14.131 },
+  { name: 'Luperox 701', chem: 't-butyl peroxyneoheptanoate', solv: 'trichloroethylene', t10hC: 52.8, Ea: 27.122, logA: 13.472 },
+  { name: 'Luperox 554', chem: 't-amyl peroxypivalate', solv: 'trichloroethylene', t10hC: 55.2, Ea: 28.096, logA: 13.989 },
+  { name: 'Luperox 11', chem: 't-butyl peroxypivalate', solv: 'trichloroethylene', t10hC: 57.6, Ea: 28.133, logA: 13.876 },
+  { name: 'Luperox 219', chem: 'diisononanoyl peroxide', solv: 'trichloroethylene', t10hC: 60.9, Ea: 31.042, logA: 15.592 },
+  { name: 'Luperox LP', chem: 'didodecanoyl peroxide', solv: 'trichloroethylene', t10hC: 63.6, Ea: 31.123, logA: 15.485 },
+  { name: 'Luperox 665', chem: '3-hydroxy-1,1-dimethylbutylperoxy-2-ethylhexanoate', solv: 'alpha-methylstyrene', t10hC: 64.6, Ea: 28.209, logA: 13.539 },
+  { name: 'Luperox DEC', chem: 'didecanoyl peroxide', solv: 'trichloroethylene', t10hC: 64.8, Ea: 30.747, logA: 15.168 },
+  { name: 'AZDN', chem: '2,2\'-azobis(isobutyronitrile)', solv: 'toluene', t10hC: 64.8, Ea: 32.674, logA: 16.414 },
+  { name: 'Luperox SAP', chem: 'di(3-carboxypropionyl) peroxide', solv: 'acetone', t10hC: 66.1, Ea: 23.284, logA: 10.283 },
+  { name: 'Luperox 256', chem: '2,5-dimethyl-2,5-di(2-ethylhexanoylperoxy)hexane', solv: 'decane', t10hC: 72.6, Ea: 31.362, logA: 15.111 },
+  { name: 'Luperox A', chem: 'dibenzoyl peroxide', solv: 'benzene', t10hC: 72.9, Ea: 30.779, logA: 14.722 },
+  { name: 'Luperox 575', chem: 't-amylperoxy 2-ethylhexanoate', solv: 'dodecane', t10hC: 75.1, Ea: 34.730, logA: 17.084 },
+  { name: 'Luperox 26', chem: 't-butylperoxy 2-ethylhexanoate', solv: 'dodecane', t10hC: 77.3, Ea: 34.083, logA: 16.543 },
+  { name: 'Luperox 80', chem: 't-butyl peroxyisobutyrate', solv: 'decane', t10hC: 81.8, Ea: 29.612, logA: 13.520 },
+  { name: 'Luperox PMA', chem: 't-butyl peroxy-(cis-3-carboxy)propenoate', solv: 'acetone', t10hC: 87.3, Ea: 27.025, logA: 11.671 },
+  { name: 'Luperox 531', chem: '1,1-di(t-amylperoxy)cyclohexane', solv: 'dodecane', t10hC: 93.3, Ea: 34.580, logA: 15.907 },
+  { name: 'Luperox 231', chem: '1,1-di(t-butylperoxy)-3,3,5-trimethylcyclohexane', solv: 'dodecane', t10hC: 96.4, Ea: 35.497, logA: 16.279 },
+  { name: 'Luperox 331', chem: '1,1-di(t-butylperoxy)cyclohexane', solv: 'dodecane', t10hC: 96.7, Ea: 34.592, logA: 15.727 },
+  { name: 'Luperox TAEC', chem: 'OO-t-amyl O-(2-ethylhexyl) monoperoxycarbonate', solv: 'dodecane', t10hC: 98.5, Ea: 35.967, logA: 16.435 },
+  { name: 'Luperox TBIC', chem: 'OO-t-butyl O-isopropyl monoperoxycarbonate', solv: 'benzene', t10hC: 98.7, Ea: 34.049, logA: 15.300 },
+  { name: 'Luperox TBEC', chem: 'OO-t-butyl O-(2-ethylhexyl) monoperoxycarbonate', solv: 'dodecane', t10hC: 99.6, Ea: 31.494, logA: 13.752 },
+  { name: 'Luperox JW', chem: 'polyether tetrakis(t-butylperoxycarbonate)', solv: 'ethylbenzene', t10hC: 99.7, Ea: 34.305, logA: 15.396 },
+  { name: 'Luperox 118', chem: '2,5-dimethyl-2,5-di(benzoylperoxy)hexane', solv: 'benzene', t10hC: 100.1, Ea: 36.431, logA: 16.616 },
+  { name: 'Luperox 555', chem: 't-amyl peroxyacetate', solv: 'dodecane', t10hC: 100.1, Ea: 33.323, logA: 14.796 },
+  { name: 'Luperox TAP', chem: 't-amyl peroxybenzoate', solv: 'dodecane', t10hC: 100.2, Ea: 31.622, logA: 13.795 },
+  { name: 'Luperox 270', chem: 't-butyl peroxyisononanoate', solv: 'benzene', t10hC: 101.5, Ea: 33.185, logA: 14.646 },
+  { name: 'Luperox 7', chem: 't-butyl peroxyacetate', solv: 'decane', t10hC: 102.2, Ea: 32.908, logA: 14.445 },
+  { name: 'Luperox P', chem: 't-butyl peroxybenzoate', solv: 'dodecane', t10hC: 103.6, Ea: 31.641, logA: 13.640 },
+  { name: 'Luperox KDB', chem: 'di-t-butyl diperoxyphthalate', solv: 'benzene', t10hC: 104.3, Ea: 37.803, logA: 17.177 },
+  { name: 'Luperox 220', chem: '2,2-di(t-butylperoxy)butane', solv: 'dodecane', t10hC: 107.0, Ea: 34.282, logA: 14.996 },
+  { name: 'Luperox 553', chem: '2,2-di(t-amylperoxy)propane', solv: 'dodecane', t10hC: 107.8, Ea: 34.533, logA: 15.099 },
+  { name: 'Luperox 230', chem: 'n-butyl 4,4-di(t-butylperoxy)valerate', solv: 'dodecane', t10hC: 108.9, Ea: 35.308, logA: 15.485 },
+  { name: 'Luperox 533', chem: 'ethyl 3,3-di(t-amylperoxy)butyrate', solv: 'dodecane', t10hC: 111.9, Ea: 35.513, logA: 15.442 },
+  { name: 'Luperox 233', chem: 'ethyl 3,3-di(t-butylperoxy)butyrate', solv: 'dodecane', t10hC: 114.1, Ea: 36.243, logA: 15.738 },
+  { name: 'Luperox DC', chem: 'dicumyl peroxide', solv: 'decane', t10hC: 117.1, Ea: 36.757, logA: 15.874 },
+  { name: 'Luperox F', chem: "a,a'-bis(t-butylperoxy)diisopropylbenzene", solv: 'dodecane', t10hC: 119.3, Ea: 36.831, logA: 15.799 },
+  { name: 'Luperox 101', chem: '2,5-dimethyl-2,5-di(t-butylperoxy)hexane', solv: 'dodecane', t10hC: 120.3, Ea: 37.182, logA: 15.941 },
+  { name: 'Luperox DTA', chem: 'di(t-amyl) peroxide', solv: 'dodecane', t10hC: 123.3, Ea: 38.121, logA: 16.300 },
+  { name: 'Luperox 801', chem: 't-butyl a-cumyl peroxide', solv: 'dodecane', t10hC: 123.6, Ea: 37.765, logA: 16.086 },
+  { name: 'Luperox DI', chem: 'di(t-butyl) peroxide', solv: 'decane', t10hC: 129.4, Ea: 39.413, logA: 16.686 },
+  { name: 'Luperox 130', chem: '2,5-dimethyl-2,5-di(t-butylperoxy)-3-hexyne', solv: 'dodecane', t10hC: 131.1, Ea: 38.127, logA: 15.896 },
+  // Note: Luperox MIX kinetic parameters in the source spreadsheet duplicate Luperox F's
+  // (a,a'-bis(t-butylperoxy)diisopropylbenzene); MIX is a proprietary blend, so its
+  // single-Ea/A pair is nominal-only and shouldn't be relied on for precise calculations.
+  // Removed to avoid confusion.
+];
+
+let REF_T_SECONDS = 36000; // 10 h default
+
+// Recompute the reference temperature for a given t_ref (in seconds)
+// using same Eₐ. Arrhenius: 1/T2 = 1/T1 + R/Ea · ln(t2/t1)
+function tempForRefHalfLife(t10hC, Ea_kcal, t_ref_s) {
+  const T1 = t10hC + 273.15;
+  const Ea_cal = Ea_kcal * 1000;
+  const invT2 = 1 / T1 + (R / Ea_cal) * Math.log(t_ref_s / 36000);
+  return 1 / invT2 - 273.15;
+}
+
+function refLabel(t_s) {
+  if (t_s === 360) return '0.1 h';
+  if (t_s === 3600) return '1 h';
+  if (t_s === 36000) return '10 h';
+  if (t_s === 360000) return '100 h';
+  return formatTime(t_s);
+}
+
+let lastInitQuery = '';
+function renderInitiatorTable(query) {
+  if (query !== undefined) lastInitQuery = query;
+  const q = (lastInitQuery || '').toLowerCase().trim();
+  const body = document.getElementById('initTable');
+  let html;
+  if (sortState.init) {
+    // Sorted: drop groups, render flat list
+    const flat = initiators
+      .map((i, idx) => ({ ...i, idx }))
+      .filter(i => !i.group && (!q || i.name.toLowerCase().includes(q)))
+      .map(i => ({ ...i, Tref: tempForRefHalfLife(i.t10hC, i.Ea, REF_T_SECONDS) }));
+    const sorted = applySort(flat, sortState.init, {
+      name: i => i.name,
+      t: i => i.Tref,
+      ea: i => i.Ea,
+    });
+    html = sorted.map(i => {
+      const active = activeCompounds.find(c => c.name === i.name);
+      const rowStyle = active
+        ? `background: ${hexToRgba(active.color, 0.18)}; box-shadow: inset 3px 0 0 ${active.color};`
+        : '';
+      const dot = active
+        ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${active.color}; margin-right:6px; vertical-align:middle;"></span>`
+        : '';
+      return `<tr data-init-idx="${i.idx}" data-temp="${i.Tref.toFixed(2)}" data-time="${REF_T_SECONDS}" style="${rowStyle}">
+        <td>${dot}${i.name}</td><td>${i.Tref.toFixed(1)}</td><td>${i.Ea.toFixed(1)}</td>
+      </tr>`;
+    }).join('');
+  } else {
+    // Default: keep group structure
+    const out = [];
+    let curGroup = null;
+    let groupHasMatch = false;
+    initiators.forEach((i, idx) => {
+      if (i.group) {
+        if (curGroup && groupHasMatch) {
+          out.push(`<tr class="subhead"><td colspan="3">${curGroup}</td></tr>`, ...curBuf);
+        }
+        curGroup = i.group;
+        curBuf = [];
+        groupHasMatch = false;
+        return;
+      }
+      if (q && !i.name.toLowerCase().includes(q)) return;
+      groupHasMatch = true;
+      const Tref = tempForRefHalfLife(i.t10hC, i.Ea, REF_T_SECONDS);
+      const active = activeCompounds.find(c => c.name === i.name);
+      const rowStyle = active
+        ? `background: ${hexToRgba(active.color, 0.18)}; box-shadow: inset 3px 0 0 ${active.color};`
+        : '';
+      const dot = active
+        ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${active.color}; margin-right:6px; vertical-align:middle;"></span>`
+        : '';
+      curBuf.push(`<tr data-init-idx="${idx}" data-temp="${Tref.toFixed(2)}" data-time="${REF_T_SECONDS}" style="${rowStyle}">
+        <td>${dot}${i.name}</td><td>${Tref.toFixed(1)}</td><td>${i.Ea.toFixed(1)}</td>
+      </tr>`);
+    });
+    if (curGroup && groupHasMatch) {
+      out.push(`<tr class="subhead"><td colspan="3">${curGroup}</td></tr>`, ...curBuf);
+    }
+    html = out.join('');
+  }
+  body.innerHTML = html ||
+    `<tr><td colspan="3" style="color: var(--muted); padding: 12px;">No matches.</td></tr>`;
+  document.getElementById('initTempHead').innerHTML = `${refLabel(REF_T_SECONDS)} t₁/₂ (°C) <span class="sort-arrow"></span>`;
+  const initTable = document.getElementById('initTable').closest('table');
+  syncSortArrows(initTable, 'init');
+  body.querySelectorAll('tr[data-init-idx]').forEach(tr => {
+    tr.addEventListener('click', (e) => {
+      const idx = +tr.dataset.initIdx;
+      const i = initiators[idx];
+      const Tref = i.t10hC + 273.15;
+      const Acalc = (LN2 / 36000) * Math.exp(i.Ea * 1000 / (R * Tref));
+      const logA = Math.log10(Acalc);
+      setActiveCompound({
+        name: i.name, chem: i.name, solv: '',
+        t10hC: i.t10hC, Ea: i.Ea, logA
+      }, { add: e.metaKey || e.ctrlKey });
+    });
+  });
+}
+let curBuf = [];
+
+// Sort state for each table — { key, dir: 1 | -1 } or null for default order
+const sortState = {
+  init: null,
+  luperox: null,
+  bde: null,
+};
+function attachSortHandlers(tableEl, stateKey, refreshFn) {
+  if (!tableEl) return;
+  const ths = tableEl.querySelectorAll('thead th.sortable');
+  ths.forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sort;
+      const cur = sortState[stateKey];
+      if (cur && cur.key === key) {
+        if (cur.dir === 1) sortState[stateKey] = { key, dir: -1 };
+        else sortState[stateKey] = null;
+      } else {
+        sortState[stateKey] = { key, dir: 1 };
+      }
+      syncSortArrows(tableEl, stateKey);
+      refreshFn();
+    });
+  });
+}
+function syncSortArrows(tableElOrSelector, stateKey) {
+  const el = typeof tableElOrSelector === 'string'
+    ? document.querySelector(tableElOrSelector)
+    : tableElOrSelector;
+  if (!el) return;
+  const s = sortState[stateKey];
+  el.querySelectorAll('thead th.sortable').forEach(t => {
+    const arrow = t.querySelector('.sort-arrow');
+    if (!arrow) return;
+    arrow.textContent = (s && s.key === t.dataset.sort) ? (s.dir === 1 ? '▲' : '▼') : '';
+  });
+}
+function applySort(items, state, keyMap) {
+  if (!state) return items.slice();
+  const getter = keyMap[state.key];
+  if (!getter) return items.slice();
+  return items.slice().sort((a, b) => {
+    const av = getter(a), bv = getter(b);
+    if (typeof av === 'string' && typeof bv === 'string') {
+      return av.localeCompare(bv) * state.dir;
+    }
+    return ((av < bv ? -1 : av > bv ? 1 : 0)) * state.dir;
+  });
+}
+
+function populateTables() {
+  renderInitiatorTable('');
+
+  // ----- Luperox database -----
+  renderLuperoxTable('');
+
+  // ----- BDEs -----
+  renderBdeTable();
+}
+
+function renderBdeTable() {
+  const flatBonds = bonds.filter(b => !b.group);
+  let html;
+  if (sortState.bde) {
+    const sorted = applySort(flatBonds, sortState.bde, {
+      name: b => b.name,
+      bde: b => b.bde,
+    });
+    html = sorted.map(b =>
+      `<tr data-bde="${b.bde}" title="Click to compute half-life at current T for this bond"><td>${b.name}</td><td>${b.bde}</td></tr>`
+    ).join('');
+  } else {
+    // default: keep groupings
+    html = bonds.map(b => {
+      if (b.group) return `<tr class="subhead"><td colspan="2">${b.group}</td></tr>`;
+      return `<tr data-bde="${b.bde}" title="Click to compute half-life at current T for this bond"><td>${b.name}</td><td>${b.bde}</td></tr>`;
+    }).join('');
+  }
+  document.getElementById('bdeTable').innerHTML = html;
+  document.querySelectorAll('#bdeTable tr[data-bde]').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const bde = +tr.dataset.bde;
+      const Tk = +tempSlider.value + 273.15;
+      const t_s = halfLifeFromBde(Tk, bde);
+      if (!isFinite(t_s) || t_s <= 0) return;
+      setTimeFromSeconds(t_s);
+      update();
+    });
+  });
+}
+
+// Lock the dashboard to one or more reference compounds. Use {add:true} for multi-select.
+// Clicking an already-active compound deselects it (toggle behavior).
+function setActiveCompound(c, opts = {}) {
+  const add = !!opts.add;
+  const existing = activeCompounds.find(x => x.name === c.name);
+  if (existing) {
+    // Toggle off — remove this compound from the active set
+    removeActiveCompound(c.name);
+    return;
+  }
+  if (!add) activeCompounds = [];
+  const color = nextCompoundColor();
+  activeCompounds.push({ ...c, color });
+
+  // Use the last-added compound as the "focused" one for the input panel
+  const focus = activeCompounds[activeCompounds.length - 1];
+  // Force Arrhenius mode (compound parameters are Arrhenius)
+  if (MODEL !== 'arrhenius') {
+    MODEL = 'arrhenius';
+    modelSeg.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('active', b.dataset.model === 'arrhenius');
+    });
+    arrParamWrap.style.display = '';
+    eyrParamWrap.style.display = 'none';
+  }
+  // Lock A and Eₐ to the focused compound's values (clamped to slider range)
+  aSlider.value = Math.max(10, Math.min(18, focus.logA)).toFixed(1);
+  eaSlider.value = Math.max(10, Math.min(60, focus.Ea)).toFixed(1);
+  // Switch into "Solve for Half-life" mode so user can sweep T and see t change
+  SOLVE = 'time';
+  solveSeg.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b.dataset.solve === 'time');
+  });
+  // Seed temperature with the focused compound's 10 h half-life T
+  setTempFromKelvin(focus.t10hC + 273.15);
+  tempUnit.value = 'C';
+  renderActiveCompoundList();
+  refreshReferenceHighlights();
+  update();
+}
+
+function removeActiveCompound(name) {
+  activeCompounds = activeCompounds.filter(c => c.name !== name);
+  renderActiveCompoundList();
+  refreshReferenceHighlights();
+  update();
+}
+
+function clearActiveCompounds() {
+  activeCompounds = [];
+  renderActiveCompoundList();
+  refreshReferenceHighlights();
+  update();
+}
+
+function refreshReferenceHighlights() {
+  // Re-render rows so active compounds show colored backgrounds
+  if (typeof renderInitiatorTable === 'function') renderInitiatorTable();
+  if (typeof renderLuperoxTable === 'function') renderLuperoxTable();
+}
+
+function renderActiveCompoundList() {
+  if (!activeCompounds.length) {
+    activeCompoundBanner.style.display = 'none';
+    activeCompoundList.innerHTML = '';
+    return;
+  }
+  activeCompoundBanner.style.display = '';
+  // Focused compound (last in activeCompounds) renders first; rest follow in their existing order.
+  const focusIdx = activeCompounds.length - 1;
+  const ordered = [activeCompounds[focusIdx], ...activeCompounds.slice(0, focusIdx)];
+  activeCompoundList.innerHTML = ordered.map((c, i) => {
+    const isFocus = i === 0;
+    return `
+    <span class="cmp-chip${isFocus ? ' cmp-chip-focus' : ''}" data-name="${escapeAttr(c.name)}"
+          style="display:inline-flex; align-items:center; gap:6px;
+                 background:${hexToRgba(c.color, isFocus ? 0.22 : 0.12)};
+                 border:1px solid ${hexToRgba(c.color, isFocus ? 0.9 : 0.5)};
+                 ${isFocus ? `box-shadow: 0 0 0 1px ${hexToRgba(c.color, 0.4)};` : ''}
+                 border-radius:14px; padding:3px 4px 3px 10px; font-size:11px;">
+      <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${c.color};"></span>
+      <span style="font-weight:${isFocus ? '700' : '600'};">${c.name}</span>
+      <span style="color: var(--muted);">Eₐ=${c.Ea.toFixed(1)} · logA=${c.logA.toFixed(1)}</span>
+      <button class="cmp-remove" title="Remove" data-name="${escapeAttr(c.name)}"
+              style="background:transparent; border:0; color:var(--muted); cursor:pointer;
+                     padding:0 4px; font-size:14px; line-height:1;">×</button>
+    </span>`;
+  }).join('');
+  activeCompoundList.querySelectorAll('.cmp-remove').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeActiveCompound(btn.dataset.name);
+    });
+  });
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+// ===== URL hash state persistence =====
+let HASH_LOADING = false;
+function writeHash() {
+  if (HASH_LOADING || UPDATING) return;
+  const params = new URLSearchParams();
+  params.set('T', (+tempSlider.value).toFixed(1));
+  params.set('t', (+timeValue.value));
+  params.set('tu', timeUnit.value);
+  params.set('Ea', (+eaSlider.value).toFixed(1));
+  params.set('A', (+aSlider.value).toFixed(1));
+  params.set('dS', (+dsSlider.value).toFixed(1));
+  params.set('m', MODEL);
+  params.set('s', SOLVE);
+  if (activeCompounds.length) {
+    params.set('c', activeCompounds.map(c => c.name).join('|'));
+  }
+  if (typeof THEME !== 'undefined') params.set('th', THEME);
+  history.replaceState(null, '', '#' + params.toString());
+}
+function readHash() {
+  if (!location.hash) return false;
+  HASH_LOADING = true;
+  try {
+    const params = new URLSearchParams(location.hash.slice(1));
+    const set = (k, fn) => { const v = params.get(k); if (v !== null) fn(v); };
+    set('T', v => { tempSlider.value = v; tempInput.value = v; tempUnit.value = 'C'; });
+    set('t', v => { timeValue.value = v; });
+    set('tu', v => { timeUnit.value = v; });
+    set('Ea', v => { eaSlider.value = v; });
+    set('A', v => { aSlider.value = v; });
+    set('dS', v => { dsSlider.value = v; });
+    set('m', v => {
+      MODEL = (v === 'eyring') ? 'eyring' : 'arrhenius';
+      modelSeg.querySelectorAll('button').forEach(b =>
+        b.classList.toggle('active', b.dataset.model === MODEL));
+      arrParamWrap.style.display = MODEL === 'arrhenius' ? '' : 'none';
+      eyrParamWrap.style.display = MODEL === 'eyring' ? '' : 'none';
+    });
+    set('s', v => {
+      if (['bde','time','temp'].includes(v)) {
+        SOLVE = v;
+        solveSeg.querySelectorAll('button').forEach(b =>
+          b.classList.toggle('active', b.dataset.solve === SOLVE));
+      }
+    });
+    set('c', v => {
+      activeCompounds = [];
+      const names = v.split('|').filter(Boolean);
+      names.forEach(name => {
+        const lp = luperox.find(p => p.name === name);
+        if (lp) {
+          activeCompounds.push({ ...lp, color: nextCompoundColor() });
+          return;
+        }
+        const ini = initiators.find(p => !p.group && p.name === name);
+        if (ini) {
+          const Tref = ini.t10hC + 273.15;
+          const Acalc = (LN2 / 36000) * Math.exp(ini.Ea * 1000 / (R * Tref));
+          activeCompounds.push({
+            name: ini.name, chem: ini.name, solv: '',
+            t10hC: ini.t10hC, Ea: ini.Ea, logA: Math.log10(Acalc),
+            color: nextCompoundColor()
+          });
+        }
+      });
+      renderActiveCompoundList();
+    });
+    set('th', v => {
+      if (v === 'light' || v === 'dark') THEME = v;
+    });
+    return true;
+  } finally {
+    HASH_LOADING = false;
+  }
+}
+
+// Render the Luperox table, optionally filtered by search query
+let lastLuperoxQuery = '';
+let showSolventCol = false;
+function renderLuperoxTable(query) {
+  if (query !== undefined) lastLuperoxQuery = query;
+  const q = (lastLuperoxQuery || '').toLowerCase().trim();
+  let filtered = luperox.filter(p => !q ||
+    p.name.toLowerCase().includes(q) ||
+    p.chem.toLowerCase().includes(q) ||
+    p.solv.toLowerCase().includes(q));
+  filtered = applySort(filtered, sortState.luperox, {
+    name: p => p.name,
+    chem: p => p.chem,
+    solv: p => p.solv,
+    t: p => p.t10hC,
+    ea: p => p.Ea,
+    loga: p => p.logA,
+  });
+  const ncols = showSolventCol ? 6 : 5;
+  const rows = filtered.map(p => {
+    const origIdx = luperox.indexOf(p);
+    const active = activeCompounds.find(c => c.name === p.name);
+    const rowStyle = active
+      ? `background: ${hexToRgba(active.color, 0.18)}; border-left: 3px solid ${active.color};`
+      : '';
+    const dot = active
+      ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${active.color}; margin-right:6px; vertical-align:middle;"></span>`
+      : '';
+    const solvCell = showSolventCol
+      ? `<td style="text-align:left; color: var(--muted); font-size: 11px;">${p.solv}</td>`
+      : '';
+    return `<tr data-idx="${origIdx}" title="Solvent: ${p.solv}" style="${rowStyle}">
+      <td style="text-align:left;">${dot}${p.name}</td>
+      <td style="text-align:left; color: var(--muted); font-size: 11px;">${p.chem}</td>
+      ${solvCell}
+      <td>${p.t10hC.toFixed(1)}</td>
+      <td>${p.Ea.toFixed(2)}</td>
+      <td>${p.logA.toFixed(2)}</td>
+    </tr>`;
+  }).join('');
+  const body = document.getElementById('luperoxBody');
+  if (!body) return;
+  body.innerHTML = rows || `<tr><td colspan="${ncols}" style="color: var(--muted); padding: 12px;">No matches.</td></tr>`;
+  // toggle Solvent header column visibility
+  const solvHeader = document.querySelector('#luperoxTable th[data-sort="solv"]');
+  if (solvHeader) solvHeader.style.display = showSolventCol ? '' : 'none';
+  body.querySelectorAll('tr[data-idx]').forEach(tr => {
+    tr.addEventListener('click', (e) => {
+      setActiveCompound(luperox[+tr.dataset.idx], { add: e.metaKey || e.ctrlKey });
+    });
+  });
+}
+
+// ===== Canvas drawing helpers =====
+function setupCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, w: rect.width, h: rect.height };
+}
+
+function drawAxes(ctx, w, h, m, opts) {
+  // m = margins {l,r,t,b}
+  const x0 = m.l, x1 = w - m.r;
+  const y0 = m.t, y1 = h - m.b;
+  ctx.strokeStyle = cssVar('--grid') || '#2a2f3a';
+  ctx.fillStyle = cssVar('--muted') || '#8a93a6';
+  ctx.lineWidth = 1;
+  ctx.font = '11px -apple-system, sans-serif';
+
+  // grid
+  ctx.beginPath();
+  for (let i = 0; i <= 5; i++) {
+    const y = y0 + (y1 - y0) * i / 5;
+    ctx.moveTo(x0, y); ctx.lineTo(x1, y);
+  }
+  for (let i = 0; i <= opts.xTicks; i++) {
+    const x = x0 + (x1 - x0) * i / opts.xTicks;
+    ctx.moveTo(x, y0); ctx.lineTo(x, y1);
+  }
+  ctx.stroke();
+
+  // x labels
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let i = 0; i <= opts.xTicks; i++) {
+    const x = x0 + (x1 - x0) * i / opts.xTicks;
+    const v = opts.xMin + (opts.xMax - opts.xMin) * i / opts.xTicks;
+    ctx.fillText(opts.xFmt(v), x, y1 + 4);
+  }
+  // y labels
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 5; i++) {
+    const y = y1 - (y1 - y0) * i / 5;
+    const v = opts.yMin + (opts.yMax - opts.yMin) * i / 5;
+    ctx.fillText(v.toFixed(0), x0 - 6, y);
+  }
+  // titles
+  ctx.fillStyle = cssVar('--muted') || '#8a93a6';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText(opts.xLabel, (x0+x1)/2, h - 2);
+  ctx.save();
+  ctx.translate(12, (y0+y1)/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText(opts.yLabel, 0, 0);
+  ctx.restore();
+  return { x0, x1, y0, y1 };
+}
+
+// ===== Chart 1: BDE vs T =====
+function drawChartT(t_s) {
+  const canvas = document.getElementById('chartT');
+  const { ctx, w, h } = setupCanvas(canvas);
+  ctx.clearRect(0, 0, w, h);
+  const m = { l: 50, r: 16, t: 12, b: 36 };
+  const tempC_min = -50, tempC_max = 800;
+  // determine y range from data
+  const samples = 200;
+  const data = [];
+  for (let i = 0; i <= samples; i++) {
+    const Tc = tempC_min + (tempC_max - tempC_min) * i / samples;
+    const Tk = Tc + 273.15;
+    data.push({ T: Tc, bde: bdeFromConditions(Tk, t_s) });
+  }
+  const yMax = Math.ceil(Math.max(...data.map(d => d.bde)) / 10) * 10;
+  const yMin = 0;
+  const ax = drawAxes(ctx, w, h, m, {
+    xMin: tempC_min, xMax: tempC_max, xTicks: 6,
+    xFmt: v => v.toFixed(0) + '°C',
+    xLabel: 'Temperature (°C)',
+    yMin, yMax, yLabel: 'BDE (kcal/mol)'
+  });
+  // reference horizontal lines for common BDEs
+  const refs = [{v:30,c:'#5a2a8c'},{v:50,c:'#1f4ea0'},{v:70,c:'#1f8c7a'},{v:90,c:'#a07020'}];
+  refs.forEach(r => {
+    if (r.v < yMax) {
+      const y = ax.y1 - (ax.y1-ax.y0) * (r.v-yMin)/(yMax-yMin);
+      ctx.strokeStyle = r.c + '88'; ctx.setLineDash([3,3]);
+      ctx.beginPath(); ctx.moveTo(ax.x0, y); ctx.lineTo(ax.x1, y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = r.c; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillText(r.v + '', ax.x0 + 4, y - 2);
+    }
+  });
+
+  // curve
+  ctx.strokeStyle = '#6ea8ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  data.forEach((d,i) => {
+    const x = ax.x0 + (ax.x1-ax.x0) * (d.T-tempC_min)/(tempC_max-tempC_min);
+    const y = ax.y1 - (ax.y1-ax.y0) * (d.bde-yMin)/(yMax-yMin);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // marker
+  const Tc = +tempSlider.value;
+  const Tk = Tc + 273.15;
+  const bde = bdeFromConditions(Tk, t_s);
+  if (bde >= yMin && bde <= yMax) {
+    const x = ax.x0 + (ax.x1-ax.x0) * (Tc-tempC_min)/(tempC_max-tempC_min);
+    const y = ax.y1 - (ax.y1-ax.y0) * (bde-yMin)/(yMax-yMin);
+    const focusColor = activeCompounds.length
+      ? activeCompounds[activeCompounds.length - 1].color
+      : '#ffb86b';
+    ctx.fillStyle = focusColor;
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = focusColor; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(x, ax.y1); ctx.lineTo(x, y); ctx.lineTo(ax.x0, y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ===== Chart 2: BDE vs half-life (log) =====
+function drawChartTime(T_K) {
+  const canvas = document.getElementById('chartTime');
+  const { ctx, w, h } = setupCanvas(canvas);
+  ctx.clearRect(0, 0, w, h);
+  const m = { l: 50, r: 16, t: 12, b: 36 };
+  const logMin = -6, logMax = 12; // 1 µs to 30000 years
+  const samples = 200;
+  const data = [];
+  for (let i = 0; i <= samples; i++) {
+    const lg = logMin + (logMax - logMin) * i / samples;
+    const t = Math.pow(10, lg);
+    data.push({ lg, bde: bdeFromConditions(T_K, t) });
+  }
+  const yMax = Math.ceil(Math.max(...data.map(d => d.bde)) / 10) * 10;
+  const yMin = Math.max(0, Math.floor(Math.min(...data.map(d => d.bde)) / 10) * 10);
+  const ax = drawAxes(ctx, w, h, m, {
+    xMin: logMin, xMax: logMax, xTicks: 9,
+    xFmt: v => {
+      const t = Math.pow(10, v);
+      return formatTimeShort(t);
+    },
+    xLabel: 'Half-life (log scale)',
+    yMin, yMax, yLabel: 'BDE (kcal/mol)'
+  });
+
+  ctx.strokeStyle = '#7ee2a8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  data.forEach((d,i) => {
+    const x = ax.x0 + (ax.x1-ax.x0) * (d.lg-logMin)/(logMax-logMin);
+    const y = ax.y1 - (ax.y1-ax.y0) * (d.bde-yMin)/(yMax-yMin);
+    if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // marker
+  const t_user = +timeValue.value * +timeUnit.value;
+  const lg = Math.log10(t_user);
+  const bde = bdeFromConditions(T_K, t_user);
+  if (lg >= logMin && lg <= logMax && bde >= yMin && bde <= yMax) {
+    const x = ax.x0 + (ax.x1-ax.x0) * (lg-logMin)/(logMax-logMin);
+    const y = ax.y1 - (ax.y1-ax.y0) * (bde-yMin)/(yMax-yMin);
+    const focusColor = activeCompounds.length
+      ? activeCompounds[activeCompounds.length - 1].color
+      : '#ffb86b';
+    ctx.fillStyle = focusColor;
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = focusColor; ctx.setLineDash([2,3]);
+    ctx.beginPath(); ctx.moveTo(x, ax.y1); ctx.lineTo(x, y); ctx.lineTo(ax.x0, y); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ===== Heatmap =====
+function bdeColor(bde) {
+  // Map BDE 10..120 kcal/mol to a color ramp
+  const stops = [
+    { v: 10,  c: [20, 15, 35]   },
+    { v: 25,  c: [59, 31, 77]   },
+    { v: 40,  c: [90, 42, 140]  },
+    { v: 55,  c: [31, 78, 160]  },
+    { v: 70,  c: [31, 140, 122] },
+    { v: 85,  c: [160, 140, 50] },
+    { v: 100, c: [200, 90, 50]  },
+    { v: 120, c: [220, 60, 50]  },
+  ];
+  if (bde <= stops[0].v) return `rgb(${stops[0].c.join(',')})`;
+  if (bde >= stops[stops.length-1].v) return `rgb(${stops[stops.length-1].c.join(',')})`;
+  for (let i = 0; i < stops.length-1; i++) {
+    const a = stops[i], b = stops[i+1];
+    if (bde >= a.v && bde <= b.v) {
+      const f = (bde - a.v) / (b.v - a.v);
+      const r = Math.round(a.c[0] + f*(b.c[0]-a.c[0]));
+      const g = Math.round(a.c[1] + f*(b.c[1]-a.c[1]));
+      const bl = Math.round(a.c[2] + f*(b.c[2]-a.c[2]));
+      return `rgb(${r},${g},${bl})`;
+    }
+  }
+}
+
+function drawHeatmap() {
+  const canvas = document.getElementById('chartHeat');
+  const { ctx, w, h } = setupCanvas(canvas);
+  ctx.clearRect(0, 0, w, h);
+  const m = { l: 56, r: 20, t: 12, b: 40 };
+  const { tempC_min, tempC_max, logMin, logMax } = heatmapView;
+  const x0 = m.l, x1 = w - m.r;
+  const y0 = m.t, y1 = h - m.b;
+  // Persist mapping for the click handler (canvas pixel ↔ data coords)
+  heatmapBox = { x0, x1, y0, y1, tempC_min, tempC_max, logMin, logMax, w, h };
+  heatmapCompoundDots = []; // refilled below as 10-h marker dots are drawn
+
+  const cols = 120, rows = 80;
+  const cellW = (x1-x0)/cols, cellH = (y1-y0)/rows;
+  for (let i = 0; i < cols; i++) {
+    const Tc = tempC_min + (tempC_max-tempC_min) * (i+0.5)/cols;
+    const Tk = Tc + 273.15;
+    for (let j = 0; j < rows; j++) {
+      // y axis: top = long half-life, bottom = short. But conventional: bottom=small log → swap so up = longer
+      const lg = logMin + (logMax-logMin) * (1 - (j+0.5)/rows);
+      const t = Math.pow(10, lg);
+      const bde = bdeFromConditions(Tk, t);
+      ctx.fillStyle = bdeColor(bde);
+      ctx.fillRect(x0 + i*cellW, y0 + j*cellH, cellW+0.5, cellH+0.5);
+    }
+  }
+
+  // contour lines for selected BDE values
+  const contours = [20, 30, 40, 50, 60, 70, 80, 90, 100];
+  contours.forEach(target => {
+    ctx.strokeStyle = THEME === 'light' ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    let started = false;
+    // Collect visible-segment temperatures so we can label at the segment's midpoint.
+    const visibleTcs = [];
+    const N = 200;
+    for (let i = 0; i <= N; i++) {
+      const Tc = tempC_min + (tempC_max-tempC_min) * i/N;
+      const Tk = Tc + 273.15;
+      const t = halfLifeFromBde(Tk, target);
+      const lg = Math.log10(t);
+      if (lg < logMin || lg > logMax) { started = false; continue; }
+      visibleTcs.push(Tc);
+      const x = x0 + (x1-x0) * (Tc-tempC_min)/(tempC_max-tempC_min);
+      const y = y0 + (y1-y0) * (1 - (lg-logMin)/(logMax-logMin));
+      if (!started) { ctx.moveTo(x,y); started = true; }
+      else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    // label at the midpoint of the visible portion of the contour
+    if (visibleTcs.length > 4) {
+      const labelTc = visibleTcs[Math.floor(visibleTcs.length / 2)];
+      const Tk = labelTc + 273.15;
+      const t = halfLifeFromBde(Tk, target);
+      const lg = Math.log10(t);
+      const x = x0 + (x1-x0) * (labelTc-tempC_min)/(tempC_max-tempC_min);
+      const y = y0 + (y1-y0) * (1 - (lg-logMin)/(logMax-logMin));
+      // Stroke a contrasting outline behind text for readability
+      ctx.font = '10px -apple-system, sans-serif';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = THEME === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)';
+      ctx.strokeText(target+'', x+3, y-2);
+      ctx.fillStyle = THEME === 'light' ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.85)';
+      ctx.fillText(target+'', x+3, y-2);
+    }
+  });
+
+  // axes overlay
+  ctx.strokeStyle = cssVar('--border') || '#3a3f4a';
+  ctx.strokeRect(x0, y0, x1-x0, y1-y0);
+  ctx.fillStyle = cssVar('--muted') || '#8a93a6';
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const xTicks = w < 500 ? 4 : 6;
+  for (let i = 0; i <= xTicks; i++) {
+    const Tc = tempC_min + (tempC_max-tempC_min)*i/xTicks;
+    const x = x0 + (x1-x0)*i/xTicks;
+    ctx.fillText(Tc.toFixed(0)+'°', x, y1+4);
+  }
+  // Y axis: per-decade labels at "natural" times. Add minor gridlines at every decade.
+  const decadeLabels = [
+    { lg: -6,  label: '1µs' },
+    { lg: -3,  label: '1ms' },
+    { lg: 0,   label: '1s'  },
+    { lg: Math.log10(60),       label: '1min' },
+    { lg: Math.log10(3600),     label: '1h'   },
+    { lg: Math.log10(86400),    label: '1d'   },
+    { lg: Math.log10(604800),   label: '1w'   },
+    { lg: Math.log10(2592000),  label: '1mo'  },
+    { lg: Math.log10(31557600), label: '1y'   },
+    { lg: Math.log10(31557600 * 100),   label: '100y'  },
+    { lg: Math.log10(31557600 * 10000), label: '10ky'  },
+  ];
+  // minor gridlines at every integer decade
+  ctx.strokeStyle = THEME === 'light' ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let lg = Math.ceil(logMin); lg <= Math.floor(logMax); lg++) {
+    const y = y0 + (y1 - y0) * (1 - (lg - logMin) / (logMax - logMin));
+    ctx.moveTo(x0, y); ctx.lineTo(x1, y);
+  }
+  ctx.stroke();
+  ctx.fillStyle = cssVar('--muted') || '#8a93a6';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  decadeLabels.forEach(d => {
+    if (d.lg < logMin || d.lg > logMax) return;
+    const y = y0 + (y1 - y0) * (1 - (d.lg - logMin) / (logMax - logMin));
+    ctx.fillText(d.label, x0 - 6, y);
+  });
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('Temperature (°C)', (x0+x1)/2, h-2);
+  ctx.save(); ctx.translate(14, (y0+y1)/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('Half-life', 0, 0); ctx.restore();
+
+  // Active-compound t(T) curve overlays — each uses its locked Ea & A,
+  // independent of the current Arrhenius/Eyring slider settings.
+  activeCompounds.forEach(c => {
+    const A = Math.pow(10, c.logA);
+    const Ea_cal = c.Ea * 1000;
+    const color = c.color || '#7ee2a8';
+    // glow first (drawn under) then crisp line on top
+    ctx.beginPath();
+    let started = false;
+    const N = 240;
+    for (let i = 0; i <= N; i++) {
+      const Tc = tempC_min + (tempC_max - tempC_min) * i / N;
+      const Tk = Tc + 273.15;
+      const t = LN2 / (A * Math.exp(-Ea_cal / (R * Tk)));
+      const lg = Math.log10(t);
+      if (!isFinite(lg) || lg < logMin || lg > logMax) { started = false; continue; }
+      const x = x0 + (x1 - x0) * (Tc - tempC_min) / (tempC_max - tempC_min);
+      const y = y0 + (y1 - y0) * (1 - (lg - logMin) / (logMax - logMin));
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = hexToRgba(color, 0.25);
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+
+    // marker at 10-h reference point
+    const lg10 = Math.log10(36000);
+    if (c.t10hC >= tempC_min && c.t10hC <= tempC_max && lg10 >= logMin && lg10 <= logMax) {
+      const mx = x0 + (x1 - x0) * (c.t10hC - tempC_min) / (tempC_max - tempC_min);
+      const my = y0 + (y1 - y0) * (1 - (lg10 - logMin) / (logMax - logMin));
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(mx, my, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = color;
+      ctx.font = '11px -apple-system, sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillText(c.name, mx + 6, my - 4);
+      heatmapCompoundDots.push({ name: c.name, px: mx, py: my });
+    }
+  });
+
+  // crosshair
+  const Tc = +tempSlider.value;
+  const t_user = +timeValue.value * +timeUnit.value;
+  const lg = Math.log10(t_user);
+  if (Tc >= tempC_min && Tc <= tempC_max && lg >= logMin && lg <= logMax) {
+    const x = x0 + (x1-x0) * (Tc-tempC_min)/(tempC_max-tempC_min);
+    const y = y0 + (y1-y0) * (1 - (lg-logMin)/(logMax-logMin));
+    ctx.strokeStyle = THEME === 'light' ? '#000' : '#fff';
+    ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(x0, y); ctx.lineTo(x1, y);
+    ctx.moveTo(x, y0); ctx.lineTo(x, y1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const focusColor = activeCompounds.length
+      ? activeCompounds[activeCompounds.length - 1].color
+      : (cssVar('--accent-2') || '#ffb86b');
+    ctx.fillStyle = focusColor;
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = THEME === 'light' ? '#fff' : '#000';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Pinned probes (long-press): independent of slider state. Multi-probe support.
+  const placedBoxes = []; // rects of already-drawn label boxes for collision avoidance
+  function rectsOverlap(a, b) {
+    return !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
+  }
+  pinnedProbes.forEach((probe, probeIdx) => {
+    const { Tc: pTc, t_s: pT } = probe;
+    const lgp = Math.log10(pT);
+    if (pTc >= tempC_min && pTc <= tempC_max && lgp >= logMin && lgp <= logMax) {
+      const px = x0 + (x1 - x0) * (pTc - tempC_min) / (tempC_max - tempC_min);
+      const py = y0 + (y1 - y0) * (1 - (lgp - logMin) / (logMax - logMin));
+      // halo + dot
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(px, py, 4.5, 0, Math.PI * 2); ctx.fill();
+
+      // label box anchored above-right; flip if too close to edges
+      const labelLines = (() => {
+        const bde = bdeArrhenius(pTc + 273.15, pT, Math.pow(10, +aSlider.value));
+        const bdeText = isFinite(bde)
+          ? `BDE = ${bde.toFixed(1)} kcal/mol @ A=10^${(+aSlider.value).toFixed(1)}`
+          : `BDE = — @ A=10^${(+aSlider.value).toFixed(1)}`;
+        return [
+          `T = ${pTc.toFixed(1)} °C`,
+          `t₁/₂ = ${formatTime(pT)}`,
+          bdeText,
+        ];
+      })();
+      ctx.font = '11px -apple-system, sans-serif';
+      const lw = Math.max(...labelLines.map(s => ctx.measureText(s).width));
+      const padX = 8, padY = 6, lh = 14;
+      const boxW = lw + 2 * padX;
+      const boxH = lh * labelLines.length + 2 * padY;
+      // Try four anchors around the dot; pick first that fits and doesn't collide with prior boxes.
+      const candidates = [
+        { x: px + 12,         y: py - boxH - 12 }, // above-right
+        { x: px - boxW - 12,  y: py - boxH - 12 }, // above-left
+        { x: px + 12,         y: py + 12 },        // below-right
+        { x: px - boxW - 12,  y: py + 12 },        // below-left
+      ];
+      let bx = candidates[0].x, by = candidates[0].y;
+      for (const c of candidates) {
+        const cx = Math.max(x0 + 4, Math.min(c.x, x1 - boxW - 4));
+        const cy = Math.max(y0 + 4, Math.min(c.y, y1 - boxH - 4));
+        const r = { x: cx, y: cy, w: boxW, h: boxH };
+        if (!placedBoxes.some(p => rectsOverlap(p, r))) {
+          bx = cx; by = cy;
+          break;
+        }
+        // Fall back to last clamped candidate if all overlap
+        bx = cx; by = cy;
+      }
+      placedBoxes.push({ x: bx, y: by, w: boxW, h: boxH });
+      // Leader line from dot to nearest corner of label (so multi-probe stays unambiguous)
+      const cornerX = (px < bx) ? bx : bx + boxW;
+      const cornerY = (py < by) ? by : by + boxH;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.75;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(cornerX, cornerY);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,0.85)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 1;
+      // rounded rect
+      const rr = 6;
+      ctx.beginPath();
+      ctx.moveTo(bx + rr, by);
+      ctx.lineTo(bx + boxW - rr, by);
+      ctx.quadraticCurveTo(bx + boxW, by, bx + boxW, by + rr);
+      ctx.lineTo(bx + boxW, by + boxH - rr);
+      ctx.quadraticCurveTo(bx + boxW, by + boxH, bx + boxW - rr, by + boxH);
+      ctx.lineTo(bx + rr, by + boxH);
+      ctx.quadraticCurveTo(bx, by + boxH, bx, by + boxH - rr);
+      ctx.lineTo(bx, by + rr);
+      ctx.quadraticCurveTo(bx, by, bx + rr, by);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      labelLines.forEach((line, i) => {
+        ctx.fillText(line, bx + padX, by + padY + i * lh);
+      });
+    }
+  });
+
+  // Box-select overlay: live drag preview OR committed selection
+  const liveBox = boxSelectDragging && boxSelectDragStart && boxSelectDragCurrent
+    ? {
+        tempC_min: Math.min(boxSelectDragStart.Tc, boxSelectDragCurrent.Tc),
+        tempC_max: Math.max(boxSelectDragStart.Tc, boxSelectDragCurrent.Tc),
+        logMin: Math.min(boxSelectDragStart.lg, boxSelectDragCurrent.lg),
+        logMax: Math.max(boxSelectDragStart.lg, boxSelectDragCurrent.lg),
+      }
+    : boxSelection;
+  if (liveBox) {
+    const bx0 = x0 + (x1 - x0) * (Math.max(tempC_min, liveBox.tempC_min) - tempC_min) / (tempC_max - tempC_min);
+    const bx1 = x0 + (x1 - x0) * (Math.min(tempC_max, liveBox.tempC_max) - tempC_min) / (tempC_max - tempC_min);
+    const by0 = y0 + (y1 - y0) * (1 - (Math.min(logMax, liveBox.logMax) - logMin) / (logMax - logMin));
+    const by1 = y0 + (y1 - y0) * (1 - (Math.max(logMin, liveBox.logMin) - logMin) / (logMax - logMin));
+    if (bx1 > bx0 && by1 > by0) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.10)';
+      ctx.fillRect(bx0, by0, bx1 - bx0, by1 - by0);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0);
+      ctx.setLineDash([]);
+
+      // Readout: T-range / t₁/₂-range, anchored just outside a corner that fits.
+      const lines = [
+        `T: ${liveBox.tempC_min.toFixed(1)} – ${liveBox.tempC_max.toFixed(1)} °C`,
+        `t½: ${formatTime(Math.pow(10, liveBox.logMin))} – ${formatTime(Math.pow(10, liveBox.logMax))}`,
+      ];
+      ctx.font = '11px -apple-system, sans-serif';
+      const lw = Math.max(...lines.map(s => ctx.measureText(s).width));
+      const padX = 6, padY = 5, lh = 14;
+      const labW = lw + 2 * padX;
+      const labH = lh * lines.length + 2 * padY;
+      // Prefer above-right of the box; fall back to below-right, above-left, below-left.
+      // Lift the "above" anchors enough that the readout clears any compound-name labels
+      // drawn just above their 10-h dots near the box's top edge.
+      const ABOVE_GAP = 22;
+      const anchors = [
+        { x: bx1 + 6,        y: by0 - labH - ABOVE_GAP },
+        { x: bx1 + 6,        y: by1 + 6 },
+        { x: bx0 - labW - 6, y: by0 - labH - ABOVE_GAP },
+        { x: bx0 - labW - 6, y: by1 + 6 },
+      ];
+      let lx = anchors[0].x, ly = anchors[0].y;
+      for (const a of anchors) {
+        if (a.x >= x0 && a.x + labW <= x1 && a.y >= y0 && a.y + labH <= y1) {
+          lx = a.x; ly = a.y;
+          break;
+        }
+      }
+      lx = Math.max(x0 + 2, Math.min(lx, x1 - labW - 2));
+      ly = Math.max(y0 + 2, Math.min(ly, y1 - labH - 2));
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.rect(lx, ly, labW, labH);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      lines.forEach((line, i) => ctx.fillText(line, lx + padX, ly + padY + i * lh));
+    }
+  }
+}
+
+// Pick a sensible (value, unit) for displaying a time in seconds, and write into the inputs
+function setTimeFromSeconds(t_s) {
+  if (!isFinite(t_s) || t_s <= 0) return;
+  let unit = 1, val = t_s;
+  if (t_s >= 31557600)      unit = 31557600;
+  else if (t_s >= 86400)    unit = 86400;
+  else if (t_s >= 3600)     unit = 3600;
+  else if (t_s >= 60)       unit = 60;
+  val = t_s / unit;
+  timeUnit.value = String(unit);
+  timeValue.value = val < 0.001 ? val.toExponential(2) : +val.toPrecision(4);
+  if (timeSlider) {
+    const lg = Math.log10(t_s);
+    timeSlider.value = Math.max(-6, Math.min(12, lg));
+  }
+}
+function setTempFromKelvin(T_K) {
+  if (!isFinite(T_K)) return;
+  const Tc = T_K - 273.15;
+  tempSlider.value = Math.max(-50, Math.min(800, Math.round(Tc)));
+  tempInput.value = +Tc.toFixed(2);
+}
+
+function update() {
+  if (UPDATING) return;
+  UPDATING = true;
+  try {
+  // Sync slider labels
+  aLabel.textContent = `1×10${superscript(+aSlider.value)}`;
+  dsLabel.textContent = (+dsSlider.value >= 0 ? '+' : '') + (+dsSlider.value).toFixed(1);
+  eaLabel.textContent = (+eaSlider.value).toFixed(1);
+
+  // Always keep Eₐ slider in the layout to prevent jumps when SOLVE changes;
+  // dim+disable it in BDE mode where it's an output rather than an input.
+  setControlEnabled(eaControlWrap, SOLVE !== 'bde');
+  // Disable the input that we are solving for (visual cue)
+  setControlEnabled(tempControlWrap, SOLVE !== 'temp');
+  setControlEnabled(timeControlWrap, SOLVE !== 'time');
+
+  let Tc = +tempSlider.value, Tk = Tc + 273.15;
+  let t_s = +timeValue.value * +timeUnit.value;
+  const Ea = +eaSlider.value;
+
+  // Compute solved value and write back to its input
+  if (SOLVE === 'bde') {
+    // Solve for BDE/Eₐ from T,t (existing behaviour)
+    const bde = bdeFromConditions(Tk, t_s);
+    renderResult(bde, Tk, t_s);
+  } else if (SOLVE === 'time') {
+    // Solve for half-life given T and Eₐ
+    const tNew = halfLifeFromBde(Tk, Ea);
+    setTimeFromSeconds(tNew);
+    t_s = tNew;
+    renderResult(Ea, Tk, tNew);
+  } else if (SOLVE === 'temp') {
+    // Solve for temperature given t and Eₐ
+    const TkNew = tempFromBde(t_s, Ea);
+    if (isFinite(TkNew) && TkNew > 0) {
+      setTempFromKelvin(TkNew);
+      Tk = TkNew; Tc = Tk - 273.15;
+    }
+    renderResult(Ea, Tk, t_s);
+  }
+
+  // Display labels for the (possibly updated) inputs
+  tempLabel.textContent = `${(+tempSlider.value).toFixed(0)} °C  (${(+tempSlider.value + 273.15).toFixed(2)} K)`;
+  timeLabel.textContent = formatTime(+timeValue.value * +timeUnit.value);
+
+  pill1.textContent = `${MODEL === 'eyring' ? 'Eyring' : 'Arrhenius'} · t₁/₂ = ${formatTime(+timeValue.value * +timeUnit.value)}`;
+  pill2.textContent = `${MODEL === 'eyring' ? 'Eyring' : 'Arrhenius'} · T = ${(+tempSlider.value).toFixed(0)}°C`;
+
+  drawChartT(+timeValue.value * +timeUnit.value);
+  drawChartTime(+tempSlider.value + 273.15);
+  drawHeatmap();
+  } finally {
+    UPDATING = false;
+  }
+  writeHash();
+}
+
+function uncertaintyTimeRange(Tk) {
+  // Vary Ea by ±10%; t = ln2/(A·exp(-Ea/RT)) so factor on t is exp(±0.1·Ea/RT)
+  const Ea = +eaSlider.value;
+  const factor = Math.exp(0.1 * Ea * 1000 / (R * Tk));
+  return factor; // multiplicative (>1)
+}
+function uncertaintyTempRange(t_s) {
+  // Vary Ea by ±10% and recompute T
+  const Ea = +eaSlider.value;
+  const Tlo = tempFromBde(t_s, Ea * 0.9);
+  const Thi = tempFromBde(t_s, Ea * 1.1);
+  return [Tlo, Thi];
+}
+
+function renderResult(bde, Tk, t_s) {
+  // The big value follows SOLVE: in bde mode show BDE; in time mode show solved t; in temp mode show solved T
+  const showUnc = uncertaintyToggle && uncertaintyToggle.checked;
+  if (SOLVE === 'time') {
+    const tNew = +timeValue.value * +timeUnit.value;
+    if (isFinite(tNew) && tNew > 0) {
+      bdeValue.textContent = formatTime(tNew).split(' ')[0];
+      const unit = formatTime(tNew).split(' ').slice(1).join(' ');
+      bdeUnit.textContent = `${unit}  ·  Half-life at T, given Eₐ & A`;
+      bdeKj.textContent = `${tNew.toExponential(3)} s`;
+      let extra = `Eₐ = ${(+eaSlider.value).toFixed(1)} kcal/mol &nbsp;·&nbsp; T = ${(+tempSlider.value).toFixed(1)} °C`;
+      if (showUnc) {
+        const f = uncertaintyTimeRange(Tk);
+        extra += `<br/><span style="color: var(--muted); font-size: 11px;">±10% Eₐ → t₁/₂ in [${formatTime(tNew/f)}, ${formatTime(tNew*f)}]</span>`;
+      }
+      bdeExtra.innerHTML = extra;
+    } else { bdeValue.textContent = '—'; bdeKj.textContent = '—'; bdeExtra.textContent = ''; }
+    return;
+  }
+  if (SOLVE === 'temp') {
+    const TcNew = +tempSlider.value;
+    if (isFinite(TcNew)) {
+      bdeValue.textContent = TcNew.toFixed(1);
+      bdeUnit.textContent = `°C  ·  Temperature for t₁/₂, given Eₐ & A`;
+      bdeKj.textContent = `${(TcNew + 273.15).toFixed(2)} K`;
+      let extra = `Eₐ = ${(+eaSlider.value).toFixed(1)} kcal/mol &nbsp;·&nbsp; t₁/₂ = ${formatTime(t_s)}`;
+      if (showUnc) {
+        const [Tlo, Thi] = uncertaintyTempRange(t_s);
+        if (isFinite(Tlo) && isFinite(Thi)) {
+          extra += `<br/><span style="color: var(--muted); font-size: 11px;">±10% Eₐ → T in [${(Thi-273.15).toFixed(1)}, ${(Tlo-273.15).toFixed(1)}] °C</span>`;
+        }
+      }
+      bdeExtra.innerHTML = extra;
+    } else { bdeValue.textContent = '—'; bdeKj.textContent = '—'; bdeExtra.textContent = ''; }
+    return;
+  }
+  // SOLVE === 'bde'
+  if (isFinite(bde) && bde > 0) {
+    bdeValue.textContent = bde.toFixed(1);
+    bdeKj.textContent = `${(bde * 4.184).toFixed(1)} kJ/mol`;
+    let extra;
+    if (MODEL === 'eyring') {
+      const Ea = bde + R * Tk / 1000;
+      const dG = bde - Tk * (+dsSlider.value) / 1000;
+      bdeUnit.textContent = `kcal/mol  ·  ΔH‡ ≈ BDE`;
+      extra = `ΔG‡ = ${dG.toFixed(1)} kcal/mol &nbsp;·&nbsp; Eₐ = ${Ea.toFixed(1)} kcal/mol`;
+    } else {
+      bdeUnit.textContent = `kcal/mol  ·  Eₐ ≈ BDE`;
+      const dH = bde - R * Tk / 1000;
+      extra = `ΔH‡ ≈ ${dH.toFixed(1)} kcal/mol`;
+    }
+    if (showUnc) {
+      // Eₐ = RT·ln(A·t/ln2). A 10× uncertainty in A maps to RT·ln(10) shift.
+      const shift = R * Tk * Math.log(10) / 1000; // kcal/mol per 10× in A
+      extra += `<br/><span style="color: var(--muted); font-size: 11px;">10× uncertainty in A → ±${shift.toFixed(1)} kcal/mol on Eₐ</span>`;
+    }
+    bdeExtra.innerHTML = extra;
+  } else {
+    bdeValue.textContent = '—';
+    bdeKj.textContent = '—';
+    bdeExtra.textContent = '';
+  }
+}
+
+function setControlEnabled(wrap, enabled) {
+  if (!wrap) return;
+  wrap.style.opacity = enabled ? '1' : '0.55';
+  wrap.style.pointerEvents = enabled ? '' : 'none';
+}
+
+// Sync typed temperature input with slider
+function syncTempFromInput() {
+  const v = +tempInput.value;
+  const u = tempUnit.value;
+  if (!isFinite(v)) return;
+  const K = toKelvin(v, u);
+  const C = K - 273.15;
+  // clamp to slider range
+  const Cclamped = Math.max(-50, Math.min(800, C));
+  tempSlider.value = Cclamped;
+  update();
+}
+function syncTempFromSlider() {
+  const C = +tempSlider.value;
+  const u = tempUnit.value;
+  const K = C + 273.15;
+  tempInput.value = +fromKelvin(K, u).toFixed(2);
+  update();
+}
+function syncTempUnit() {
+  // when unit changes, recompute the typed input from slider in new unit
+  const C = +tempSlider.value;
+  const K = C + 273.15;
+  tempInput.value = +fromKelvin(K, tempUnit.value).toFixed(2);
+  update();
+}
+
+function superscript(n) {
+  // n is like 15 or 14.3; convert to e.g. ¹⁵ or ¹⁴·³
+  const map = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','.':'·','-':'⁻'};
+  return n.toFixed(1).replace(/\.0$/, '').split('').map(c => map[c] || c).join('');
+}
+
+tempSlider.addEventListener('input', syncTempFromSlider);
+tempInput.addEventListener('input', syncTempFromInput);
+tempInput.addEventListener('change', syncTempFromInput);
+tempUnit.addEventListener('change', syncTempUnit);
+
+// Half-life slider (log10 seconds) → write into timeValue/timeUnit, then update.
+function syncTimeFromSlider() {
+  const lg = +timeSlider.value;
+  setTimeFromSeconds(Math.pow(10, lg));
+  update();
+}
+function syncSliderFromTime() {
+  const t_s = +timeValue.value * +timeUnit.value;
+  if (isFinite(t_s) && t_s > 0) {
+    const lg = Math.log10(t_s);
+    timeSlider.value = Math.max(-6, Math.min(12, lg));
+  }
+  update();
+}
+if (timeSlider) timeSlider.addEventListener('input', syncTimeFromSlider);
+[timeValue, timeUnit].forEach(el => {
+  el.addEventListener('input', syncSliderFromTime);
+  el.addEventListener('change', syncSliderFromTime);
+});
+[aSlider, dsSlider, eaSlider].forEach(el => {
+  el.addEventListener('input', update);
+  el.addEventListener('change', update);
+});
+if (uncertaintyToggle) uncertaintyToggle.addEventListener('change', update);
+if (copyResultBtn) {
+  copyResultBtn.addEventListener('click', async () => {
+    const Tc = (+tempSlider.value).toFixed(1);
+    const Tk = (+tempSlider.value + 273.15).toFixed(2);
+    const t_s = +timeValue.value * +timeUnit.value;
+    const Ea = (+eaSlider.value).toFixed(1);
+    const logA = (+aSlider.value).toFixed(1);
+    const ds = (+dsSlider.value).toFixed(1);
+    const main = `${bdeValue.textContent} ${(bdeUnit.textContent.split('·')[0] || '').trim()}`;
+    const lines = [
+      `Bond / Half-life — ${MODEL === 'eyring' ? 'Eyring (TST)' : 'Arrhenius'}`,
+      `Solving for: ${SOLVE === 'bde' ? 'BDE/Eₐ' : SOLVE === 'time' ? 'Half-life' : 'Temperature'}`,
+      `T = ${Tc} °C (${Tk} K)`,
+      `t₁/₂ = ${formatTime(t_s)} (${t_s.toExponential(3)} s)`,
+      MODEL === 'eyring' ? `ΔS‡ = ${ds} cal·mol⁻¹·K⁻¹` : `log A = ${logA} (A = 10^${logA} s⁻¹)`,
+      `Eₐ = ${Ea} kcal/mol`,
+      `→ Result: ${main}`,
+    ];
+    if (activeCompounds.length) {
+      lines.push(`Active compounds: ${activeCompounds.map(c => c.name).join(', ')}`);
+    }
+    lines.push(`URL: ${location.href}`);
+    const text = lines.join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+      const original = copyResultBtn.textContent;
+      copyResultBtn.textContent = 'Copied!';
+      copyResultBtn.style.color = 'var(--good)';
+      setTimeout(() => { copyResultBtn.textContent = original; copyResultBtn.style.color = ''; }, 1500);
+    } catch (err) {
+      copyResultBtn.textContent = 'Copy failed';
+      setTimeout(() => { copyResultBtn.textContent = 'Copy'; }, 1500);
+    }
+  });
+}
+
+solveSeg.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    solveSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    SOLVE = btn.dataset.solve;
+    update();
+  });
+});
+
+clearCompoundBtn.addEventListener('click', clearActiveCompounds);
+
+modelSeg.querySelectorAll('button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    modelSeg.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    MODEL = btn.dataset.model;
+    arrParamWrap.style.display = MODEL === 'arrhenius' ? '' : 'none';
+    eyrParamWrap.style.display = MODEL === 'eyring' ? '' : 'none';
+    update();
+  });
+});
+
+window.addEventListener('resize', update);
+
+// Heatmap long-press → pin a probe showing exact T, t₁/₂, and computed BDE at that point.
+// Long press: hold 500ms without moving > a few pixels.
+(function setupHeatmapProbe() {
+  const canvas = document.getElementById('chartHeat');
+  if (!canvas) return;
+  const LONG_MS = 500;
+  const MOVE_TOL = 6;
+  let timerId = null;
+  let startX = 0, startY = 0;
+  let suppressClick = false;
+
+  function dataAtPixel(px, py) {
+    if (!heatmapBox) return null;
+    const { x0, x1, y0, y1, tempC_min, tempC_max, logMin, logMax } = heatmapBox;
+    if (px < x0 || px > x1 || py < y0 || py > y1) return null;
+    const Tc = tempC_min + (tempC_max - tempC_min) * (px - x0) / (x1 - x0);
+    const lg = logMin + (logMax - logMin) * (1 - (py - y0) / (y1 - y0));
+    return { Tc, t_s: Math.pow(10, lg) };
+  }
+  function pixelFromEvent(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    return { px: cx, py: cy };
+  }
+  function clearTimer() {
+    if (timerId) { clearTimeout(timerId); timerId = null; }
+  }
+  function onDown(e) {
+    const { px, py } = pixelFromEvent(e);
+    startX = px; startY = py;
+
+    // Box-select takes priority when active — start a drag, suppress probe pinning
+    if (boxSelectActive) {
+      const data = dataAtPixel(px, py);
+      if (!data) return;
+      boxSelectDragging = true;
+      boxSelection = null;
+      boxSelectDragStart = { Tc: data.Tc, lg: Math.log10(data.t_s) };
+      boxSelectDragCurrent = { ...boxSelectDragStart };
+      drawHeatmap();
+      e.preventDefault && e.preventDefault();
+      return;
+    }
+
+    const addMode = !!(e.metaKey || e.ctrlKey);
+    timerId = setTimeout(() => {
+      timerId = null;
+      const data = dataAtPixel(px, py);
+      if (!data) return;
+      if (addMode) pinnedProbes.push(data);
+      else pinnedProbes = [data]; // replace with single
+      drawHeatmap();
+      suppressClick = true; // prevent the click handler from dismissing what we just pinned
+      if (navigator.vibrate) try { navigator.vibrate(15); } catch (_) {}
+    }, LONG_MS);
+  }
+  function onMove(e) {
+    if (boxSelectDragging) {
+      const { px, py } = pixelFromEvent(e);
+      // Clamp to plot rect so the rectangle never escapes the heatmap
+      const { x0, x1, y0, y1, tempC_min, tempC_max, logMin, logMax } = heatmapBox;
+      const cpx = Math.max(x0, Math.min(x1, px));
+      const cpy = Math.max(y0, Math.min(y1, py));
+      boxSelectDragCurrent = {
+        Tc: tempC_min + (tempC_max - tempC_min) * (cpx - x0) / (x1 - x0),
+        lg: logMin + (logMax - logMin) * (1 - (cpy - y0) / (y1 - y0)),
+      };
+      drawHeatmap();
+      return;
+    }
+    if (!timerId) return;
+    const { px, py } = pixelFromEvent(e);
+    if (Math.hypot(px - startX, py - startY) > MOVE_TOL) clearTimer();
+  }
+  function onUp() {
+    if (boxSelectDragging) {
+      boxSelectDragging = false;
+      if (boxSelectDragStart && boxSelectDragCurrent) {
+        const tempC_min = Math.min(boxSelectDragStart.Tc, boxSelectDragCurrent.Tc);
+        const tempC_max = Math.max(boxSelectDragStart.Tc, boxSelectDragCurrent.Tc);
+        const logMin = Math.min(boxSelectDragStart.lg, boxSelectDragCurrent.lg);
+        const logMax = Math.max(boxSelectDragStart.lg, boxSelectDragCurrent.lg);
+        // Reject degenerate / negligible boxes (treat as click)
+        if (tempC_max - tempC_min > 0.5 && logMax - logMin > 0.05) {
+          boxSelection = { tempC_min, tempC_max, logMin, logMax };
+          renderBoxMatches();
+          suppressClick = true; // don't let the trailing click clear what we just selected
+        } else {
+          boxSelection = null;
+          renderBoxMatches();
+        }
+      }
+      boxSelectDragStart = null;
+      boxSelectDragCurrent = null;
+      drawHeatmap();
+      return;
+    }
+    clearTimer();
+  }
+  canvas.addEventListener('mousedown', onDown);
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseup', onUp);
+  canvas.addEventListener('mouseleave', clearTimer);
+  // While box-selecting, finish the drag even if the mouse left the canvas
+  window.addEventListener('mousemove', (e) => { if (boxSelectDragging) onMove(e); });
+  window.addEventListener('mouseup',   (e) => { if (boxSelectDragging) onUp(e); });
+
+  // Double-click a compound's 10-h dot to refocus the crosshair on that compound
+  // (re-locks A/Eₐ to it and seeds T to its 10-h reference) without altering the
+  // active set, so multi-compound comparison stays intact.
+  canvas.addEventListener('dblclick', (e) => {
+    const { px, py } = pixelFromEvent(e);
+    const HIT_R = 10;
+    let best = null, bestD2 = HIT_R * HIT_R;
+    for (const d of heatmapCompoundDots) {
+      const dx = px - d.px, dy = py - d.py;
+      const d2 = dx * dx + dy * dy;
+      if (d2 <= bestD2) { best = d; bestD2 = d2; }
+    }
+    if (!best) return;
+    const c = activeCompounds.find(x => x.name === best.name);
+    if (!c) return;
+    e.preventDefault();
+    e.stopPropagation();
+    suppressClick = true; // keep the trailing single-click from clearing pinned probes
+    // Move "focused" compound to end of array and refocus inputs to its params
+    activeCompounds = activeCompounds.filter(x => x.name !== c.name).concat(c);
+    if (MODEL !== 'arrhenius') {
+      MODEL = 'arrhenius';
+      modelSeg.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('active', b.dataset.model === 'arrhenius');
+      });
+      arrParamWrap.style.display = '';
+      eyrParamWrap.style.display = 'none';
+    }
+    aSlider.value = Math.max(10, Math.min(18, c.logA)).toFixed(1);
+    eaSlider.value = Math.max(10, Math.min(60, c.Ea)).toFixed(1);
+    SOLVE = 'time';
+    solveSeg.querySelectorAll('button').forEach(b => {
+      b.classList.toggle('active', b.dataset.solve === 'time');
+    });
+    setTempFromKelvin(c.t10hC + 273.15);
+    tempUnit.value = 'C';
+    renderActiveCompoundList();
+    refreshReferenceHighlights();
+    update();
+  });
+
+  // ===== Heatmap zoom & pan =====
+  function clampView(v) {
+    // Cap zoom-out at default bounds; allow zoom-in to ~1°C × 0.01 dec
+    if (v.tempC_max - v.tempC_min < 1) {
+      const c = (v.tempC_max + v.tempC_min) / 2;
+      v.tempC_min = c - 0.5; v.tempC_max = c + 0.5;
+    }
+    if (v.logMax - v.logMin < 0.1) {
+      const c = (v.logMax + v.logMin) / 2;
+      v.logMin = c - 0.05; v.logMax = c + 0.05;
+    }
+    if (v.tempC_max - v.tempC_min > HEATMAP_DEFAULT_BOUNDS.tempC_max - HEATMAP_DEFAULT_BOUNDS.tempC_min) {
+      v.tempC_min = HEATMAP_DEFAULT_BOUNDS.tempC_min;
+      v.tempC_max = HEATMAP_DEFAULT_BOUNDS.tempC_max;
+    }
+    if (v.logMax - v.logMin > HEATMAP_DEFAULT_BOUNDS.logMax - HEATMAP_DEFAULT_BOUNDS.logMin) {
+      v.logMin = HEATMAP_DEFAULT_BOUNDS.logMin;
+      v.logMax = HEATMAP_DEFAULT_BOUNDS.logMax;
+    }
+  }
+  canvas.addEventListener('wheel', (e) => {
+    if (!heatmapBox) return;
+    e.preventDefault();
+    const { px, py } = pixelFromEvent(e);
+    const { x0, x1, y0, y1 } = heatmapBox;
+    if (px < x0 || px > x1 || py < y0 || py > y1) return;
+    // Anchor zoom at cursor location in data coords
+    const v = heatmapView;
+    const Tc_at = v.tempC_min + (v.tempC_max - v.tempC_min) * (px - x0) / (x1 - x0);
+    const lg_at = v.logMin + (v.logMax - v.logMin) * (1 - (py - y0) / (y1 - y0));
+    const factor = Math.exp(e.deltaY * 0.0015); // wheel up = zoom in
+    const newTRange = (v.tempC_max - v.tempC_min) * factor;
+    const newLRange = (v.logMax - v.logMin) * factor;
+    const fx = (px - x0) / (x1 - x0);
+    const fy = 1 - (py - y0) / (y1 - y0);
+    v.tempC_min = Tc_at - fx * newTRange;
+    v.tempC_max = v.tempC_min + newTRange;
+    v.logMin = lg_at - fy * newLRange;
+    v.logMax = v.logMin + newLRange;
+    clampView(v);
+    drawHeatmap();
+  }, { passive: false });
+
+  // Shift+drag to pan
+  let panning = false, panStart = null;
+  canvas.addEventListener('mousedown', (e) => {
+    if (!e.shiftKey || !heatmapBox) return;
+    panning = true;
+    const { px, py } = pixelFromEvent(e);
+    panStart = { px, py, view: { ...heatmapView } };
+    clearTimer(); // cancel any long-press timer
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!panning) return;
+    const rect = canvas.getBoundingClientRect();
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+    const { x0, x1, y0, y1 } = heatmapBox;
+    const dxData = (panStart.px - px) / (x1 - x0) * (panStart.view.tempC_max - panStart.view.tempC_min);
+    const dyData = -(panStart.py - py) / (y1 - y0) * (panStart.view.logMax - panStart.view.logMin);
+    heatmapView.tempC_min = panStart.view.tempC_min + dxData;
+    heatmapView.tempC_max = panStart.view.tempC_max + dxData;
+    heatmapView.logMin = panStart.view.logMin + dyData;
+    heatmapView.logMax = panStart.view.logMax + dyData;
+    clampView(heatmapView);
+    drawHeatmap();
+  });
+  window.addEventListener('mouseup', () => { panning = false; });
+
+  // Reset button + 0 key
+  const resetBtn = document.getElementById('resetZoomBtn');
+  function isHeatmapZoomed() {
+    const eps = 0.01;
+    return Math.abs(heatmapView.tempC_min - HEATMAP_DEFAULT_BOUNDS.tempC_min) > eps
+        || Math.abs(heatmapView.tempC_max - HEATMAP_DEFAULT_BOUNDS.tempC_max) > eps
+        || Math.abs(heatmapView.logMin   - HEATMAP_DEFAULT_BOUNDS.logMin)   > eps
+        || Math.abs(heatmapView.logMax   - HEATMAP_DEFAULT_BOUNDS.logMax)   > eps;
+  }
+  function syncResetZoomButton() {
+    if (!resetBtn) return;
+    if (isHeatmapZoomed()) {
+      resetBtn.style.background = hexToRgba('#7ee2a8', 0.22);
+      resetBtn.style.borderColor = hexToRgba('#7ee2a8', 0.8);
+      resetBtn.style.color = '#7ee2a8';
+    } else {
+      resetBtn.style.background = 'rgba(110, 168, 255, 0.18)';
+      resetBtn.style.borderColor = 'rgba(110, 168, 255, 0.7)';
+      resetBtn.style.color = '#6ea8ff';
+    }
+  }
+  // Initial paint, then keep it in sync after every heatmap redraw (wheel/pan/reset).
+  syncResetZoomButton();
+  const _origDrawHeatmap = drawHeatmap;
+  drawHeatmap = function () { _origDrawHeatmap(); syncResetZoomButton(); };
+  function resetZoom() {
+    heatmapView = { ...HEATMAP_DEFAULT_BOUNDS };
+    drawHeatmap();
+  }
+  if (resetBtn) resetBtn.addEventListener('click', resetZoom);
+  window.addEventListener('keydown', (e) => {
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.key === '0' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      resetZoom();
+      e.preventDefault();
+    }
+  });
+
+  canvas.addEventListener('touchstart', (e) => { onDown(e); }, { passive: true });
+  canvas.addEventListener('touchmove', onMove, { passive: true });
+  canvas.addEventListener('touchend', onUp);
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const { px, py } = pixelFromEvent(e);
+    const data = dataAtPixel(px, py);
+    if (!data) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey) pinnedProbes.push(data);
+    else pinnedProbes = [data];
+    drawHeatmap();
+  });
+  canvas.addEventListener('click', (e) => {
+    if (suppressClick) {
+      suppressClick = false;
+      e.preventDefault();
+      return;
+    }
+    // Short click dismisses all pinned probes
+    if (pinnedProbes.length) {
+      pinnedProbes = [];
+      drawHeatmap();
+    }
+  }, true);
+  // Pressing Escape unpins all (and clears any box selection)
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    let dirty = false;
+    if (pinnedProbes.length) { pinnedProbes = []; dirty = true; }
+    if (boxSelection || boxSelectDragging) {
+      boxSelection = null;
+      boxSelectDragging = false;
+      boxSelectDragStart = null;
+      boxSelectDragCurrent = null;
+      renderBoxMatches();
+      dirty = true;
+    }
+    if (dirty) drawHeatmap();
+  });
+
+  // ===== Box-select toggle + match renderer =====
+  const boxBtn = document.getElementById('boxSelectBtn');
+  const boxPanel = document.getElementById('boxMatchesPanel');
+  const boxList = document.getElementById('boxMatchesList');
+  const boxTitle = document.getElementById('boxMatchesTitle');
+  const boxClose = document.getElementById('boxMatchesClose');
+  const boxForm = document.getElementById('boxRangeForm');
+  const boxTempMinIn = document.getElementById('boxTempMin');
+  const boxTempMaxIn = document.getElementById('boxTempMax');
+  const boxTimeMinIn = document.getElementById('boxTimeMin');
+  const boxTimeMaxIn = document.getElementById('boxTimeMax');
+  let boxFormUpdating = false; // guard against feedback when programmatically writing inputs
+
+  // Parse strings like "1.5 h", "30min", "2d", "1y", or bare numbers (interpreted as seconds).
+  // Returns seconds, or NaN if unparseable.
+  const TIME_UNITS = {
+    s: 1, sec: 1, secs: 1, second: 1, seconds: 1,
+    min: 60, mins: 60, minute: 60, minutes: 60,
+    h: 3600, hr: 3600, hrs: 3600, hour: 3600, hours: 3600,
+    d: 86400, day: 86400, days: 86400,
+    w: 604800, wk: 604800, week: 604800, weeks: 604800,
+    mo: 2592000, mon: 2592000, month: 2592000, months: 2592000,
+    y: 31557600, yr: 31557600, year: 31557600, years: 31557600,
+  };
+  function parseTimeWithUnit(str) {
+    if (str == null) return NaN;
+    const s = String(str).trim().toLowerCase();
+    if (!s) return NaN;
+    const m = s.match(/^([+-]?[\d.]+(?:[eE][+-]?\d+)?)\s*([a-z]*)$/);
+    if (!m) return NaN;
+    const v = parseFloat(m[1]);
+    if (!isFinite(v)) return NaN;
+    const unitKey = m[2];
+    if (!unitKey) return v; // bare number → seconds
+    const u = TIME_UNITS[unitKey];
+    return u ? v * u : NaN;
+  }
+  // Express seconds as a compact "value+unit" string for display.
+  function formatTimeWithUnit(t_s) {
+    if (!isFinite(t_s) || t_s <= 0) return '';
+    let unit = 1, suffix = 's';
+    if (t_s >= 31557600)      { unit = 31557600; suffix = 'y'; }
+    else if (t_s >= 2592000)  { unit = 2592000;  suffix = 'mo'; }
+    else if (t_s >= 604800)   { unit = 604800;   suffix = 'w'; }
+    else if (t_s >= 86400)    { unit = 86400;    suffix = 'd'; }
+    else if (t_s >= 3600)     { unit = 3600;     suffix = 'h'; }
+    else if (t_s >= 60)       { unit = 60;       suffix = 'min'; }
+    const v = t_s / unit;
+    const num = v < 0.001 ? v.toExponential(3) : +v.toPrecision(4);
+    return `${num}${suffix}`;
+  }
+
+  function syncBoxFormFromSelection() {
+    if (!boxSelection || !boxTempMinIn) return;
+    boxFormUpdating = true;
+    try {
+      boxTempMinIn.value = boxSelection.tempC_min.toFixed(1);
+      boxTempMaxIn.value = boxSelection.tempC_max.toFixed(1);
+      boxTimeMinIn.value = formatTimeWithUnit(Math.pow(10, boxSelection.logMin));
+      boxTimeMaxIn.value = formatTimeWithUnit(Math.pow(10, boxSelection.logMax));
+    } finally { boxFormUpdating = false; }
+  }
+  function applyBoxFormEdits() {
+    if (!boxSelection || boxFormUpdating) return;
+    let tempMin = parseFloat(boxTempMinIn.value);
+    let tempMax = parseFloat(boxTempMaxIn.value);
+    let tMin_s = parseTimeWithUnit(boxTimeMinIn.value);
+    let tMax_s = parseTimeWithUnit(boxTimeMaxIn.value);
+    if (![tempMin, tempMax, tMin_s, tMax_s].every(isFinite)) return;
+    if (tMin_s <= 0 || tMax_s <= 0) return;
+    if (tempMin > tempMax) [tempMin, tempMax] = [tempMax, tempMin];
+    if (tMin_s > tMax_s) [tMin_s, tMax_s] = [tMax_s, tMin_s];
+    boxSelection = {
+      tempC_min: tempMin,
+      tempC_max: tempMax,
+      logMin: Math.log10(tMin_s),
+      logMax: Math.log10(tMax_s),
+    };
+    drawHeatmap();
+    renderBoxMatchesContentOnly(); // refresh chips + title without re-syncing inputs (would steal cursor)
+  }
+  [boxTempMinIn, boxTempMaxIn, boxTimeMinIn, boxTimeMaxIn].forEach(inp => {
+    if (!inp) return;
+    inp.addEventListener('input', applyBoxFormEdits);
+    inp.addEventListener('change', applyBoxFormEdits);
+  });
+
+  function setBoxSelectActive(on) {
+    boxSelectActive = !!on;
+    if (boxBtn) {
+      // Active = green accent; inactive = light-blue accent (so it's visible at rest)
+      boxBtn.style.background = boxSelectActive ? hexToRgba('#7ee2a8', 0.18) : 'rgba(110, 168, 255, 0.18)';
+      boxBtn.style.borderColor = boxSelectActive ? hexToRgba('#7ee2a8', 0.7) : 'rgba(110, 168, 255, 0.7)';
+      boxBtn.style.color = boxSelectActive ? '#7ee2a8' : '#6ea8ff';
+    }
+    canvas.style.cursor = boxSelectActive ? 'crosshair' : '';
+    // Turning the toggle off should fully tear down the feature: clear any in-progress
+    // drag, drop the committed selection, hide the matches panel, and remove the rectangle
+    // overlay from the heatmap. Otherwise the rectangle and results panel linger on screen
+    // even though the user just disabled the mode.
+    if (!boxSelectActive) {
+      boxSelectDragging = false;
+      boxSelectDragStart = null;
+      boxSelectDragCurrent = null;
+      boxSelection = null;
+      renderBoxMatches();
+      drawHeatmap();
+    }
+  }
+  if (boxBtn) {
+    boxBtn.addEventListener('click', () => setBoxSelectActive(!boxSelectActive));
+  }
+  if (boxClose) {
+    boxClose.addEventListener('click', () => {
+      boxSelection = null;
+      renderBoxMatches();
+      drawHeatmap();
+    });
+  }
+
+  // For each {t10hC, Ea} initiator-style entry, return half-life (seconds) at temperature Tc
+  function halfLifeAtFromInitiator(entry, Tc) {
+    const T1 = entry.t10hC + 273.15;
+    const Tk = Tc + 273.15;
+    const Ea_cal = entry.Ea * 1000;
+    // Arrhenius: ln(t/t10h) = (Ea/R) * (1/Tk - 1/T1)
+    return 36000 * Math.exp((Ea_cal / R) * (1 / Tk - 1 / T1));
+  }
+  // Same for Luperox-style entries that also carry an explicit logA
+  function halfLifeAtFromLuperox(entry, Tc) {
+    const A = Math.pow(10, entry.logA);
+    const Tk = Tc + 273.15;
+    return LN2 / (A * Math.exp(-entry.Ea * 1000 / (R * Tk)));
+  }
+
+  // Test: does the initiator's t(T) curve cross the box [tempC_min..tempC_max] × [10^logMin..10^logMax]?
+  // Arrhenius t(T) is strictly monotonic in T, so we only need the values at the two T endpoints.
+  function curveCrossesBox(box, halfLifeFn) {
+    const tA = halfLifeFn(box.tempC_min);
+    const tB = halfLifeFn(box.tempC_max);
+    if (!isFinite(tA) || !isFinite(tB)) return false;
+    const lgA = Math.log10(tA), lgB = Math.log10(tB);
+    const lo = Math.min(lgA, lgB), hi = Math.max(lgA, lgB);
+    return !(hi < box.logMin || lo > box.logMax);
+  }
+
+  function renderBoxMatches() {
+    if (!boxPanel || !boxList) return;
+    if (!boxSelection) {
+      boxPanel.style.display = 'none';
+      boxList.innerHTML = '';
+      return;
+    }
+    boxPanel.style.display = '';
+    syncBoxFormFromSelection();
+    renderBoxMatchesContentOnly();
+  }
+  function renderBoxMatchesContentOnly() {
+    if (!boxSelection || !boxPanel || !boxList) return;
+    const matches = [];
+    initiators.forEach((i, idx) => {
+      if (i.group) return;
+      if (curveCrossesBox(boxSelection, (Tc) => halfLifeAtFromInitiator(i, Tc))) {
+        matches.push({ kind: 'init', idx, name: i.name });
+      }
+    });
+    luperox.forEach((p, idx) => {
+      if (curveCrossesBox(boxSelection, (Tc) => halfLifeAtFromLuperox(p, Tc))) {
+        matches.push({ kind: 'lup', idx, name: p.name });
+      }
+    });
+
+    boxTitle.textContent = `Initiators in selection (${matches.length})`;
+    if (!matches.length) {
+      boxList.innerHTML = `<span style="color: var(--muted);">No matches in this window.</span>`;
+      return;
+    }
+    boxList.innerHTML = matches.map(m => `
+      <button class="box-match" data-kind="${m.kind}" data-idx="${m.idx}"
+              style="background: var(--panel); border: 1px solid var(--border);
+                     color: var(--text); padding: 3px 9px; border-radius: 12px;
+                     cursor: pointer; font-family: inherit; font-size: 11px;">
+        ${m.kind === 'lup' ? '<span style="color: var(--muted); margin-right: 4px;">Lup</span>' : ''}${m.name}
+      </button>`).join('');
+    boxList.querySelectorAll('button.box-match').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = +btn.dataset.idx;
+        if (btn.dataset.kind === 'lup') {
+          setActiveCompound(luperox[idx], { add: e.metaKey || e.ctrlKey });
+        } else {
+          const i = initiators[idx];
+          const Tref = i.t10hC + 273.15;
+          const Acalc = (LN2 / 36000) * Math.exp(i.Ea * 1000 / (R * Tref));
+          const logA = Math.log10(Acalc);
+          setActiveCompound({
+            name: i.name, chem: i.name, solv: '',
+            t10hC: i.t10hC, Ea: i.Ea, logA
+          }, { add: e.metaKey || e.ctrlKey });
+        }
+      });
+    });
+  }
+
+  // Re-render matches when the active set changes (so chip highlights stay in sync — for now this is a noop placeholder)
+  // (Could subscribe to a change event later; renderBoxMatches is also called manually after onUp.)
+})();
+
+// Keyboard shortcuts (when no input/textarea has focus)
+window.addEventListener('keydown', (e) => {
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  if (isTyping) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  switch (e.key.toLowerCase()) {
+    case 't': tempInput.focus(); tempInput.select(); e.preventDefault(); break;
+    case 'h': timeValue.focus(); timeValue.select(); e.preventDefault(); break;
+    case 'e': eaSlider.focus(); e.preventDefault(); break;
+    case 'a': aSlider.focus(); e.preventDefault(); break;
+    case 's': {
+      const order = ['bde', 'time', 'temp'];
+      const next = order[(order.indexOf(SOLVE) + 1) % order.length];
+      SOLVE = next;
+      solveSeg.querySelectorAll('button').forEach(b =>
+        b.classList.toggle('active', b.dataset.solve === SOLVE));
+      update();
+      e.preventDefault();
+      break;
+    }
+    case 'm': {
+      MODEL = MODEL === 'arrhenius' ? 'eyring' : 'arrhenius';
+      modelSeg.querySelectorAll('button').forEach(b =>
+        b.classList.toggle('active', b.dataset.model === MODEL));
+      arrParamWrap.style.display = MODEL === 'arrhenius' ? '' : 'none';
+      eyrParamWrap.style.display = MODEL === 'eyring' ? '' : 'none';
+      update();
+      e.preventDefault();
+      break;
+    }
+    case '/': {
+      if (luperoxFilter) { luperoxFilter.focus(); e.preventDefault(); }
+      break;
+    }
+    case '?': {
+      alert('Keyboard shortcuts:\n\nT — focus temperature\nH — focus half-life\nE — focus Eₐ slider\nA — focus pre-exponential A slider\nS — cycle Solve-for mode\nM — toggle Arrhenius/Eyring\n/ — focus Luperox filter\n0 — reset heatmap zoom\nEsc — clear pinned probes / box selection\n? — this help');
+      e.preventDefault();
+      break;
+    }
+  }
+});
+
+const themeToggleBtn = document.getElementById('themeToggle');
+const themeToggleIcon = document.getElementById('themeToggleIcon');
+const themeToggleLabel = document.getElementById('themeToggleLabel');
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', THEME);
+  if (themeToggleIcon) themeToggleIcon.textContent = THEME === 'dark' ? '☾' : '☀';
+  if (themeToggleLabel) themeToggleLabel.textContent = THEME === 'dark' ? 'Light' : 'Dark';
+  update();
+}
+if (themeToggleBtn) {
+  themeToggleBtn.addEventListener('click', () => {
+    THEME = THEME === 'dark' ? 'light' : 'dark';
+    applyTheme();
+  });
+}
+// Honor a saved theme from URL hash (set by readHash before init)
+applyTheme();
+
+// User guide: auto-open on first visit; close when clicking anywhere outside it.
+const userGuide = document.getElementById('userGuide');
+try {
+  if (!localStorage.getItem('bdeGuideSeen')) {
+    if (userGuide) userGuide.open = true;
+    localStorage.setItem('bdeGuideSeen', '1');
+  }
+} catch (e) { /* localStorage may be unavailable */ }
+if (userGuide) {
+  // Click anywhere on the collapsed panel (not just the summary) opens it.
+  userGuide.addEventListener('click', (e) => {
+    if (userGuide.open) return;
+    // Let the native summary handler do its job for that exact element
+    if (e.target.closest('summary')) return;
+    e.preventDefault();
+    userGuide.open = true;
+  });
+  document.addEventListener('click', (e) => {
+    if (!userGuide.open) return;
+    if (userGuide.contains(e.target)) return;
+    // Don't close on interactions that affect the dashboard state — those would
+    // shift the page underneath the user as the guide collapses.
+    const isInteractive = e.target.closest(
+      'button, input, select, textarea, label, summary, ' +
+      'tr[data-idx], tr[data-init-idx], tr[data-bde], canvas, ' +
+      'a, [role="button"], .cmp-chip'
+    );
+    if (isInteractive) return;
+    userGuide.open = false;
+  });
+}
+
+populateTables();
+// Wire sortable column headers (parent <table> elements, since IDs are on <tbody>)
+attachSortHandlers(document.getElementById('initTable').closest('table'), 'init', () => renderInitiatorTable());
+attachSortHandlers(document.getElementById('luperoxTable'), 'luperox', () => renderLuperoxTable());
+attachSortHandlers(document.getElementById('bdeTable').closest('table'), 'bde', () => renderBdeTable());
+const luperoxFilter = document.getElementById('luperoxFilter');
+if (luperoxFilter) {
+  luperoxFilter.addEventListener('input', (e) => renderLuperoxTable(e.target.value));
+}
+const showSolventToggle = document.getElementById('showSolventToggle');
+if (showSolventToggle) {
+  showSolventToggle.addEventListener('change', (e) => {
+    showSolventCol = e.target.checked;
+    renderLuperoxTable();
+  });
+}
+const refSel = document.getElementById('refHalfLife');
+if (refSel) {
+  refSel.addEventListener('change', () => {
+    REF_T_SECONDS = +refSel.value;
+    renderInitiatorTable(initFilter ? initFilter.value : '');
+  });
+}
+const initFilter = document.getElementById('initFilter');
+if (initFilter) {
+  initFilter.addEventListener('input', (e) => renderInitiatorTable(e.target.value));
+}
+// initialize typed temp input to match slider
+tempInput.value = +tempSlider.value;
+// initialize time slider from initial time inputs
+if (timeSlider) {
+  const t0 = +timeValue.value * +timeUnit.value;
+  if (isFinite(t0) && t0 > 0) timeSlider.value = Math.max(-6, Math.min(12, Math.log10(t0)));
+}
+readHash(); // restore from URL if present (must come after populateTables() so luperox/initiators are bound)
+update();
+window.addEventListener('hashchange', () => { if (readHash()) update(); });
+</script>
+</body>
+</html>
