@@ -3,77 +3,161 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Science Dashboards</title>
+  <title>Fun Dashboards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 3rem 1.5rem;
+    :root{
+      --bg:#0a0f1e; --card:#141c2e; --card-2:#18213594; --border:#26324b;
+      --text:#e8edf6; --muted:#93a0b8; --dim:#5f6c85;
     }
-    h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.5rem; }
-    p.subtitle { color: #94a3b8; margin-bottom: 2.5rem; font-size: 0.95rem; }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1rem;
-      width: 100%;
-      max-width: 900px;
+    body{
+      font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+      color:var(--text); min-height:100vh; padding:4.5rem 1.5rem 4rem;
+      -webkit-font-smoothing:antialiased;
+      background:
+        radial-gradient(900px 480px at 12% -8%, rgba(56,189,248,.13), transparent 60%),
+        radial-gradient(820px 460px at 92% 4%, rgba(99,102,241,.15), transparent 55%),
+        radial-gradient(700px 600px at 50% 120%, rgba(16,185,129,.08), transparent 60%),
+        var(--bg);
     }
-    .card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 0.75rem;
-      padding: 1.5rem;
-      text-decoration: none;
-      color: #e2e8f0;
-      transition: border-color 0.2s, box-shadow 0.2s;
+    /* ---------- Header ---------- */
+    header{ max-width:980px; margin:0 auto 2.75rem; text-align:center; }
+    .eyebrow{
+      display:inline-flex; align-items:center; gap:.5rem;
+      font-size:.72rem; font-weight:600; letter-spacing:.18em; text-transform:uppercase;
+      color:var(--muted); padding:.35rem .8rem; border:1px solid var(--border);
+      border-radius:999px; background:rgba(255,255,255,.02); margin-bottom:1.4rem;
     }
-    .card:hover {
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 1px #3b82f6;
+    .eyebrow .dot{ width:6px; height:6px; border-radius:50%; background:#38bdf8; box-shadow:0 0 10px #38bdf8; }
+    h1{
+      font-family:'Fraunces',Georgia,serif; font-weight:900; letter-spacing:-.02em;
+      font-size:clamp(2.6rem, 6vw, 4rem); line-height:1.02;
+      background:linear-gradient(120deg,#e8edf6 18%,#7dd3fc 50%,#a5b4fc 82%);
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
     }
-    .card h2 { font-size: 1.1rem; margin-bottom: 0.4rem; }
-    .card p { font-size: 0.85rem; color: #94a3b8; }
-    .empty {
-      text-align: center;
-      color: #64748b;
-      padding: 3rem;
-      font-size: 0.95rem;
+    .subtitle{ color:var(--muted); margin-top:1rem; font-size:1.02rem; line-height:1.6; max-width:34rem; margin-inline:auto; }
+    /* ---------- Grid ---------- */
+    .grid{
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
+      gap:1.1rem; width:100%; max-width:980px; margin:0 auto;
     }
+    .card{
+      --c:#3b82f6;
+      position:relative; display:flex; align-items:center; gap:1.05rem;
+      background:linear-gradient(180deg, var(--card), var(--card-2));
+      border:1px solid var(--border); border-radius:18px; padding:1.25rem 1.35rem;
+      text-decoration:none; color:var(--text); overflow:hidden;
+      transition:transform .22s cubic-bezier(.2,.7,.3,1), border-color .22s, box-shadow .22s;
+      opacity:0; transform:translateY(10px); animation:rise .5s ease forwards;
+    }
+    .card::before{
+      content:""; position:absolute; inset:0 0 auto 0; height:2px;
+      background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--c) 75%, transparent), transparent);
+      opacity:0; transition:opacity .22s;
+    }
+    .card:hover{
+      transform:translateY(-4px);
+      border-color:color-mix(in srgb, var(--c) 55%, var(--border));
+      box-shadow:0 16px 40px -16px color-mix(in srgb, var(--c) 55%, transparent), 0 0 0 1px color-mix(in srgb, var(--c) 22%, transparent);
+    }
+    .card:hover::before{ opacity:1; }
+    .icon{
+      flex:none; width:52px; height:52px; border-radius:14px; display:grid; place-items:center;
+      font-size:1.7rem; line-height:1;
+      background:color-mix(in srgb, var(--c) 16%, #0e1626);
+      border:1px solid color-mix(in srgb, var(--c) 32%, transparent);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+      transition:transform .22s, background .22s;
+    }
+    .card:hover .icon{ transform:scale(1.06) rotate(-3deg); background:color-mix(in srgb, var(--c) 26%, #0e1626); }
+    .card .body{ min-width:0; }
+    .card h2{ font-size:1.06rem; font-weight:600; letter-spacing:-.01em; }
+    .card p{ font-size:.84rem; color:var(--muted); margin-top:.2rem; line-height:1.4; }
+    .arrow{
+      margin-left:auto; flex:none; color:var(--dim); font-size:1.15rem;
+      transition:transform .22s, color .22s; transform:translateX(-2px);
+    }
+    .card:hover .arrow{ color:color-mix(in srgb, var(--c) 80%, white); transform:translateX(2px); }
+    @keyframes rise{ to{ opacity:1; transform:none; } }
+    .card:nth-child(1){animation-delay:.04s} .card:nth-child(2){animation-delay:.09s}
+    .card:nth-child(3){animation-delay:.14s} .card:nth-child(4){animation-delay:.19s}
+    .card:nth-child(5){animation-delay:.24s} .card:nth-child(6){animation-delay:.29s}
+    .card:nth-child(7){animation-delay:.34s} .card:nth-child(8){animation-delay:.39s}
+    @media (prefers-reduced-motion: reduce){ .card{ animation:none; opacity:1; transform:none; } }
+    /* ---------- Footer ---------- */
+    footer{ max-width:980px; margin:2.75rem auto 0; text-align:center; color:var(--dim); font-size:.8rem; }
+    footer .count{ color:var(--muted); font-weight:600; }
   </style>
 </head>
 <body>
-  <h1>Science Dashboards</h1>
-  <p class="subtitle">Drop your HTML dashboards into the <code>/dashboards</code> folder.</p>
+  <header>
+    <span class="eyebrow"><span class="dot"></span> Jerzy's Collection</span>
+    <h1>Fun Dashboards</h1>
+    <p class="subtitle">A growing collection of interactive things I've built — chemistry, plants, code, and a few guides.</p>
+  </header>
 
-  <div class="grid">
-    <a href="dashboards/bond-half-life-dashboard_6-7-2026_Jerzy.html" class="card">
-      <h2>Bond Half-Life</h2>
+  <main class="grid">
+    <a href="dashboards/bond-half-life-dashboard_6-7-2026_Jerzy.html" class="card" style="--c:#22d3ee">
+      <div class="icon">🔗</div>
+      <div class="body">
+        <h2>Bond Half-Life</h2>
+        <p>How bond strength shapes molecular half-life</p>
+      </div>
+      <span class="arrow">→</span>
     </a>
-    <a href="dashboards/claude-code-slash-commands.html" class="card">
-      <h2>Claude Code Slash Commands</h2>
+    <a href="dashboards/claude-code-slash-commands.html" class="card" style="--c:#3b82f6">
+      <div class="icon">⌨️</div>
+      <div class="body">
+        <h2>Claude Code Slash Commands</h2>
+        <p>Every slash command &amp; power feature</p>
+      </div>
+      <span class="arrow">→</span>
     </a>
-    <a href="dashboards/coding-academy.html" class="card">
-      <h2>Coding Academy</h2>
+    <a href="dashboards/coding-academy.html" class="card" style="--c:#8b5cf6">
+      <div class="icon">🎓</div>
+      <div class="body">
+        <h2>Coding Academy</h2>
+        <p>From zero to vibe coder</p>
+      </div>
+      <span class="arrow">→</span>
     </a>
-    <a href="dashboards/Getting-Started-Dev-Guide.html" class="card">
-      <h2>Getting Started Dev Guide</h2>
+    <a href="dashboards/Getting-Started-Dev-Guide.html" class="card" style="--c:#10b981">
+      <div class="icon">🧭</div>
+      <div class="body">
+        <h2>Getting Started Dev Guide</h2>
+        <p>Git, GitHub &amp; Vercel for new developers</p>
+      </div>
+      <span class="arrow">→</span>
     </a>
-    <a href="dashboards/Hoya%20Plants.html" class="card">
-      <h2>Hoya Plants</h2>
+    <a href="dashboards/Hoya%20Plants.html" class="card" style="--c:#34d399">
+      <div class="icon">🪴</div>
+      <div class="body">
+        <h2>Hoya Plants</h2>
+        <p>100 species, with care &amp; propagation</p>
+      </div>
+      <span class="arrow">→</span>
     </a>
-    <a href="dashboards/multinuclear-nmr.html" class="card">
-      <h2>Multinuclear NMR</h2>
+    <a href="dashboards/multinuclear-nmr.html" class="card" style="--c:#6366f1">
+      <div class="icon">🧲</div>
+      <div class="body">
+        <h2>Multinuclear NMR</h2>
+        <p>A reference for NMR-active nuclei</p>
+      </div>
+      <span class="arrow">→</span>
     </a>
-    <a href="dashboards/periodic-table.html" class="card">
-      <h2>Periodic Table</h2>
+    <a href="dashboards/periodic-table.html" class="card" style="--c:#f59e0b">
+      <div class="icon">⚛️</div>
+      <div class="body">
+        <h2>Periodic Table</h2>
+        <p>Explore every element, interactively</p>
+      </div>
+      <span class="arrow">→</span>
     </a>
-  </div>
+  </main>
+
+  <footer><span class="count">7</span> little dashboards and counting.</footer>
 </body>
 </html>
