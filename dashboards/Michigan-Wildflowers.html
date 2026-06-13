@@ -1,0 +1,1021 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Michigan Wildflowers — Interactive Dashboard</title>
+<script>
+  // Apply theme before paint to avoid flash
+  (function(){
+    const saved = localStorage.getItem("miwildflower-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = saved || (prefersDark ? "dark" : "light");
+    if(theme==="dark") document.documentElement.classList.add("dark");
+  })();
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ---------- LIGHT MODE (wildflower violet) ---------- */
+  :root{
+    --bg:         #faf9fd;
+    --bg-elev:    #ffffff;
+    --bg-subtle:  #f1eefb;
+    --border:     #e7e2f3;
+    --border-2:   #d8d0ec;
+    --text:       #1b1525;
+    --text-muted: #5f5775;
+    --text-dim:   #948caa;
+    --accent:     #7c3aed;
+    --accent-2:   #9061f9;
+    --accent-soft:#ede9fe;
+    --accent-ink: #4c1d95;
+    --ring:       rgba(124,58,237,.32);
+    --shadow:     0 1px 2px rgba(27,21,37,.05), 0 12px 32px -16px rgba(27,21,37,.18);
+    --glow-a:     #efe9fd;
+    --glow-b:     #e9f6ee;
+    --badge-good-bg:#dcfce7;--badge-good-fg:#166534;
+    --badge-mid-bg:#fef3c7;--badge-mid-fg:#92400e;
+    --badge-agg-bg:#fee2e2;--badge-agg-fg:#991b1b;
+    --img-a:#ddd6fe; --img-b:#a78bfa; --img-c:#4c1d95;
+    --modal-bg: rgba(20,16,30,.5);
+  }
+  /* ---------- DARK MODE ---------- */
+  html.dark{
+    --bg:         #0d0b14;
+    --bg-elev:    #15121f;
+    --bg-subtle:  #1d1830;
+    --border:     #2a2440;
+    --border-2:   #38314f;
+    --text:       #ece8f6;
+    --text-muted: #a99fc4;
+    --text-dim:   #7a7196;
+    --accent:     #a78bfa;
+    --accent-2:   #c4b5fd;
+    --accent-soft:#2e1065;
+    --accent-ink: #ede9fe;
+    --ring:       rgba(167,139,250,.4);
+    --shadow:     0 1px 2px rgba(0,0,0,.5), 0 20px 40px -20px rgba(0,0,0,.7);
+    --glow-a:     #1f1638;
+    --glow-b:     #11231a;
+    --badge-good-bg:#0b3b25;--badge-good-fg:#86efac;
+    --badge-mid-bg:#3b2b0b;--badge-mid-fg:#fcd34d;
+    --badge-agg-bg:#3b1414;--badge-agg-fg:#fca5a5;
+    --img-a:#3b2b6b; --img-b:#6d28d9; --img-c:#1e1638;
+    --modal-bg: rgba(0,0,0,.7);
+  }
+  html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.serif{font-family:'Fraunces',Georgia,serif;letter-spacing:-0.015em;}
+  .app-bg{
+    background:
+      radial-gradient(1200px 600px at 15% -10%,var(--glow-a) 0%,transparent 55%),
+      radial-gradient(1000px 500px at 95% 5%,var(--glow-b) 0%,transparent 50%),
+      var(--bg);
+    min-height:100vh;
+  }
+  .card{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;}
+  .card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border-2);}
+  .panel{background:var(--bg-elev);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);}
+  .badge{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:600;letter-spacing:.01em;}
+  .badge-good{background:var(--badge-good-bg);color:var(--badge-good-fg);}
+  .badge-mid{background:var(--badge-mid-bg);color:var(--badge-mid-fg);}
+  .badge-agg{background:var(--badge-agg-bg);color:var(--badge-agg-fg);}
+  .chip{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border-radius:999px;background:var(--bg-subtle);color:var(--text-muted);font-size:.72rem;font-weight:500;border:1px solid var(--border);transition:all .15s ease;cursor:pointer;}
+  .chip:hover{border-color:var(--border-2);color:var(--text);}
+  .chip[data-active="true"]{background:var(--accent);color:#fff;border-color:var(--accent);}
+  html.dark .chip[data-active="true"]{color:#1a1226;}
+  .modal-backdrop{background:var(--modal-bg);backdrop-filter:blur(6px);}
+  .care-icon{width:1rem;height:1rem;stroke-width:2;}
+  details>summary{list-style:none;cursor:pointer;}
+  details>summary::-webkit-details-marker{display:none;}
+  .scroll-thin::-webkit-scrollbar{height:8px;width:8px;}
+  .scroll-thin::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:10px;}
+  .fade-in{animation:fade .3s ease both;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  .stat-bar{height:6px;border-radius:999px;background:var(--bg-subtle);overflow:hidden;}
+  .stat-bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:999px;}
+  input,select{font:inherit;color:var(--text);}
+  .field{background:var(--bg-subtle);border:1px solid var(--border);color:var(--text);}
+  .field::placeholder{color:var(--text-dim);}
+  input:focus,select:focus,button:focus-visible{outline:2px solid var(--ring);outline-offset:2px;border-color:var(--accent);}
+  .cmp-dot{width:10px;height:10px;border-radius:999px;background:var(--border-2);display:inline-block;}
+  .cmp-dot.on{background:var(--accent);}
+  .btn-primary{background:var(--accent);color:#fff;border:1px solid var(--accent);}
+  html.dark .btn-primary{color:#1a1226;}
+  .btn-primary:hover{background:var(--accent-2);border-color:var(--accent-2);}
+  .btn-ghost{background:var(--bg-subtle);color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--border-2);}
+  .text-muted{color:var(--text-muted);}
+  .text-dim{color:var(--text-dim);}
+  .text-accent{color:var(--accent);}
+  .divider{border-color:var(--border);}
+  .img-ph{background:linear-gradient(135deg,var(--img-a),var(--img-b) 55%,var(--img-c));position:relative;overflow:hidden;}
+  .img-ph::after{content:"";position:absolute;inset:0;background:
+    radial-gradient(circle at 28% 28%,rgba(255,255,255,.35),transparent 42%),
+    radial-gradient(circle at 72% 65%,rgba(0,0,0,.22),transparent 55%);}
+  .img-ph span{position:absolute;inset:auto 0 10% 0;text-align:center;color:#fff;font-family:'Fraunces',serif;font-style:italic;font-size:.88rem;text-shadow:0 1px 3px rgba(0,0,0,.5);padding:0 .5rem;letter-spacing:.01em;}
+  /* theme toggle */
+  .theme-toggle{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--bg-elev);border:1px solid var(--border);color:var(--text);transition:all .2s ease;}
+  .theme-toggle:hover{border-color:var(--accent);color:var(--accent);}
+  html.dark .sun-icon{display:block;} html.dark .moon-icon{display:none;}
+  html:not(.dark) .sun-icon{display:none;} html:not(.dark) .moon-icon{display:block;}
+  /* tabs */
+  .tab-btn{color:var(--text-muted);transition:all .2s ease;}
+  .tab-btn[data-active="true"]{background:var(--bg-elev);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .tab-btn:hover:not([data-active="true"]){color:var(--text);}
+  /* step numbers */
+  .step-num{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-family:'Fraunces',serif;flex-shrink:0;}
+  dl dt{color:var(--text-muted);}
+  dl dd{color:var(--text);}
+  code{background:var(--bg-subtle);padding:0 .3em;border-radius:4px;color:var(--accent);}
+  /* bloom calendar */
+  .cal{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;}
+  .cal .mo{font-size:.6rem;text-align:center;color:var(--text-dim);padding-bottom:2px;}
+  .cal .bar{height:12px;border-radius:4px;background:var(--bg-subtle);}
+  .cal .bar.on{background:linear-gradient(90deg,var(--accent-2),var(--accent));}
+</style>
+</head>
+<body class="app-bg min-h-screen">
+
+<header class="max-w-7xl mx-auto px-5 pt-8 pb-5">
+  <div class="flex items-center justify-between gap-4 flex-wrap">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl grid place-items-center shadow-sm" style="background:var(--accent);color:#fff;">
+        <i data-lucide="flower-2" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="text-3xl md:text-4xl font-[800]" style="color:var(--text);">Michigan <span style="color:var(--accent);">Wildflowers</span></h1>
+        <p class="text-sm text-muted">Native wildflowers of Michigan — habitat, bloom time, light &amp; water, and care</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="hidden md:flex items-center gap-2 text-xs text-muted">
+        <i data-lucide="info" class="w-4 h-4"></i>
+        <span>Click a card for photos &amp; details · use filters &amp; compare</span>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+        <i data-lucide="sun" class="w-4 h-4 sun-icon"></i>
+        <i data-lucide="moon" class="w-4 h-4 moon-icon"></i>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- STATS OVERVIEW -->
+<section class="max-w-7xl mx-auto px-5 grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" aria-label="Collection stats">
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Species</div>
+    <div class="text-3xl serif font-[800] text-accent" id="stat-total">—</div>
+    <div class="text-xs text-muted">Michigan native wildflowers</div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Garden manners</div>
+    <div id="stat-manners" class="mt-2 space-y-1.5"></div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Top habitat</div>
+    <div class="text-xl serif font-[700] mt-1" style="color:var(--text);" id="stat-region">—</div>
+    <div class="text-xs text-muted" id="stat-region-sub">—</div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Peak bloom</div>
+    <div class="text-3xl serif font-[800] text-accent">Jun–Aug</div>
+    <div class="text-xs text-muted">Full range Mar–Oct</div>
+  </div>
+</section>
+
+<!-- TAB NAV -->
+<nav class="max-w-7xl mx-auto px-5 mb-5" aria-label="Sections">
+  <div class="inline-flex p-1 rounded-xl" style="background:var(--bg-subtle);border:1px solid var(--border);">
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="catalog">Catalog</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="care">Care &amp; Planting</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="propagation">Propagation</button>
+  </div>
+</nav>
+
+<!-- CATALOG VIEW -->
+<div id="view-catalog">
+
+<!-- CONTROLS -->
+<section class="max-w-7xl mx-auto px-5 mb-5">
+  <div class="panel p-4 md:p-5">
+    <div class="flex flex-col md:flex-row md:items-center gap-3">
+      <div class="relative flex-1">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-dim"></i>
+        <input id="search" type="search" placeholder="Search common or scientific name…" aria-label="Search wildflowers"
+          class="field w-full pl-9 pr-3 py-2 rounded-lg" />
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-muted">Sort</label>
+        <select id="sort" class="field px-2 py-2 rounded-lg text-sm">
+          <option value="rank">Featured</option>
+          <option value="name">Name A–Z</option>
+          <option value="height">Height</option>
+          <option value="bloom">Bloom time</option>
+          <option value="manners">Garden manners</option>
+        </select>
+      </div>
+      <button id="cmp-toggle" class="btn-primary px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+        <i data-lucide="columns-3" class="w-4 h-4"></i><span>Compare</span>
+        <span id="cmp-count" class="ml-1 text-[10px] rounded-full px-1.5 py-0.5" style="background:rgba(255,255,255,.22);">0</span>
+      </button>
+    </div>
+
+    <!-- Filter groups -->
+    <div class="mt-4 grid gap-3 text-sm">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Habitat</span>
+        <div id="f-region" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Light</span>
+        <div id="f-light" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Water</span>
+        <div id="f-water" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Height</span>
+        <div id="f-height" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Bloom</span>
+        <div id="f-bloom" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Color</span>
+        <div id="f-color" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Garden manners</span>
+        <div id="f-manners" class="flex flex-wrap gap-1.5"></div>
+        <button id="clear-filters" class="ml-auto text-xs text-accent underline decoration-dotted">Clear all</button>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <details class="mt-4">
+      <summary class="text-xs text-muted flex items-center gap-1"><i data-lucide="help-circle" class="w-3.5 h-3.5"></i>Reading the cards</summary>
+      <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted">
+        <div class="flex items-center gap-2"><i data-lucide="sun" class="w-4 h-4" style="color:#f59e0b;"></i>Light need</div>
+        <div class="flex items-center gap-2"><i data-lucide="droplets" class="w-4 h-4" style="color:#0ea5e9;"></i>Soil moisture</div>
+        <div class="flex items-center gap-2"><i data-lucide="ruler" class="w-4 h-4" style="color:var(--accent);"></i>Mature height</div>
+        <div class="flex items-center gap-2"><span class="badge badge-good">Clumping</span>well-behaved in beds</div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- COMPARE TRAY -->
+<section id="cmp-tray" class="max-w-7xl mx-auto px-5 mb-5 hidden">
+  <div class="panel p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="serif text-lg font-[700] text-accent">Compare (up to 3)</h2>
+      <button id="cmp-clear" class="text-xs text-accent underline decoration-dotted">Clear</button>
+    </div>
+    <div id="cmp-table" class="overflow-x-auto scroll-thin"></div>
+  </div>
+</section>
+
+<!-- RESULTS GRID -->
+<main class="max-w-7xl mx-auto px-5 pb-16">
+  <div class="flex items-center justify-between mb-3">
+    <div id="result-count" class="text-sm text-muted">—</div>
+  </div>
+  <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+  <div id="empty" class="hidden text-center py-16 text-muted">
+    <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2"></i>
+    <div>No wildflowers match those filters.</div>
+  </div>
+</main>
+
+</div><!-- /view-catalog -->
+
+<!-- CARE & PLANTING VIEW -->
+<div id="view-care" class="hidden">
+<section class="max-w-5xl mx-auto px-5 pb-16">
+
+  <!-- Intro -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-xl grid place-items-center shrink-0" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="sprout" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h2 class="serif text-xl font-[800]" style="color:var(--text);">Growing Michigan Native Wildflowers</h2>
+        <p class="text-sm mt-1" style="color:var(--text-muted);">Natives are easy <em>if</em> you match each plant to the spot it already wants. Get the light and moisture right and most ask for almost nothing — no fertilizer, little water, and years of bloom that feed Michigan's bees, butterflies and birds.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Care cards grid -->
+  <div class="grid md:grid-cols-2 gap-5 mb-6">
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);"><i data-lucide="map-pin" class="w-5 h-5"></i></div>
+        <h3 class="font-semibold" style="color:var(--text);">Right Plant, Right Place</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">The whole secret to low-maintenance natives. Match the plant to your site instead of fighting it.</p>
+      <ul class="text-sm space-y-1" style="color:var(--text-muted);">
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Use the <strong>Habitat</strong>, <strong>Light</strong> and <strong>Water</strong> filters to find species that fit your spot</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Woodland species for shade; prairie species for hot, open sun</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> A happy native shrugs off drought, pests and Michigan winters</li>
+      </ul>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);"><i data-lucide="mountain" class="w-5 h-5"></i></div>
+        <h3 class="font-semibold" style="color:var(--text);">Soil &amp; Site</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">Most natives evolved on lean soil — rich, fertilized beds make them flop.</p>
+      <ul class="text-sm space-y-1" style="color:var(--text-muted);">
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> <strong>Skip the fertilizer</strong> — it causes weak, floppy growth and fewer flowers</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Don't amend to change soil — match a plant to the soil you have</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Good drainage for prairie/dune species; keep wetland species damp</li>
+      </ul>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);"><i data-lucide="droplets" class="w-5 h-5"></i></div>
+        <h3 class="font-semibold" style="color:var(--text);">Watering</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">The goal of year one is deep roots. After that, rain usually does the job.</p>
+      <ul class="text-sm space-y-1" style="color:var(--text-muted);">
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Water deeply and regularly the <strong>first growing season</strong></li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Once established, most dry &amp; prairie species need little to none</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Wetland species (cardinal flower, Joe-Pye, lobelias) want steady moisture</li>
+      </ul>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);"><i data-lucide="sun" class="w-5 h-5"></i></div>
+        <h3 class="font-semibold" style="color:var(--text);">Light &amp; Spacing</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">Light drives bloom; spacing drives airflow and self-sufficiency.</p>
+      <ul class="text-sm space-y-1" style="color:var(--text-muted);">
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Prairie species want <strong>6+ hours of sun</strong> or they stretch and flop</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Plant in drifts of 3&ndash;7; let them knit together to crowd out weeds</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Tall species: pinch asters &amp; bee balm by July for shorter, sturdier plants</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Bloom through the seasons -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);"><i data-lucide="calendar-days" class="w-5 h-5"></i></div>
+      <h3 class="font-semibold" style="color:var(--text);">Plan for Bloom All Season</h3>
+    </div>
+    <p class="text-sm mb-4" style="color:var(--text-muted);">Combine species from each window so something is always in flower — and pollinators always have food, from the first spring bees to the last migrating monarchs.</p>
+    <div class="grid sm:grid-cols-3 gap-4">
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="serif font-[700] mb-1" style="color:var(--accent);">Spring</div>
+        <p class="text-xs" style="color:var(--text-muted);">Woodland ephemerals — bloodroot, bluebells, trillium, spring beauty — bloom and fade before the tree canopy closes. Plant them under deciduous trees.</p>
+      </div>
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="serif font-[700] mb-1" style="color:var(--accent);">Summer</div>
+        <p class="text-xs" style="color:var(--text-muted);">The prairie peak — milkweeds, bee balm, coneflowers, black-eyed Susans and blazing stars run hot through the longest days.</p>
+      </div>
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="serif font-[700] mb-1" style="color:var(--accent);">Fall</div>
+        <p class="text-xs" style="color:var(--text-muted);">Asters and gentians carry the show to frost, providing the critical last nectar for monarchs heading south.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Planting steps -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);"><i data-lucide="shovel" class="w-5 h-5"></i></div>
+      <h3 class="font-semibold" style="color:var(--text);">Planting a Potted Native</h3>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="step-num mb-2">1</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Plant spring or fall</h4>
+        <p class="text-xs" style="color:var(--text-muted);">Cooler, wetter weather lets roots establish. Avoid mid-summer heat unless you can water faithfully.</p>
+      </div>
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="step-num mb-2">2</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Loosen &amp; set level</h4>
+        <p class="text-xs" style="color:var(--text-muted);">Dig twice the width, tease circling roots, and set the crown at soil level — never bury it.</p>
+      </div>
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="step-num mb-2">3</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Water in &amp; mulch lightly</h4>
+        <p class="text-xs" style="color:var(--text-muted);">Soak well, then add 1&ndash;2&Prime; of leaf or bark mulch — kept off the crown.</p>
+      </div>
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="step-num mb-2">4</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Tend year one</h4>
+        <p class="text-xs" style="color:var(--text-muted);">Water through the first season and weed around young plants. Many natives "sleep, creep, then leap" by year three.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pollinator value -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);"><i data-lucide="bug" class="w-5 h-5"></i></div>
+      <h3 class="font-semibold" style="color:var(--text);">Feeding Wildlife</h3>
+    </div>
+    <p class="text-sm mb-4" style="color:var(--text-muted);">Native wildflowers do far more than nectar — many are the <em>only</em> food certain insects can use, and those insects feed the birds.</p>
+    <div class="grid sm:grid-cols-2 gap-3 text-sm">
+      <div class="p-3 rounded-lg" style="background:var(--bg-subtle);color:var(--text-muted);"><strong style="color:var(--text);">Host plants matter most</strong><br>Milkweeds feed monarchs; wild lupine is the sole food of the endangered Karner blue; violets host fritillaries.</div>
+      <div class="p-3 rounded-lg" style="background:var(--bg-subtle);color:var(--text-muted);"><strong style="color:var(--text);">Bloom in succession</strong><br>Overlapping spring-to-fall bloom keeps nectar flowing for bees and migrating butterflies.</div>
+      <div class="p-3 rounded-lg" style="background:var(--bg-subtle);color:var(--text-muted);"><strong style="color:var(--text);">Leave the stems &amp; seed heads</strong><br>Don't cut back in fall — hollow stems shelter native bees and seed heads feed goldfinches all winter.</div>
+      <div class="p-3 rounded-lg" style="background:var(--bg-subtle);color:var(--text-muted);"><strong style="color:var(--text);">Go pesticide-free</strong><br>Insecticides (including many "systemic" treated plants) defeat the entire purpose — skip them.</div>
+    </div>
+  </div>
+
+  <!-- Common Problems -->
+  <div class="panel p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);"><i data-lucide="stethoscope" class="w-5 h-5"></i></div>
+      <h3 class="font-semibold" style="color:var(--text);">Common Problems &amp; Fixes</h3>
+    </div>
+    <div class="space-y-3">
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);"><summary class="font-[600] flex items-center justify-between" style="color:var(--text);">Tall plants flop over <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary><p class="text-sm text-muted mt-2">Usually too much shade or too-rich soil. Give prairie species full sun, stop fertilizing, and pinch back asters and bee balm by half in early July for shorter, self-supporting plants.</p></details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);"><summary class="font-[600] flex items-center justify-between" style="color:var(--text);">No flowers the first year <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary><p class="text-sm text-muted mt-2">Normal. Many perennials "sleep, creep, then leap" — they build roots for a year or two before blooming well. Black-eyed Susan and coreopsis are exceptions that bloom fast from seed.</p></details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);"><summary class="font-[600] flex items-center justify-between" style="color:var(--text);">One species is taking over <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary><p class="text-sm text-muted mt-2">Watch the <span class="badge badge-agg">Spreads</span> tag in the catalog. Give aggressive spreaders (common milkweed, cup plant, mayapple) room to roam, or corral them and pull excess each spring.</p></details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);"><summary class="font-[600] flex items-center justify-between" style="color:var(--text);">A plant vanished by mid-summer <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary><p class="text-sm text-muted mt-2">Spring ephemerals (bluebells, trout lily, Dutchman's breeches) naturally go dormant after blooming — they're fine. Mark their spots so you don't dig into them, and let later plants fill the gap.</p></details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);"><summary class="font-[600] flex items-center justify-between" style="color:var(--text);">Powdery white film on leaves <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary><p class="text-sm text-muted mt-2">Powdery mildew, common on bee balm and asters in late summer. It's cosmetic — improve airflow with wider spacing, choose mildew-resistant species (smooth aster, wild bergamot), and avoid overhead watering.</p></details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);"><summary class="font-[600] flex items-center justify-between" style="color:var(--text);">Deer or rabbits browsing <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary><p class="text-sm text-muted mt-2">Lean on plants they tend to avoid — milkweeds, bee balm, mountain mint, wild geranium and anything aromatic or fuzzy. Protect tender spring growth with fencing until plants establish.</p></details>
+    </div>
+  </div>
+
+</section>
+</div><!-- /view-care -->
+
+<!-- PROPAGATION VIEW -->
+<div id="view-propagation" class="hidden">
+<section class="max-w-5xl mx-auto px-5 pb-16">
+
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-xl grid place-items-center shrink-0" style="background:var(--accent-soft);color:var(--accent-ink);"><i data-lucide="sprout" class="w-6 h-6"></i></div>
+      <div>
+        <h2 class="serif text-2xl md:text-3xl font-[800]" style="color:var(--text);">How to Propagate <span class="text-accent">Native Wildflowers</span></h2>
+        <p class="text-sm text-muted mt-1">Most Michigan natives are easy and cheap to multiply from seed — the trick is giving the seed the cold, damp winter it expects. Division and self-sowing are even simpler.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Method cards -->
+  <div class="grid md:grid-cols-2 gap-4 mb-8">
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="snowflake" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Winter Sowing</h3><span class="badge badge-good ml-auto">Easiest</span></div>
+      <p class="text-sm text-muted mb-3">Sow in jugs outdoors and let real winter do the work — no fridge space needed.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">Nearly everything — milkweeds, coneflowers, asters, bergamot, blazing stars.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">Timing</div>
+      <p class="text-sm">Dec–Feb; sprouts in spring</p>
+    </div>
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="cloud-snow" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Direct Fall Sowing</h3><span class="badge badge-good ml-auto">Easiest</span></div>
+      <p class="text-sm text-muted mb-3">Scatter seed on prepared ground in fall and let nature stratify it in place.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">Meadows &amp; large areas; species that resent transplanting (lupine, butterfly weed, baptisia).</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">Timing</div>
+      <p class="text-sm">Oct–Nov, before snow</p>
+    </div>
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="layers" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Division</h3><span class="badge badge-mid ml-auto">Easy</span></div>
+      <p class="text-sm text-muted mb-3">Split a clump into several plants — the fastest way to more blooms.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">Spreading clumpers — bee balm, asters, mountain mint, irises, golden Alexanders.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">Timing</div>
+      <p class="text-sm">Early spring or fall</p>
+    </div>
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="wind" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Let It Self-Sow</h3><span class="badge badge-good ml-auto">Easiest</span></div>
+      <p class="text-sm text-muted mb-3">Do nothing — leave seed heads and let plants colonize on their own.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">Columbine, black-eyed Susan, spiderwort, golden Alexanders, blue vervain.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">Timing</div>
+      <p class="text-sm">Leave seed heads through winter</p>
+    </div>
+  </div>
+
+  <!-- Step-by-step: Winter sowing -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <h3 class="serif text-xl font-[800] mb-1" style="color:var(--text);">Step-by-Step: Winter Sowing in a Jug</h3>
+    <p class="text-sm text-muted mb-5">The foolproof way to give native seed its required cold-moist stratification — outdoors, hands-off.</p>
+    <ol class="space-y-5">
+      <li class="flex gap-4"><div class="step-num">1</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Prep a milk jug</h4><p class="text-sm text-muted">Cut a clean translucent gallon jug around the middle, leaving a hinge. Punch drainage holes in the bottom and a few in the top. Leave the cap off.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">2</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Add moist mix</h4><p class="text-sm text-muted">Fill the bottom with 3&ndash;4&Prime; of damp seed-starting mix.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">3</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Sow the seed</h4><p class="text-sm text-muted">Scatter seed on top. Press tiny seed in for light contact; barely cover larger seed. As a rule, sow no deeper than the seed is wide.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">4</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Tape &amp; label</h4><p class="text-sm text-muted">Tape the jug shut, label with species and date (a pencil on tape survives winter), and write on the jug too.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">5</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Set it outside &amp; forget it</h4><p class="text-sm text-muted">Put jugs in a spot that gets snow, rain and freeze-thaw cycles. Don't bring them in — the cold is the whole point.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">6</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Watch for spring sprouts</h4><p class="text-sm text-muted">Seedlings appear as it warms. Vent on warm days so they don't cook, and keep the mix damp.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">7</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Harden off &amp; pot up</h4><p class="text-sm text-muted">Once they have a couple of true leaves, separate the "hunk-of-seedlings" into pots or plugs and grow on.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">8</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Plant out</h4><p class="text-sm text-muted">Set plugs in the garden in late spring once established. Water through their first season.</p></div></li>
+    </ol>
+  </div>
+
+  <!-- Step-by-step: Division -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <h3 class="serif text-xl font-[800] mb-1" style="color:var(--text);">Step-by-Step: Dividing a Clump</h3>
+    <p class="text-sm text-muted mb-5">For established clumping perennials — quick, free plants that bloom the same year.</p>
+    <ol class="space-y-5">
+      <li class="flex gap-4"><div class="step-num">1</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Time it right</h4><p class="text-sm text-muted">Divide in early spring as growth emerges, or in fall 6 weeks before hard frost. Avoid summer heat.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">2</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Water the day before</h4><p class="text-sm text-muted">A well-hydrated clump lifts cleaner and recovers faster.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">3</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Lift the whole clump</h4><p class="text-sm text-muted">Dig a generous circle and pry the root ball out with a fork, keeping as many roots as you can.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">4</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Split into pieces</h4><p class="text-sm text-muted">Pull apart by hand or cut with a sharp spade. Each division needs healthy roots <em>and</em> a few growth buds or shoots.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">5</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Replant immediately</h4><p class="text-sm text-muted">Set divisions at the original depth, firm the soil, and don't let roots dry out while you work.</p></div></li>
+      <li class="flex gap-4"><div class="step-num">6</div><div><h4 class="font-[600] mb-1" style="color:var(--text);">Water &amp; shade briefly</h4><p class="text-sm text-muted">Soak well and keep evenly moist for a few weeks. Light afternoon shade helps spring divisions settle.</p></div></li>
+    </ol>
+  </div>
+
+  <!-- Do's and Don'ts -->
+  <div class="grid md:grid-cols-2 gap-4 mb-6">
+    <div class="panel p-5">
+      <h3 class="serif text-lg font-[700] mb-3 flex items-center gap-2" style="color:var(--text);"><i data-lucide="check-circle-2" class="w-5 h-5" style="color:var(--accent);"></i>Do</h3>
+      <ul class="space-y-2 text-sm">
+        <li class="flex gap-2"><span class="text-accent mt-0.5">&#10003;</span><span>Give most native seed a <strong>cold-moist period</strong> (winter sowing or 30&ndash;60 days in the fridge in damp sand).</span></li>
+        <li class="flex gap-2"><span class="text-accent mt-0.5">&#10003;</span><span><strong>Direct-sow taprooted species</strong> (lupine, butterfly weed, baptisia) where they'll stay.</span></li>
+        <li class="flex gap-2"><span class="text-accent mt-0.5">&#10003;</span><span>Scarify or inoculate hard-coated legume seed (lupine, baptisia) for better germination.</span></li>
+        <li class="flex gap-2"><span class="text-accent mt-0.5">&#10003;</span><span>Collect seed from <strong>your own or local plants</strong> — never strip wild populations.</span></li>
+      </ul>
+    </div>
+    <div class="panel p-5">
+      <h3 class="serif text-lg font-[700] mb-3 flex items-center gap-2" style="color:var(--text);"><i data-lucide="x-circle" class="w-5 h-5" style="color:#f43f5e;"></i>Don't</h3>
+      <ul class="space-y-2 text-sm">
+        <li class="flex gap-2"><span style="color:#f43f5e;" class="mt-0.5">&#10007;</span><span><strong>Dig plants from the wild</strong> — it's harmful and often illegal (trilliums and lady's slippers especially).</span></li>
+        <li class="flex gap-2"><span style="color:#f43f5e;" class="mt-0.5">&#10007;</span><span>Expect spring sowing without cold treatment to work — most seed will just sit.</span></li>
+        <li class="flex gap-2"><span style="color:#f43f5e;" class="mt-0.5">&#10007;</span><span>Sow seed too deep — many natives need light to germinate; surface-sow tiny seed.</span></li>
+        <li class="flex gap-2"><span style="color:#f43f5e;" class="mt-0.5">&#10007;</span><span>Let seedlings dry out — keep them evenly moist until well rooted.</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Stratification table -->
+  <div class="panel p-6 md:p-8">
+    <h3 class="serif text-xl font-[800] mb-4" style="color:var(--text);">Quick Guide: Which Method?</h3>
+    <div class="overflow-x-auto scroll-thin">
+      <table class="w-full text-sm border-collapse">
+        <thead><tr>
+          <th class="text-left p-2 text-xs uppercase tracking-wider text-dim">If you want to…</th>
+          <th class="text-left p-2 text-xs uppercase tracking-wider text-dim">Best method</th>
+          <th class="text-left p-2 text-xs uppercase tracking-wider text-dim">Notes</th>
+        </tr></thead>
+        <tbody>
+          <tr style="border-top:1px solid var(--border);"><td class="p-2" style="color:var(--text);">Grow a lot, cheaply</td><td class="p-2 text-muted">Winter sowing</td><td class="p-2 text-muted">One jug = dozens of plants; no fridge needed.</td></tr>
+          <tr style="border-top:1px solid var(--border);"><td class="p-2" style="color:var(--text);">Start a meadow</td><td class="p-2 text-muted">Fall direct sowing</td><td class="p-2 text-muted">Prep bare soil, sow Oct–Nov, press in, wait.</td></tr>
+          <tr style="border-top:1px solid var(--border);"><td class="p-2" style="color:var(--text);">More of a favorite clump</td><td class="p-2 text-muted">Division</td><td class="p-2 text-muted">Spring/fall; blooms the same year.</td></tr>
+          <tr style="border-top:1px solid var(--border);"><td class="p-2" style="color:var(--text);">Taprooted species</td><td class="p-2 text-muted">Direct sow</td><td class="p-2 text-muted">Lupine, butterfly weed, baptisia hate transplanting.</td></tr>
+          <tr style="border-top:1px solid var(--border);"><td class="p-2" style="color:var(--text);">Zero effort</td><td class="p-2 text-muted">Self-sowing</td><td class="p-2 text-muted">Leave seed heads; thin volunteers in spring.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+</div><!-- /view-propagation -->
+
+<!-- MODAL -->
+<div id="modal" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
+  <div class="absolute inset-0 modal-backdrop" data-close></div>
+  <div class="panel relative w-full max-w-3xl max-h-[90vh] overflow-y-auto scroll-thin p-6 md:p-8 fade-in" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <button class="absolute top-4 right-4 theme-toggle" data-close aria-label="Close">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="max-w-7xl mx-auto px-5 pb-10 text-xs text-dim">
+  <div class="divider border-t pt-5 flex flex-col gap-1">
+    <div>Flower &amp; plant photos from <a href="https://www.inaturalist.org" target="_blank" rel="noopener" class="underline text-accent">iNaturalist</a> community observers, used under their Creative Commons licenses. Click any card to view the source species.</div>
+    <div>A curated selection of Michigan native wildflowers — not exhaustive. Horticultural data compiled from public native-plant references (USDA PLANTS, Lady Bird Johnson Wildflower Center, Michigan Wildflower Farm, and regional botanical gardens). Always confirm a species suits your site, and never collect plants from the wild.</div>
+  </div>
+</footer>
+
+<script>
+/* =========================================================================
+   MICHIGAN WILDFLOWER DATA — native species across woodland, prairie, wetland,
+   savanna and dune. Each record carries community, bloom + color, light/water/soil,
+   garden manners, wildlife value, propagation, and verified iNaturalist photo URLs.
+   ========================================================================= */
+const FLOWERS = [
+  {"sci": "Sanguinaria canadensis", "rank": 1, "common": "Bloodroot", "region": "Woodland", "color": "White", "range": "Rich woods throughout Michigan", "zones": "3–8", "bloom": "Apr", "bloomNote": "Among the first — early-mid Apr, flower lasts only days", "light": "Part shade–shade", "water": "Medium", "height": "6–10 in", "spread": "Clumping, slowly colonizes", "soil": "Rich, moist, well-drained woodland loam", "habitat": "Rich deciduous woods, slopes, floodplains", "manners": "Clumping", "bestFor": "Shade & woodland gardens, spring ephemeral layer", "wildlife": "Early pollen for native bees; seeds dispersed by ants", "prop": "Seed (fresh), division", "propNote": "Sow seed fresh; divide rhizomes after flowering", "fragrant": false, "fact": "Snap a root and it bleeds bright orange-red sap — the source of its name and a traditional dye.", "taxonId": 51044, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/1862384/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/255556559/medium.jpg"},
+  {"sci": "Mertensia virginica", "rank": 2, "common": "Virginia Bluebells", "region": "Woodland", "color": "Blue", "range": "Floodplain woods, mostly southern Lower Peninsula", "zones": "3–8", "bloom": "Apr–May", "bloomNote": "Pink buds open sky-blue; goes dormant by early summer", "light": "Part shade–shade", "water": "Medium–moist", "height": "1–2 ft", "spread": "Clumping", "soil": "Rich, moist woodland soil", "habitat": "Floodplains, moist rich woods, riverbanks", "manners": "Clumping", "bestFor": "Woodland drifts, shade gardens, along streams", "wildlife": "Nectar for early bees, bumblebees and butterflies", "prop": "Seed (fresh), division when dormant", "propNote": "Self-sows; mark spot — it vanishes by July", "fragrant": false, "fact": "Buds emerge pink and shift to blue as they open, so a single cluster shows both colors at once.", "taxonId": 59771, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/358541879/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/361047441/medium.jpeg"},
+  {"sci": "Trillium grandiflorum", "rank": 3, "common": "Large-flowered Trillium", "region": "Woodland", "color": "White", "range": "Rich woods statewide — Michigan's classic spring wildflower", "zones": "4–8", "bloom": "Apr–May", "bloomNote": "Blooms white, often fading to pink with age", "light": "Part shade–shade", "water": "Medium", "height": "12–18 in", "spread": "Slowly clumping", "soil": "Rich, neutral, humusy woodland soil", "habitat": "Rich mesic deciduous forests", "manners": "Clumping", "bestFor": "Woodland gardens; long-lived showpiece", "wildlife": "Ant-dispersed seeds; early forest nectar", "prop": "Seed (very slow), division", "propNote": "From seed takes ~7 yrs to bloom — never dig from the wild", "fragrant": false, "fact": "A protected species in Michigan — picking the single leaf-whorl can kill the plant, so it's left to admire.", "taxonId": 55402, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/80252/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/74375305/medium.jpg"},
+  {"sci": "Aquilegia canadensis", "rank": 4, "common": "Wild Columbine", "region": "Woodland", "color": "Red", "range": "Rocky woods, ledges and slopes statewide", "zones": "3–8", "bloom": "Apr–Jun", "bloomNote": "Nodding red-and-yellow bells over a long spring window", "light": "Sun–part shade", "water": "Dry–medium", "height": "1–3 ft", "spread": "Clumping, self-sows", "soil": "Average to rocky, very well-drained", "habitat": "Rocky woods, cliffs, ledges, dry slopes", "manners": "Clumping", "bestFor": "Woodland edges, rock gardens, hummingbird gardens", "wildlife": "A premier hummingbird flower; also feeds long-tongued bees", "prop": "Seed", "propNote": "Self-sows freely; cold-moist stratify seed", "fragrant": false, "fact": "The spurred red bells are shaped for hummingbirds, which arrive in Michigan just as it blooms.", "taxonId": 49868, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/503013812/medium.jpeg", "leafImg": "https://static.inaturalist.org/photos/3856775/medium.jpg"},
+  {"sci": "Dicentra cucullaria", "rank": 5, "common": "Dutchman's Breeches", "region": "Woodland", "color": "White", "range": "Rich woods across the state", "zones": "3–7", "bloom": "Apr–May", "bloomNote": "Fleeting — blooms then goes fully dormant by early summer", "light": "Part shade–shade", "water": "Medium", "height": "6–12 in", "spread": "Clumping", "soil": "Rich, moist, well-drained humus", "habitat": "Rich mesic woods, slopes, floodplains", "manners": "Clumping", "bestFor": "Spring ephemeral layer in woodland gardens", "wildlife": "Early bumblebee queens are the main pollinators", "prop": "Seed (fresh), division of tubers when dormant", "propNote": "Ant-dispersed; divide tiny tubers after dormancy", "fragrant": false, "fact": "The white flowers really do look like rows of upside-down pantaloons hung on a line.", "taxonId": 51053, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/16316623/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/13591764/medium.jpg"},
+  {"sci": "Claytonia virginica", "rank": 6, "common": "Spring Beauty", "region": "Woodland", "color": "Pink", "range": "Woods and even lawns throughout Michigan", "zones": "3–8", "bloom": "Mar–May", "bloomNote": "One of the earliest — candy-striped pink flowers open in sun", "light": "Sun–part shade", "water": "Medium", "height": "3–6 in", "spread": "Colonizes from corms", "soil": "Rich, moist woodland soil", "habitat": "Moist woods, clearings, old lawns", "manners": "Moderate spreader", "bestFor": "Naturalizing under trees, lawn alternative", "wildlife": "A specialist mining bee depends almost solely on its pollen", "prop": "Seed, corm offsets", "propNote": "Self-sows and multiplies by tiny edible corms", "fragrant": false, "fact": "Each white flower is finely pencilled with pink lines that guide bees to the nectar.", "taxonId": 117434, "flowerImg": "https://static.inaturalist.org/photos/183910009/medium.jpeg", "leafImg": "https://static.inaturalist.org/photos/192987875/medium.jpg"},
+  {"sci": "Erythronium americanum", "rank": 7, "common": "Trout Lily", "region": "Woodland", "color": "Yellow", "range": "Rich woods statewide; forms vast colonies", "zones": "3–8", "bloom": "Apr–May", "bloomNote": "Nodding yellow lily; most leaves in a colony never bloom", "light": "Part shade–shade", "water": "Medium", "height": "4–8 in", "spread": "Colonizes by runners", "soil": "Rich, moist woodland soil", "habitat": "Rich deciduous woods, floodplains", "manners": "Moderate spreader", "bestFor": "Naturalizing carpets in woodland gardens", "wildlife": "Early pollen and nectar for emerging bees", "prop": "Seed (slow), corm offsets", "propNote": "Spreads by runners into broad colonies over years", "fragrant": false, "fact": "The brown-mottled leaves resemble a brook trout's flank — hence the name.", "taxonId": 48240, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/495479600/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/187355582/medium.jpg"},
+  {"sci": "Geranium maculatum", "rank": 8, "common": "Wild Geranium", "region": "Woodland", "color": "Pink", "range": "Woods and edges across the Lower Peninsula", "zones": "3–8", "bloom": "Apr–Jun", "bloomNote": "Long spring show of rose-pink saucers", "light": "Sun–part shade", "water": "Medium", "height": "1.5–2 ft", "spread": "Clumping", "soil": "Rich, moist, well-drained", "habitat": "Open woods, edges, meadows", "manners": "Clumping", "bestFor": "Woodland gardens, shade borders, edges", "wildlife": "Nectar and pollen for bees, hoverflies and butterflies", "prop": "Seed, division", "propNote": "Easy from seed; divide rhizomes in fall", "fragrant": false, "fact": "Ripe seed capsules fling seeds yards away with a spring-loaded 'cranesbill' mechanism.", "taxonId": 47699, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/3489641/medium.JPG", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/3830842/medium.jpg"},
+  {"sci": "Podophyllum peltatum", "rank": 9, "common": "Mayapple", "region": "Woodland", "color": "White", "range": "Rich woods, southern & central Michigan; colony-forming", "zones": "3–8", "bloom": "Apr–May", "bloomNote": "One waxy white flower hidden beneath paired umbrella leaves", "light": "Part shade–shade", "water": "Medium", "height": "12–18 in", "spread": "Aggressive by rhizome", "soil": "Rich, moist woodland soil", "habitat": "Rich woods, floodplains, shaded slopes", "manners": "Aggressive spreader", "bestFor": "Bold groundcover for large shaded areas", "wildlife": "Bumblebees pollinate; box turtles eat ripe fruit", "prop": "Seed, rhizome division", "propNote": "Spreads into wide colonies — give it room", "fragrant": false, "fact": "All parts are toxic except the ripe golden fruit; the umbrella leaves hide the single flower beneath.", "taxonId": 49288, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/35674124/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/175152775/medium.jpg"},
+  {"sci": "Phlox divaricata", "rank": 10, "common": "Wild Blue Phlox", "region": "Woodland", "color": "Blue", "range": "Rich woods, southern Lower Peninsula", "zones": "3–8", "bloom": "Apr–Jun", "bloomNote": "Fragrant lavender-blue clouds in late spring", "light": "Part shade", "water": "Medium", "height": "10–15 in", "spread": "Spreads by stolons", "soil": "Rich, moist, well-drained", "habitat": "Open rich woods, edges, clearings", "manners": "Moderate spreader", "bestFor": "Woodland gardens, shade drifts, edging", "wildlife": "Nectar for butterflies, moths and long-tongued bees", "prop": "Cuttings, division, seed", "propNote": "Root the spreading stems; divide after bloom", "fragrant": true, "fact": "One of the few fragrant spring woodlanders — sweet-scented and a magnet for the first butterflies.", "taxonId": 81705, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/3365048/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/15374975/medium.jpg"},
+  {"sci": "Polemonium reptans", "rank": 11, "common": "Jacob's Ladder", "region": "Woodland", "color": "Blue", "range": "Rich woods, southern Michigan", "zones": "3–8", "bloom": "Apr–Jun", "bloomNote": "Loose nodding clusters of pale blue bells", "light": "Part shade–shade", "water": "Medium", "height": "8–16 in", "spread": "Clumping", "soil": "Rich, moist, well-drained", "habitat": "Rich woods, floodplains, shaded slopes", "manners": "Clumping", "bestFor": "Front of shade border, woodland gardens", "wildlife": "Nectar for bees and the occasional hummingbird", "prop": "Seed, division", "propNote": "Self-sows gently; divide in spring", "fragrant": false, "fact": "The leaflets are arranged in neat rungs up the stem like a little ladder.", "taxonId": 67524, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/23272/medium.jpg", "leafImg": "https://static.inaturalist.org/photos/134675666/medium.jpg"},
+  {"sci": "Uvularia grandiflora", "rank": 12, "common": "Large-flowered Bellwort", "region": "Woodland", "color": "Yellow", "range": "Rich woods across the state", "zones": "3–8", "bloom": "Apr–May", "bloomNote": "Drooping, twisted yellow bells on arching stems", "light": "Part shade–shade", "water": "Medium", "height": "1–2.5 ft", "spread": "Slowly clumping", "soil": "Rich, moist woodland soil", "habitat": "Rich deciduous woods, slopes", "manners": "Clumping", "bestFor": "Woodland gardens; elegant arching texture", "wildlife": "Early-season bees work the bells for nectar", "prop": "Seed, division", "propNote": "Divide rhizomes in late summer; slow from seed", "fragrant": false, "fact": "The petals look perpetually wrinkled and half-furled, as if the flower never quite finished opening.", "taxonId": 126749, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/96536/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/401542968/medium.jpg"},
+  {"sci": "Asarum canadense", "rank": 13, "common": "Wild Ginger", "region": "Woodland", "color": "Red", "range": "Rich woods throughout Michigan", "zones": "3–7", "bloom": "Apr–May", "bloomNote": "A maroon jug-shaped flower hidden at ground level", "light": "Part shade–shade", "water": "Medium", "height": "6–8 in", "spread": "Spreads by rhizome", "soil": "Rich, moist woodland humus", "habitat": "Rich mesic woods, slopes", "manners": "Moderate spreader", "bestFor": "Weed-smothering shade groundcover", "wildlife": "Ground-level flowers pollinated by gnats and beetles; ant-dispersed seed", "prop": "Division, seed", "propNote": "Easiest by rhizome division in spring or fall", "fragrant": false, "fact": "The rhizome smells of ginger but isn't related to culinary ginger — and the flower blooms at soil level for crawling insects.", "taxonId": 56325, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/842419/medium.jpg", "leafImg": "https://static.inaturalist.org/photos/172116530/medium.jpg"},
+  {"sci": "Caltha palustris", "rank": 14, "common": "Marsh Marigold", "region": "Wetland", "color": "Yellow", "range": "Swamps and stream edges statewide", "zones": "3–7", "bloom": "Apr–May", "bloomNote": "Glossy butter-yellow cups light up wet ground in spring", "light": "Sun–part shade", "water": "Moist–wet", "height": "1–1.5 ft", "spread": "Clumping", "soil": "Wet, mucky, rich", "habitat": "Marshes, swamps, wet meadows, stream edges", "manners": "Clumping", "bestFor": "Pond edges, rain gardens, bog gardens", "wildlife": "Early nectar for bees, flies and beetles", "prop": "Seed (fresh), division", "propNote": "Divide in spring; keep constantly moist", "fragrant": false, "fact": "Despite the name it's a buttercup, not a marigold, and it glows in still-bare spring wetlands.", "taxonId": 56224, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/324010734/medium.jpeg", "leafImg": "https://static.inaturalist.org/photos/129920243/medium.jpeg"},
+  {"sci": "Iris versicolor", "rank": 15, "common": "Northern Blue Flag", "region": "Wetland", "color": "Blue", "range": "Marshes, shores and wet meadows statewide", "zones": "3–9", "bloom": "May–Jul", "bloomNote": "Violet-blue iris flowers veined with gold", "light": "Sun–part shade", "water": "Moist–wet", "height": "2–3 ft", "spread": "Clumping rhizomes", "soil": "Wet to moist, rich", "habitat": "Marshes, shorelines, wet meadows, ditches", "manners": "Clumping", "bestFor": "Pond margins, rain gardens, wet borders", "wildlife": "Nectar for bumblebees; hummingbirds visit", "prop": "Division, seed", "propNote": "Divide rhizomes after bloom; sow seed fresh", "fragrant": false, "fact": "Michigan's native iris — and the parent of the fleur-de-lis emblem rendered from wild blue flags.", "taxonId": 48726, "flowerImg": "https://static.inaturalist.org/photos/135271513/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/136575307/medium.jpeg"},
+  {"sci": "Asclepias incarnata", "rank": 16, "common": "Swamp Milkweed", "region": "Wetland", "color": "Pink", "range": "Wet meadows, marsh edges statewide", "zones": "3–9", "bloom": "Jun–Aug", "bloomNote": "Domed clusters of rosy-pink, lightly vanilla-scented", "light": "Full sun", "water": "Medium–moist", "height": "3–4 ft", "spread": "Clumping", "soil": "Moist to wet, rich; tolerates clay", "habitat": "Wet meadows, marsh and pond edges, ditches", "manners": "Clumping", "bestFor": "Rain gardens, pond edges, butterfly gardens", "wildlife": "Monarch host plant; nectar for many butterflies and bees", "prop": "Seed, division", "propNote": "Stratify seed; clump is easy to divide unlike most milkweeds", "fragrant": true, "fact": "A monarch host that, unlike common milkweed, stays put in a tidy clump and tolerates garden beds.", "taxonId": 125381, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/21590017/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/173336560/medium.jpg"},
+  {"sci": "Lobelia cardinalis", "rank": 17, "common": "Cardinal Flower", "region": "Wetland", "color": "Red", "range": "Stream banks and wet ground statewide", "zones": "3–9", "bloom": "Jul–Sep", "bloomNote": "Spikes of intense scarlet in late summer", "light": "Sun–part shade", "water": "Moist–wet", "height": "2–4 ft", "spread": "Short-lived; self-sows", "soil": "Rich, moist to wet", "habitat": "Stream banks, wet meadows, swamps, shores", "manners": "Clumping", "bestFor": "Rain gardens, pond edges, hummingbird gardens", "wildlife": "Premier hummingbird flower in late summer", "prop": "Seed, basal offsets, cuttings", "propNote": "Short-lived — let it self-sow or peg down stems to root", "fragrant": false, "fact": "Its scarlet is almost too vivid for insects — it's built for ruby-throated hummingbirds.", "taxonId": 48038, "flowerImg": "https://static.inaturalist.org/photos/383016071/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/346977164/medium.jpg"},
+  {"sci": "Lobelia siphilitica", "rank": 18, "common": "Great Blue Lobelia", "region": "Wetland", "color": "Blue", "range": "Wet meadows and shores statewide", "zones": "4–9", "bloom": "Jul–Sep", "bloomNote": "Spikes of true blue late in the season", "light": "Sun–part shade", "water": "Medium–moist", "height": "2–3 ft", "spread": "Clumping; self-sows", "soil": "Rich, moist to wet", "habitat": "Wet meadows, stream banks, swamps", "manners": "Clumping", "bestFor": "Rain gardens, moist borders, pond edges", "wildlife": "Bumblebees are the main pollinators; some hummingbird visits", "prop": "Seed, division, offsets", "propNote": "Divide basal rosettes; self-sows in moist soil", "fragrant": false, "fact": "The blue counterpart to cardinal flower — the two hybridize where they grow together.", "taxonId": 119806, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/153600161/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/354433629/medium.jpeg"},
+  {"sci": "Eutrochium maculatum", "rank": 19, "common": "Spotted Joe-Pye Weed", "region": "Wetland", "color": "Pink", "range": "Wet meadows and fens statewide", "zones": "3–8", "bloom": "Jul–Sep", "bloomNote": "Big mauve-pink domes tower over wet meadows", "light": "Sun–part shade", "water": "Medium–moist", "height": "4–7 ft", "spread": "Clumping", "soil": "Rich, moist to wet", "habitat": "Wet meadows, fens, marsh edges, ditches", "manners": "Clumping", "bestFor": "Back of rain garden, pollinator meadows, screening", "wildlife": "A late-summer butterfly magnet — swallowtails and monarchs swarm it", "prop": "Seed, division", "propNote": "Easy from seed; divide large clumps in spring", "fragrant": true, "fact": "Towering vanilla-scented heads make it one of the best butterfly plants for damp ground.", "taxonId": 117440, "flowerImg": "https://static.inaturalist.org/photos/88787579/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/111846704/medium.jpg"},
+  {"sci": "Verbena hastata", "rank": 20, "common": "Blue Vervain", "region": "Wetland", "color": "Purple", "range": "Wet meadows, ditches and shores statewide", "zones": "3–8", "bloom": "Jul–Sep", "bloomNote": "Candelabra of slim violet-blue spikes", "light": "Full sun", "water": "Medium–moist", "height": "3–5 ft", "spread": "Clumping; self-sows", "soil": "Moist to wet, average", "habitat": "Wet meadows, marsh edges, ditches, shores", "manners": "Clumping", "bestFor": "Rain gardens, meadows, vertical accent", "wildlife": "Specialist verbena bees plus many butterflies; finches eat seed", "prop": "Seed", "propNote": "Self-sows readily; surface-sow after cold stratification", "fragrant": false, "fact": "Its branched spikes light up from the bottom ring upward, like slow violet candles.", "taxonId": 60251, "flowerImg": "https://static.inaturalist.org/photos/6560152/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/82793218/medium.jpg"},
+  {"sci": "Chelone glabra", "rank": 21, "common": "White Turtlehead", "region": "Wetland", "color": "White", "range": "Wet woods and stream banks statewide", "zones": "3–8", "bloom": "Aug–Sep", "bloomNote": "Hooded white flowers shaped like a turtle's head", "light": "Sun–part shade", "water": "Moist–wet", "height": "2–3 ft", "spread": "Clumping", "soil": "Rich, moist to wet", "habitat": "Wet woods, stream banks, marsh edges", "manners": "Clumping", "bestFor": "Rain gardens, pond edges, shaded wet spots", "wildlife": "The host plant for the Baltimore checkerspot butterfly", "prop": "Seed, division, cuttings", "propNote": "Divide in spring; cuttings root easily", "fragrant": false, "fact": "Squeeze the flower's sides and the 'turtle' opens its mouth — exactly how a bumblebee gets in.", "taxonId": 82316, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/4704356/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/36150/medium.jpg"},
+  {"sci": "Lilium michiganense", "rank": 22, "common": "Michigan Lily", "region": "Wetland", "color": "Orange", "range": "Wet meadows and prairies, Lower Peninsula", "zones": "3–8", "bloom": "Jul–Aug", "bloomNote": "Nodding orange Turk's-cap flowers with recurved petals", "light": "Sun–part shade", "water": "Medium–moist", "height": "3–5 ft", "spread": "Clumping bulbs", "soil": "Rich, moist, well-drained", "habitat": "Wet meadows, prairie swales, moist thickets", "manners": "Clumping", "bestFor": "Meadows, moist borders, statement plant", "wildlife": "Swallowtail butterflies and hummingbirds pollinate", "prop": "Seed, bulb scales", "propNote": "Slow from seed; protect bulbs from voles", "fragrant": false, "fact": "Petals curl so far back the nodding flower forms a 'Turk's cap' — Michigan's own native lily.", "taxonId": 223671, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/2101418/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/21074828/medium.jpg"},
+  {"sci": "Gentiana andrewsii", "rank": 23, "common": "Bottle Gentian", "region": "Wetland", "color": "Blue", "range": "Wet meadows, fens, prairie swales", "zones": "3–7", "bloom": "Aug–Oct", "bloomNote": "Deep-blue flowers that never fully open", "light": "Sun–part shade", "water": "Medium–moist", "height": "1–2 ft", "spread": "Clumping", "soil": "Rich, moist", "habitat": "Wet meadows, fens, moist prairies, shores", "manners": "Clumping", "bestFor": "Rain gardens, late-season blue, moist borders", "wildlife": "Strong bumblebees are about the only insect that can force inside", "prop": "Seed (fresh, surface)", "propNote": "Tiny seed needs light and cold; slow to establish", "fragrant": false, "fact": "The closed 'bottle' flowers only open for bumblebees strong enough to pry the petals apart.", "taxonId": 120580, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/6893506/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/5625867/medium.jpg"},
+  {"sci": "Lupinus perennis", "rank": 24, "common": "Wild Lupine", "region": "Savanna", "color": "Blue", "range": "Sandy oak savannas and dunes, esp. western & northern MI", "zones": "3–8", "bloom": "May–Jun", "bloomNote": "Spikes of blue pea-flowers over fan-shaped leaves", "light": "Sun–part shade", "water": "Dry", "height": "1–2 ft", "spread": "Clumping taproot", "soil": "Dry, sandy, lean, acidic", "habitat": "Oak savannas, sand prairies, dunes, open woods", "manners": "Clumping", "bestFor": "Sandy sites, restorations; sun-to-part-shade", "wildlife": "The ONLY host plant of the endangered Karner blue butterfly", "prop": "Seed (scarify + inoculate)", "propNote": "Resents transplanting — direct-sow scarified seed", "fragrant": false, "fact": "Michigan's wild lupine is the sole food of Karner blue caterpillars — no lupine, no butterfly.", "taxonId": 81528, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/25674863/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/523713713/medium.jpg"},
+  {"sci": "Asclepias tuberosa", "rank": 25, "common": "Butterfly Weed", "region": "Prairie", "color": "Orange", "range": "Dry prairies, fields and dunes, Lower Peninsula", "zones": "3–9", "bloom": "Jun–Aug", "bloomNote": "Brilliant flat-topped orange — unmistakable mid-summer", "light": "Full sun", "water": "Dry", "height": "1–2.5 ft", "spread": "Clumping taproot", "soil": "Dry, sandy or gravelly, well-drained", "habitat": "Dry prairies, fields, roadsides, dunes", "manners": "Clumping", "bestFor": "Dry sunny borders, butterfly gardens, sandy sites", "wildlife": "Monarch host; nectar mobbed by butterflies and bees", "prop": "Seed", "propNote": "Deep taproot hates moving — sow where it will stay", "fragrant": false, "fact": "The only common milkweed with no milky sap, and the only one with fiery orange flowers.", "taxonId": 47912, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/206558098/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/170810453/medium.jpg"},
+  {"sci": "Asclepias syriaca", "rank": 26, "common": "Common Milkweed", "region": "Prairie", "color": "Pink", "range": "Fields, prairies and roadsides statewide", "zones": "3–9", "bloom": "Jun–Aug", "bloomNote": "Round dusty-pink clusters with a heavy honey scent", "light": "Full sun", "water": "Dry–medium", "height": "3–5 ft", "spread": "Aggressive by rhizome", "soil": "Average to poor; very adaptable", "habitat": "Fields, prairies, roadsides, disturbed ground", "manners": "Aggressive spreader", "bestFor": "Large meadows and naturalizing — not small beds", "wildlife": "The classic monarch host; intense nectar for countless insects", "prop": "Seed, rhizome", "propNote": "Spreads widely underground — site it where it can roam", "fragrant": true, "fact": "A single plant perfumes the whole meadow, and its pods loose silk-borne seeds to the autumn wind.", "taxonId": 47911, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/99923276/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/73191225/medium.jpg"},
+  {"sci": "Monarda fistulosa", "rank": 27, "common": "Wild Bergamot", "region": "Prairie", "color": "Purple", "range": "Prairies, fields and edges statewide", "zones": "3–9", "bloom": "Jun–Aug", "bloomNote": "Ragged lavender pompoms through mid-summer", "light": "Sun–part shade", "water": "Dry–medium", "height": "2–4 ft", "spread": "Spreads by rhizome", "soil": "Average, well-drained; tolerates dry", "habitat": "Prairies, dry fields, savannas, edges", "manners": "Moderate spreader", "bestFor": "Pollinator meadows, borders, herb gardens", "wildlife": "A nectar powerhouse for bees, butterflies, moths and hummingbirds", "prop": "Seed, division, cuttings", "propNote": "Divide every few years; thin for airflow to limit mildew", "fragrant": true, "fact": "Crushed leaves smell of oregano and brew into bee-balm tea — and the flowers hum with pollinators.", "taxonId": 85320, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/301795454/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/47763/medium.jpg"},
+  {"sci": "Echinacea purpurea", "rank": 28, "common": "Purple Coneflower", "region": "Prairie", "color": "Purple", "range": "Prairies and open woods, southern Lower Peninsula", "zones": "3–9", "bloom": "Jun–Aug", "bloomNote": "Big rosy-purple daisies with a coppery cone", "light": "Sun–part shade", "water": "Dry–medium", "height": "2–4 ft", "spread": "Clumping", "soil": "Average, well-drained; drought-tolerant", "habitat": "Prairies, savannas, open woods, fields", "manners": "Clumping", "bestFor": "Sunny borders, pollinator and cutting gardens", "wildlife": "Butterfly and bee nectar; goldfinches strip the seed heads in fall", "prop": "Seed, division", "propNote": "Leave seed heads for finches and winter interest", "fragrant": false, "fact": "Leave the spent cones standing — goldfinches cling to them all winter, picking out seeds.", "taxonId": 48627, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/433818/medium.jpg", "leafImg": "https://static.inaturalist.org/photos/84861295/medium.jpeg"},
+  {"sci": "Rudbeckia hirta", "rank": 29, "common": "Black-eyed Susan", "region": "Prairie", "color": "Yellow", "range": "Fields, prairies and roadsides statewide", "zones": "3–9", "bloom": "Jun–Sep", "bloomNote": "Golden daisies with a dark eye, all summer long", "light": "Full sun", "water": "Dry–medium", "height": "1–3 ft", "spread": "Clumping; self-sows", "soil": "Average; very adaptable", "habitat": "Fields, prairies, roadsides, clearings", "manners": "Clumping", "bestFor": "Meadows, sunny borders, quick color in new plantings", "wildlife": "Nectar for bees and butterflies; finches eat the seed", "prop": "Seed", "propNote": "Short-lived but self-sows to persist; bloom first year", "fragrant": false, "fact": "A pioneer that blooms the first year from seed, then drifts around the garden by self-sowing.", "taxonId": 62741, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/7861779/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/125563226/medium.jpeg"},
+  {"sci": "Coreopsis lanceolata", "rank": 30, "common": "Lanceleaf Coreopsis", "region": "Prairie", "color": "Yellow", "range": "Dry sandy prairies and roadsides", "zones": "3–9", "bloom": "May–Jul", "bloomNote": "Bright golden daisies in early summer", "light": "Full sun", "water": "Dry", "height": "1–2 ft", "spread": "Clumping; self-sows", "soil": "Dry, sandy, lean, well-drained", "habitat": "Dry prairies, sandy fields, roadsides", "manners": "Clumping", "bestFor": "Dry sunny borders, sandy sites, meadows", "wildlife": "Nectar for small bees and butterflies; seed for birds", "prop": "Seed, division", "propNote": "Deadhead to prolong bloom; self-sows on bare soil", "fragrant": false, "fact": "Thrives on poor sandy ground where fussier flowers sulk, blooming for weeks if deadheaded.", "taxonId": 76444, "flowerImg": "https://static.inaturalist.org/photos/21088529/medium.jpg", "leafImg": "https://static.inaturalist.org/photos/105410505/medium.jpeg"},
+  {"sci": "Penstemon digitalis", "rank": 31, "common": "Foxglove Beardtongue", "region": "Prairie", "color": "White", "range": "Prairies, fields and meadows, Lower Peninsula", "zones": "3–8", "bloom": "May–Jul", "bloomNote": "Spires of white tubular bells in early summer", "light": "Sun–part shade", "water": "Dry–medium", "height": "2–4 ft", "spread": "Clumping", "soil": "Average to moist; adaptable", "habitat": "Prairies, meadows, open woods, roadsides", "manners": "Clumping", "bestFor": "Borders, meadows; 'Husker Red' has wine foliage", "wildlife": "Tubular flowers feed long-tongued bees and hummingbirds", "prop": "Seed, division", "propNote": "Easy from seed; divide clumps in spring", "fragrant": false, "fact": "Each flower hides a fuzzy, sterile 'beard' stamen — the source of the name beardtongue.", "taxonId": 81942, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/200036822/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/5858545/medium.jpg"},
+  {"sci": "Zizia aurea", "rank": 32, "common": "Golden Alexanders", "region": "Prairie", "color": "Yellow", "range": "Moist prairies, meadows and open woods", "zones": "3–8", "bloom": "May–Jun", "bloomNote": "Flat golden umbels bridge spring into summer", "light": "Sun–part shade", "water": "Medium–moist", "height": "1–2.5 ft", "spread": "Clumping; self-sows", "soil": "Average to moist", "habitat": "Moist prairies, meadows, open woods, stream edges", "manners": "Clumping", "bestFor": "Rain gardens, meadows, woodland edges", "wildlife": "Key early host for black swallowtails; nectar for tiny native bees", "prop": "Seed (fresh)", "propNote": "Self-sows; sow seed fresh in fall", "fragrant": false, "fact": "An early host for black swallowtail caterpillars, feeding them before most prairie plants bloom.", "taxonId": 83154, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/123259131/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/607568768/medium.jpg"},
+  {"sci": "Tradescantia ohiensis", "rank": 33, "common": "Ohio Spiderwort", "region": "Prairie", "color": "Blue", "range": "Prairies, fields and roadsides, Lower Peninsula", "zones": "4–9", "bloom": "May–Jul", "bloomNote": "Three-petalled blue-purple flowers, each lasting a morning", "light": "Sun–part shade", "water": "Dry–medium", "height": "2–3 ft", "spread": "Clumping; self-sows", "soil": "Average; adaptable", "habitat": "Prairies, fields, roadsides, open woods", "manners": "Clumping", "bestFor": "Meadows, borders; shear after bloom for a rebloom", "wildlife": "Pollen for bumblebees and other native bees", "prop": "Seed, division", "propNote": "Cut back hard after first flush to refresh and rebloom", "fragrant": false, "fact": "Each flower opens at dawn and melts to jelly by afternoon — but a new one opens every morning for weeks.", "taxonId": 79383, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/287637918/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/287638138/medium.jpeg"},
+  {"sci": "Baptisia alba", "rank": 34, "common": "White Wild Indigo", "region": "Prairie", "color": "White", "range": "Prairies and savannas, southern Lower Peninsula", "zones": "4–8", "bloom": "Jun–Jul", "bloomNote": "Spires of white pea-flowers over blue-green foliage", "light": "Full sun", "water": "Dry–medium", "height": "3–4 ft", "spread": "Clumping; deep taproot", "soil": "Average to dry, well-drained", "habitat": "Prairies, savannas, open woods", "manners": "Clumping", "bestFor": "Specimen, borders, prairie gardens; shrub-like form", "wildlife": "Host for several sulphur and duskywing butterflies; bumblebee nectar", "prop": "Seed (scarify + inoculate)", "propNote": "Slow to establish then very long-lived; rarely needs division", "fragrant": false, "fact": "The deep taproot makes it nearly permanent — and inflated black seed pods rattle in the wind by fall.", "taxonId": 126835, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/133950563/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/133950590/medium.jpg"},
+  {"sci": "Geum triflorum", "rank": 35, "common": "Prairie Smoke", "region": "Prairie", "color": "Pink", "range": "Dry prairies, mainly far southern & western MI; uncommon", "zones": "3–7", "bloom": "Apr–Jun", "bloomNote": "Nodding pink-red flowers, then smoky feathered seed plumes", "light": "Full sun", "water": "Dry", "height": "6–16 in", "spread": "Slowly clumping", "soil": "Dry, lean, gravelly, well-drained", "habitat": "Dry prairies, gravel hills, rocky openings", "manners": "Clumping", "bestFor": "Rock gardens, dry borders, short-grass prairie", "wildlife": "Early bumblebee nectar before most prairie plants wake", "prop": "Seed, division", "propNote": "Needs sharp drainage; divide established clumps", "fragrant": false, "fact": "The real show is after bloom — feathery pink seed heads turn whole patches into drifting 'smoke'.", "taxonId": 57460, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/235344228/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/232276971/medium.jpeg"},
+  {"sci": "Liatris aspera", "rank": 36, "common": "Rough Blazing Star", "region": "Prairie", "color": "Purple", "range": "Dry sand prairies and savannas", "zones": "3–8", "bloom": "Aug–Sep", "bloomNote": "Button-like purple tufts down a tall wand", "light": "Full sun", "water": "Dry", "height": "2–4 ft", "spread": "Clumping corm", "soil": "Dry, sandy, lean, well-drained", "habitat": "Dry sand prairies, savannas, roadsides", "manners": "Clumping", "bestFor": "Dry sunny borders, sandy sites, vertical accent", "wildlife": "A monarch-migration nectar favorite; bees and butterflies abound", "prop": "Seed, corm division", "propNote": "Blooms top-down; great cut or dried flower", "fragrant": false, "fact": "Liatris bloom from the top of the spike downward — the reverse of almost every other flower.", "taxonId": 130380, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/4779657/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/9765258/medium.jpg"},
+  {"sci": "Liatris spicata", "rank": 37, "common": "Dense Blazing Star", "region": "Prairie", "color": "Purple", "range": "Moist prairies and meadows, Lower Peninsula", "zones": "3–9", "bloom": "Jul–Sep", "bloomNote": "Dense rosy-purple bottlebrush spikes", "light": "Full sun", "water": "Medium–moist", "height": "2–4 ft", "spread": "Clumping corm", "soil": "Average to moist, well-drained", "habitat": "Moist prairies, meadows, fens", "manners": "Clumping", "bestFor": "Borders, rain gardens, cutting and butterfly gardens", "wildlife": "Monarchs and swallowtails crowd the spikes; goldfinches take seed", "prop": "Seed, corm division", "propNote": "The florist's liatris; tolerates moister soil than most", "fragrant": false, "fact": "The fluffy spikes are a top monarch fuel stop and one of the best native cut flowers.", "taxonId": 117439, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/86566147/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/108566389/medium.jpg"},
+  {"sci": "Veronicastrum virginicum", "rank": 38, "common": "Culver's Root", "region": "Prairie", "color": "White", "range": "Moist prairies, meadows and open woods", "zones": "3–8", "bloom": "Jul–Aug", "bloomNote": "Candelabra of slender white spires", "light": "Sun–part shade", "water": "Medium–moist", "height": "4–6 ft", "spread": "Clumping", "soil": "Rich, moist", "habitat": "Moist prairies, meadows, open woods, fens", "manners": "Clumping", "bestFor": "Back of border, rain gardens, vertical structure", "wildlife": "Spires covered in bees, wasps and butterflies for weeks", "prop": "Seed, division, cuttings", "propNote": "Tall but rarely flops; divide in spring", "fragrant": false, "fact": "Branched white candelabra rise to shoulder height, alive with bees through the dog days.", "taxonId": 141767, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/2173863/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/1689453/medium.jpg"},
+  {"sci": "Silphium perfoliatum", "rank": 39, "common": "Cup Plant", "region": "Prairie", "color": "Yellow", "range": "Moist prairies, stream banks, southern MI", "zones": "3–9", "bloom": "Jul–Sep", "bloomNote": "Yellow sunflower-like blooms atop a towering square stem", "light": "Full sun", "water": "Medium–moist", "height": "4–8 ft", "spread": "Spreads by rhizome & seed", "soil": "Rich, moist", "habitat": "Moist prairies, stream banks, low meadows", "manners": "Aggressive spreader", "bestFor": "Big rain gardens, screening, wildlife plantings", "wildlife": "Paired leaves hold rain that birds drink; finches feast on seed", "prop": "Seed, division", "propNote": "Big and bold — give it space; can self-sow freely", "fragrant": false, "fact": "Opposite leaves fuse around the stem into little cups that catch rainwater for thirsty birds.", "taxonId": 81599, "flowerImg": "https://static.inaturalist.org/photos/307233594/medium.jpg", "leafImg": "https://static.inaturalist.org/photos/145736292/medium.jpg"},
+  {"sci": "Pycnanthemum virginianum", "rank": 40, "common": "Mountain Mint", "region": "Prairie", "color": "White", "range": "Moist prairies, meadows and fens", "zones": "3–8", "bloom": "Jul–Sep", "bloomNote": "Frosty-white flower clusters over minty foliage", "light": "Sun–part shade", "water": "Medium–moist", "height": "2–3 ft", "spread": "Spreads by rhizome", "soil": "Average to moist", "habitat": "Moist prairies, meadows, fens, open woods", "manners": "Moderate spreader", "bestFor": "Pollinator gardens, meadows, rain gardens", "wildlife": "Routinely tops studies as the #1 plant for pollinator diversity", "prop": "Seed, division, cuttings", "propNote": "Spreads modestly; divide to control and share", "fragrant": true, "fact": "Trials repeatedly crown it the single best plant for sheer numbers and variety of pollinators.", "taxonId": 154473, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/9055947/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/3055622/medium.JPG"},
+  {"sci": "Eryngium yuccifolium", "rank": 41, "common": "Rattlesnake Master", "region": "Prairie", "color": "White", "range": "Tallgrass prairies, southern Lower Peninsula; uncommon", "zones": "3–8", "bloom": "Jul–Aug", "bloomNote": "Spiky greenish-white globes over yucca-like leaves", "light": "Full sun", "water": "Dry–medium", "height": "3–5 ft", "spread": "Clumping taproot", "soil": "Average to dry, well-drained", "habitat": "Tallgrass and sand prairies, savannas", "manners": "Clumping", "bestFor": "Architectural accent, prairie gardens, dried arrangements", "wildlife": "Unusual short-tongued bees, wasps and beetles work the globes", "prop": "Seed (fresh)", "propNote": "Sow fresh seed; taproot dislikes disturbance", "fragrant": false, "fact": "It looks more like a desert yucca than a prairie flower, with stiff spiny-edged sword leaves.", "taxonId": 128695, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/4979392/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/3011195/medium.JPG"},
+  {"sci": "Campanula rotundifolia", "rank": 42, "common": "Harebell", "region": "Dune", "color": "Blue", "range": "Dunes, rocky shores and cliffs, esp. northern MI & Great Lakes", "zones": "3–7", "bloom": "Jun–Sep", "bloomNote": "Dainty nodding blue bells all summer", "light": "Sun–part shade", "water": "Dry", "height": "6–16 in", "spread": "Clumping; self-sows", "soil": "Dry, sandy or rocky, sharply drained", "habitat": "Dunes, rocky shores, cliffs, dry banks", "manners": "Clumping", "bestFor": "Rock gardens, sandy sites, dune restorations", "wildlife": "Nectar for small native bees", "prop": "Seed", "propNote": "Self-sows in lean gritty soil; needs sharp drainage", "fragrant": false, "fact": "The thread-thin stems let the blue bells tremble in the lake wind on open dunes.", "taxonId": 62312, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/65358586/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/531276134/medium.jpg"},
+  {"sci": "Symphyotrichum novae-angliae", "rank": 43, "common": "New England Aster", "region": "Prairie", "color": "Purple", "range": "Moist prairies, meadows and roadsides statewide", "zones": "3–8", "bloom": "Aug–Oct", "bloomNote": "Royal-purple daisies fuel the late-season", "light": "Full sun", "water": "Medium–moist", "height": "3–6 ft", "spread": "Clumping", "soil": "Rich, moist; adaptable", "habitat": "Moist prairies, meadows, roadsides, edges", "manners": "Clumping", "bestFor": "Back of border, meadows, late pollinator fuel", "wildlife": "Critical late nectar for monarchs, bees and migrating butterflies", "prop": "Seed, division, cuttings", "propNote": "Pinch by July for bushier, shorter plants", "fragrant": false, "fact": "Its violet fall daisies feed the very last monarchs heading south through Michigan.", "taxonId": 117443, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/52293886/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/235596003/medium.jpeg"},
+  {"sci": "Symphyotrichum laeve", "rank": 44, "common": "Smooth Blue Aster", "region": "Prairie", "color": "Blue", "range": "Dry prairies, savannas and open woods", "zones": "3–8", "bloom": "Aug–Oct", "bloomNote": "Clouds of pale-blue daisies on smooth blue-green stems", "light": "Sun–part shade", "water": "Dry–medium", "height": "2–4 ft", "spread": "Clumping", "soil": "Average to dry, well-drained", "habitat": "Dry prairies, savannas, open woods, roadsides", "manners": "Clumping", "bestFor": "Sunny borders, dry meadows, pairs with goldenrod", "wildlife": "Late nectar for bees and butterflies; aster specialist bees", "prop": "Seed, division", "propNote": "Tidy and mildew-resistant; divide in spring", "fragrant": false, "fact": "Smooth, waxy blue-green foliage shrugs off the mildew that plagues many other asters.", "taxonId": 129607, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/411456090/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/233852839/medium.jpeg"},
+  {"sci": "Helianthus divaricatus", "rank": 45, "common": "Woodland Sunflower", "region": "Savanna", "color": "Yellow", "range": "Dry open woods and savannas statewide", "zones": "3–8", "bloom": "Jul–Sep", "bloomNote": "Cheerful yellow sunflowers light up dry shade", "light": "Sun–part shade", "water": "Dry", "height": "2–5 ft", "spread": "Spreads by rhizome", "soil": "Dry, sandy or rocky, well-drained", "habitat": "Dry open woods, savannas, edges, clearings", "manners": "Aggressive spreader", "bestFor": "Naturalizing dry shade and savanna edges", "wildlife": "Nectar and pollen for bees; seeds for birds; many moth larvae", "prop": "Seed, division", "propNote": "Colonizes by rhizome — best where it can roam", "fragrant": false, "fact": "One of the few sunflowers happy in dry shade, brightening the dim edges of oak woods.", "taxonId": 84113, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/217510859/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/88690541/medium.jpg"}
+];
+
+/* ---------- UI state ---------- */
+const state = {
+  search:"",
+  sort:"rank",
+  filters:{region:new Set(),light:new Set(),water:new Set(),height:new Set(),bloom:new Set(),manners:new Set(),color:new Set()},
+  compare:new Set(),
+  compareMode:false
+};
+
+/* ---------- Helpers ---------- */
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>Array.from(el.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const italicSci = sci => `<em>${esc(sci)}</em>`;
+
+const MONTHS = {Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+function bloomMonths(o){
+  const m = o.bloom.match(/[A-Z][a-z]{2}/g) || [];
+  return m.map(x=>MONTHS[x]).filter(Boolean);
+}
+function bloomBucket(o){
+  const start = (bloomMonths(o)[0])||6;
+  if(start<=5) return "Spring";
+  if(start>=8) return "Fall";
+  return "Summer";
+}
+const BLOOM_ORDER = {"Spring":1,"Summer":2,"Fall":3};
+
+// mature height in feet (handles "in" units)
+function heightMaxFt(o){
+  const inInches = /in\b/.test(o.height);
+  const nums = (o.height.match(/[\d.]+/g)||[]).map(Number);
+  if(!nums.length) return 0;
+  let v = Math.max(...nums);
+  return inInches ? v/12 : v;
+}
+function heightBucket(o){
+  const f = heightMaxFt(o);
+  if(f < 3) return "Short (under 3 ft)";
+  if(f <= 5) return "Medium (3–5 ft)";
+  return "Tall (over 5 ft)";
+}
+const HEIGHT_ORDER = {"Short (under 3 ft)":1,"Medium (3–5 ft)":2,"Tall (over 5 ft)":3};
+const MANNERS_ORDER = {"Clumping":1,"Moderate spreader":2,"Aggressive spreader":3};
+
+const mannersBadge = m => {
+  const cls = m==="Clumping"?"badge-good":m==="Moderate spreader"?"badge-mid":"badge-agg";
+  const short = m==="Clumping"?"Clumping":m==="Moderate spreader"?"Moderate":"Spreads";
+  return `<span class="badge ${cls}" title="${esc(m)}">${short}</span>`;
+};
+const COLORS = {Yellow:"#eab308",Orange:"#f97316",Red:"#dc2626",Pink:"#ec4899",Purple:"#9333ea",Blue:"#2563eb",White:"#d1d5db"};
+const colorDot = o => `<span title="${esc(o.color)}" style="width:11px;height:11px;border-radius:50%;flex:none;display:inline-block;background:${COLORS[o.color]||'#999'};border:1px solid rgba(0,0,0,.25);"></span>`;
+
+const careIcons = o => `
+  <span class="inline-flex items-center gap-1 text-[11px] text-muted" title="Light: ${esc(o.light)}"><i data-lucide="sun" class="care-icon" style="color:#f59e0b;"></i>${esc(o.light)}</span>
+  <span class="inline-flex items-center gap-1 text-[11px] text-muted" title="Water: ${esc(o.water)}"><i data-lucide="droplets" class="care-icon" style="color:#0ea5e9;"></i>${esc(o.water)}</span>
+  <span class="inline-flex items-center gap-1 text-[11px] text-muted" title="Height: ${esc(o.height)}"><i data-lucide="ruler" class="care-icon" style="color:var(--accent);"></i>${esc(o.height)}</span>
+`;
+
+function imgTile(url, label, sci){
+  if(url && url.startsWith("http")){
+    return `<div class="relative w-full aspect-[4/3] overflow-hidden" style="background:var(--bg-subtle);">
+      <img src="${esc(url)}" alt="${esc(label)} of ${esc(sci)}" loading="lazy" class="w-full h-full object-cover"
+        onerror="this.style.display='none';this.parentElement.classList.add('img-ph');this.parentElement.insertAdjacentHTML('beforeend','<span>'+this.alt+'</span>')" />
+      <span class="absolute left-0 bottom-0 text-[10px] font-medium px-2 py-0.5" style="background:rgba(0,0,0,.55);color:#fff;">${esc(label)}</span>
+    </div>`;
+  }
+  return `<div class="img-ph w-full aspect-[4/3]" role="img" aria-label="${esc(label)} of ${esc(sci)}"><span>${esc(label)}</span></div>`;
+}
+
+/* ---------- Filter option builders ---------- */
+function uniq(arr){return [...new Set(arr)];}
+function buildFilters(){
+  const region = uniq(FLOWERS.map(o=>o.region)).sort();
+  const light = uniq(FLOWERS.map(o=>o.light)).sort((a,b)=>a.length-b.length||a.localeCompare(b));
+  const water = ["Dry","Dry–medium","Medium","Medium–moist","Moist–wet"].filter(v=>FLOWERS.some(o=>o.water===v));
+  const height = ["Short (under 3 ft)","Medium (3–5 ft)","Tall (over 5 ft)"];
+  const bloom = ["Spring","Summer","Fall"];
+  const manners = ["Clumping","Moderate spreader","Aggressive spreader"];
+  const color = ["Yellow","Orange","Red","Pink","Purple","Blue","White"].filter(v=>FLOWERS.some(o=>o.color===v));
+  renderChipGroup("#f-region","region",region);
+  renderChipGroup("#f-light","light",light);
+  renderChipGroup("#f-water","water",water);
+  renderChipGroup("#f-height","height",height);
+  renderChipGroup("#f-bloom","bloom",bloom);
+  renderChipGroup("#f-manners","manners",manners);
+  renderChipGroup("#f-color","color",color);
+}
+function renderChipGroup(sel,key,vals){
+  const host=$(sel);host.innerHTML="";
+  vals.forEach(v=>{
+    const b=document.createElement("button");
+    b.className="chip";b.type="button";b.dataset.key=key;b.dataset.val=v;
+    b.setAttribute("aria-pressed","false");
+    if(key==="color"){ b.innerHTML = `<span style="width:9px;height:9px;border-radius:50%;display:inline-block;background:${COLORS[v]||'#999'};border:1px solid rgba(0,0,0,.25);"></span>${esc(v)}`; }
+    else b.textContent = key==="manners" ? v.replace(" spreader","") : v;
+    b.addEventListener("click",()=>{
+      const set=state.filters[key];
+      if(set.has(v))set.delete(v);else set.add(v);
+      b.dataset.active=set.has(v);
+      b.setAttribute("aria-pressed",set.has(v));
+      render();
+    });
+    host.appendChild(b);
+  });
+}
+
+/* ---------- Filter + sort pipeline ---------- */
+function filtered(){
+  const q=state.search.trim().toLowerCase();
+  let list = FLOWERS.filter(o=>{
+    if(q){
+      const hay=(o.sci+" "+o.common).toLowerCase();
+      if(!hay.includes(q)){
+        let i=0;for(const c of q){i=hay.indexOf(c,i);if(i===-1)return false;i++;}
+      }
+    }
+    const f=state.filters;
+    if(f.region.size && !f.region.has(o.region))return false;
+    if(f.light.size && !f.light.has(o.light))return false;
+    if(f.water.size && !f.water.has(o.water))return false;
+    if(f.height.size && !f.height.has(heightBucket(o)))return false;
+    if(f.bloom.size && !f.bloom.has(bloomBucket(o)))return false;
+    if(f.manners.size && !f.manners.has(o.manners))return false;
+    if(f.color.size && !f.color.has(o.color))return false;
+    return true;
+  });
+  const s=state.sort;
+  list.sort((a,b)=>{
+    if(s==="name")return a.common.localeCompare(b.common);
+    if(s==="height")return heightMaxFt(b)-heightMaxFt(a);
+    if(s==="bloom"){const d=(bloomMonths(a)[0]||12)-(bloomMonths(b)[0]||12);return d||a.rank-b.rank;}
+    if(s==="manners")return MANNERS_ORDER[a.manners]-MANNERS_ORDER[b.manners]||a.rank-b.rank;
+    return a.rank-b.rank;
+  });
+  return list;
+}
+
+/* ---------- Render grid ---------- */
+function render(){
+  const list=filtered();
+  const grid=$("#grid");grid.innerHTML="";
+  $("#empty").classList.toggle("hidden",list.length>0);
+  $("#result-count").textContent=`Showing ${list.length} of ${FLOWERS.length} wildflowers`;
+  const frag=document.createDocumentFragment();
+  list.forEach(o=>{
+    const selected=state.compare.has(o.rank);
+    const card=document.createElement("article");
+    card.className="card rounded-xl overflow-hidden flex flex-col fade-in";
+    card.tabIndex=0;
+    card.setAttribute("role","button");
+    card.setAttribute("aria-label",`${o.common} — ${o.sci}. ${o.region}. Press to open details.`);
+    card.innerHTML=`
+      <div class="rounded-t-xl overflow-hidden">${imgTile(o.flowerImg,"In bloom",o.sci)}</div>
+      <div class="p-3 flex-1 flex flex-col gap-2">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <div class="serif text-[15px] font-[700] leading-tight" style="color:var(--text);">${esc(o.common)}</div>
+            <div class="text-[12px] text-muted truncate">${italicSci(o.sci)}</div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">${colorDot(o)}${mannersBadge(o.manners)}</div>
+        </div>
+        <div class="flex flex-wrap gap-x-3 gap-y-1">${careIcons(o)}</div>
+        <div class="flex items-center justify-between pt-1">
+          <span class="text-[11px] text-dim inline-flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>${esc(o.region)}</span>
+          ${state.compareMode
+            ? `<button class="cmp-btn text-[11px] inline-flex items-center gap-1 ${selected?"text-accent font-semibold":"text-muted"}" data-rank="${o.rank}" aria-pressed="${selected}">
+                 <span class="cmp-dot ${selected?"on":""}"></span>${selected?"Selected":"Compare"}
+               </button>`
+            : `<span class="text-[11px] text-accent inline-flex items-center gap-1"><i data-lucide="flower" class="w-3 h-3"></i>${esc(o.bloom)} →</span>`}
+        </div>
+      </div>`;
+    card.addEventListener("click",e=>{
+      if(e.target.closest(".cmp-btn"))return;
+      openModal(o);
+    });
+    card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openModal(o);}});
+    frag.appendChild(card);
+  });
+  grid.appendChild(frag);
+  grid.querySelectorAll(".cmp-btn").forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();
+    const r=+b.dataset.rank;
+    if(state.compare.has(r))state.compare.delete(r);
+    else if(state.compare.size<3)state.compare.add(r);
+    updateCompareUI();render();
+  }));
+  lucide.createIcons();
+  renderStats();
+}
+
+function renderStats(){
+  $("#stat-total").textContent=FLOWERS.length;
+  const d={"Clumping":0,"Moderate spreader":0,"Aggressive spreader":0};
+  FLOWERS.forEach(o=>d[o.manners]++);
+  const labels={"Clumping":"Clumping","Moderate spreader":"Moderate","Aggressive spreader":"Spreads"};
+  $("#stat-manners").innerHTML=Object.entries(d).map(([k,v])=>{
+    const pct=Math.round(v/FLOWERS.length*100);
+    return `<div>
+      <div class="flex justify-between text-[11px]"><span style="color:var(--text);">${labels[k]}</span><span class="text-dim">${v}</span></div>
+      <div class="stat-bar"><span style="width:${pct}%"></span></div>
+    </div>`;
+  }).join("");
+  const r={};
+  FLOWERS.forEach(o=>r[o.region]=(r[o.region]||0)+1);
+  const top=Object.entries(r).sort((a,b)=>b[1]-a[1])[0];
+  $("#stat-region").textContent=top[0];
+  $("#stat-region-sub").textContent=`${top[1]} species`;
+}
+
+/* ---------- Modal ---------- */
+function openModal(o){
+  const modal=$("#modal");
+  $("#modal-body").innerHTML=`
+    <div class="grid sm:grid-cols-2 gap-6">
+      <div>
+        <div class="grid grid-cols-1 gap-2">
+          <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);">${imgTile(o.flowerImg,"In bloom",o.sci)}</div>
+          <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);">${imgTile(o.leafImg,"Plant",o.sci)}</div>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          ${mannersBadge(o.manners)}
+          <span class="chip">${colorDot(o)}${esc(o.color)}</span>
+          <span class="chip"><i data-lucide="map-pin" class="w-3 h-3"></i>${esc(o.region)}</span>
+          ${o.fragrant?'<span class="chip"><i data-lucide="wind" class="w-3 h-3"></i>Fragrant</span>':""}
+          <span class="chip">Zones ${esc(o.zones)}</span>
+        </div>
+        <a href="https://www.inaturalist.org/taxa/${o.taxonId}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-1 text-[11px] text-accent underline decoration-dotted">
+          <i data-lucide="external-link" class="w-3 h-3"></i>More photos &amp; range map on iNaturalist
+        </a>
+      </div>
+      <div>
+        <h2 id="modal-title" class="serif text-2xl font-[800] leading-tight" style="color:var(--text);">${esc(o.common)}</h2>
+        <div class="text-muted text-sm mb-3">${italicSci(o.sci)}</div>
+        <p class="text-sm text-muted italic mb-4">${esc(o.fact)}</p>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-3">Where it grows</h3>
+        <dl class="text-sm/[0.875rem] grid grid-cols-[120px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Community</dt><dd>${esc(o.region)}</dd>
+          <dt>Native range</dt><dd>${esc(o.range)}</dd>
+          <dt>Habitat</dt><dd>${esc(o.habitat)}</dd>
+          <dt>USDA zones</dt><dd>${esc(o.zones)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">Bloom</h3>
+        <dl class="text-sm/[0.875rem] grid grid-cols-[120px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Window</dt><dd>${esc(o.bloom)}</dd>
+          <dt>Color</dt><dd>${esc(o.color)}</dd>
+          <dt>Notes</dt><dd>${esc(o.bloomNote)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">Growing conditions</h3>
+        <dl class="text-sm/[0.875rem] grid grid-cols-[120px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Light</dt><dd>${esc(o.light)}</dd>
+          <dt>Water</dt><dd>${esc(o.water)}</dd>
+          <dt>Soil</dt><dd>${esc(o.soil)}</dd>
+          <dt>Height</dt><dd>${esc(o.height)}</dd>
+          <dt>Spread</dt><dd>${esc(o.spread)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">In the garden</h3>
+        <dl class="text-sm/[0.875rem] grid grid-cols-[120px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Manners</dt><dd>${esc(o.manners)}</dd>
+          <dt>Best for</dt><dd>${esc(o.bestFor)}</dd>
+          <dt>Wildlife</dt><dd>${esc(o.wildlife)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">Propagation</h3>
+        <dl class="text-sm/[0.875rem] grid grid-cols-[120px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Methods</dt><dd>${esc(o.prop)}</dd>
+          <dt>Notes</dt><dd>${esc(o.propNote)}</dd>
+        </dl>
+      </div>
+    </div>`;
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  lucide.createIcons();
+  modal.querySelector("[data-close]").focus();
+}
+function closeModal(){const m=$("#modal");m.classList.add("hidden");m.classList.remove("flex");}
+
+/* ---------- Compare ---------- */
+function updateCompareUI(){
+  $("#cmp-count").textContent=state.compare.size;
+  const tray=$("#cmp-tray");
+  if(state.compareMode && state.compare.size>0){
+    tray.classList.remove("hidden");
+    renderCompareTable();
+  } else {
+    tray.classList.add("hidden");
+  }
+}
+function renderCompareTable(){
+  const items=[...state.compare].map(r=>FLOWERS.find(o=>o.rank===r));
+  const rows=[
+    ["Photo",o=>`<div class="w-24 rounded-lg overflow-hidden" style="border:1px solid var(--border);">${imgTile(o.flowerImg,"In bloom",o.sci)}</div>`],
+    ["Common",o=>esc(o.common)],
+    ["Scientific",o=>italicSci(o.sci)],
+    ["Habitat",o=>esc(o.region)],
+    ["Zones",o=>esc(o.zones)],
+    ["Bloom",o=>esc(o.bloom)],
+    ["Color",o=>esc(o.color)],
+    ["Light",o=>esc(o.light)],
+    ["Water",o=>esc(o.water)],
+    ["Height",o=>esc(o.height)],
+    ["Soil",o=>esc(o.soil)],
+    ["Manners",o=>mannersBadge(o.manners)+" "+esc(o.manners)],
+    ["Best for",o=>esc(o.bestFor)],
+    ["Propagation",o=>esc(o.prop)],
+  ];
+  let html=`<table class="w-full text-sm border-collapse"><thead><tr><th class="text-left p-2 text-xs uppercase tracking-wider text-dim"></th>${items.map(o=>`<th class="text-left p-2 serif text-[15px]" style="color:var(--text);">${esc(o.common)}</th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach(([label,fn])=>{
+    html+=`<tr style="border-top:1px solid var(--border);"><td class="p-2 text-xs uppercase tracking-wider text-dim align-top">${label}</td>${items.map(o=>`<td class="p-2 align-top" style="color:var(--text-muted);">${fn(o)}</td>`).join("")}</tr>`;
+  });
+  html+="</tbody></table>";
+  $("#cmp-table").innerHTML=html;
+  lucide.createIcons();
+}
+
+/* ---------- Tabs ---------- */
+function setTab(tab){
+  $$(".tab-btn").forEach(b=>b.dataset.active=(b.dataset.tab===tab));
+  $("#view-catalog").classList.toggle("hidden",tab!=="catalog");
+  $("#view-care").classList.toggle("hidden",tab!=="care");
+  $("#view-propagation").classList.toggle("hidden",tab!=="propagation");
+  if(tab!=="catalog") window.scrollTo({top:0,behavior:"smooth"});
+  lucide.createIcons();
+}
+
+/* ---------- Wire up ---------- */
+function init(){
+  buildFilters();
+  render();
+  updateCompareUI();
+  setTab("catalog");
+
+  $("#search").addEventListener("input",e=>{state.search=e.target.value;render();});
+  $("#sort").addEventListener("change",e=>{state.sort=e.target.value;render();});
+  $("#clear-filters").addEventListener("click",()=>{
+    Object.values(state.filters).forEach(s=>s.clear());
+    $$(".chip").forEach(c=>{c.dataset.active="false";c.setAttribute("aria-pressed","false");});
+    render();
+  });
+  $("#cmp-toggle").addEventListener("click",()=>{
+    state.compareMode=!state.compareMode;
+    $("#cmp-toggle").classList.toggle("btn-ghost",!state.compareMode);
+    $("#cmp-toggle").classList.toggle("btn-primary",state.compareMode);
+    updateCompareUI();render();
+  });
+  $("#cmp-clear").addEventListener("click",()=>{state.compare.clear();updateCompareUI();render();});
+
+  $$(".tab-btn").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+
+  $$("#modal [data-close]").forEach(el=>el.addEventListener("click",closeModal));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+
+  $("#theme-toggle").addEventListener("click",()=>{
+    const dark=document.documentElement.classList.toggle("dark");
+    localStorage.setItem("miwildflower-theme",dark?"dark":"light");
+  });
+
+  lucide.createIcons();
+}
+init();
+</script>
+</body>
+</html>
