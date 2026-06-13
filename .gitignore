@@ -3,3 +3,6 @@
 *.swo
 *~
 .env
+
+# Claude Code tooling artifacts inside dashboards/ (not for deploy)
+dashboards/.claude/

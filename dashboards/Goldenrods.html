@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Goldenrods — Interactive Dashboard</title>
+<script>
+  // Apply theme before paint to avoid flash
+  (function(){
+    const saved = localStorage.getItem("goldenrod-theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = saved || (prefersDark ? "dark" : "light");
+    if(theme==="dark") document.documentElement.classList.add("dark");
+  })();
+</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config = { darkMode: 'class' };</script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ---------- LIGHT MODE (warm goldenrod) ---------- */
+  :root{
+    --bg:         #fbf9f2;
+    --bg-elev:    #ffffff;
+    --bg-subtle:  #f3efe2;
+    --border:     #e8e1cd;
+    --border-2:   #ddd3b8;
+    --text:       #1c1709;
+    --text-muted: #6b6347;
+    --text-dim:   #9a9170;
+    --accent:     #a16207;   /* yellow-700 */
+    --accent-2:   #ca8a04;   /* yellow-600 */
+    --accent-soft:#fef3c7;   /* amber-100 */
+    --accent-ink: #713f12;
+    --ring:       rgba(202,138,4,.35);
+    --shadow:     0 1px 2px rgba(28,23,9,.05), 0 12px 32px -16px rgba(28,23,9,.18);
+    --glow-a:     #fdf3d0;
+    --glow-b:     #f3f6e6;
+    --badge-good-bg:#dcfce7;--badge-good-fg:#166534;
+    --badge-mid-bg:#fef3c7;--badge-mid-fg:#92400e;
+    --badge-agg-bg:#fee2e2;--badge-agg-fg:#991b1b;
+    --img-a:#fde68a; --img-b:#d9b21f; --img-c:#5d6b2a;
+    --modal-bg: rgba(20,16,6,.5);
+  }
+  /* ---------- DARK MODE ---------- */
+  html.dark{
+    --bg:         #0f0d06;
+    --bg-elev:    #18140b;
+    --bg-subtle:  #211b0f;
+    --border:     #2c2514;
+    --border-2:   #3a3119;
+    --text:       #f3ecd9;
+    --text-muted: #b8ad8a;
+    --text-dim:   #837a5c;
+    --accent:     #facc15;   /* yellow-400 */
+    --accent-2:   #fde047;   /* yellow-300 */
+    --accent-soft:#3a2f0c;
+    --accent-ink: #fef9c3;
+    --ring:       rgba(250,204,21,.4);
+    --shadow:     0 1px 2px rgba(0,0,0,.5), 0 20px 40px -20px rgba(0,0,0,.7);
+    --glow-a:     #2a2207;
+    --glow-b:     #1d2410;
+    --badge-good-bg:#0b3b25;--badge-good-fg:#86efac;
+    --badge-mid-bg:#3b2b0b;--badge-mid-fg:#fcd34d;
+    --badge-agg-bg:#3b1414;--badge-agg-fg:#fca5a5;
+    --img-a:#5c4a12; --img-b:#8a6d12; --img-c:#34401a;
+    --modal-bg: rgba(0,0,0,.7);
+  }
+  html,body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.serif{font-family:'Fraunces',Georgia,serif;letter-spacing:-0.015em;}
+  .app-bg{
+    background:
+      radial-gradient(1200px 600px at 15% -10%,var(--glow-a) 0%,transparent 55%),
+      radial-gradient(1000px 500px at 95% 5%,var(--glow-b) 0%,transparent 50%),
+      var(--bg);
+    min-height:100vh;
+  }
+  .card{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease;}
+  .card:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--border-2);}
+  .panel{background:var(--bg-elev);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);}
+  .badge{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;border-radius:999px;font-size:.7rem;font-weight:600;letter-spacing:.01em;}
+  .badge-good{background:var(--badge-good-bg);color:var(--badge-good-fg);}
+  .badge-mid{background:var(--badge-mid-bg);color:var(--badge-mid-fg);}
+  .badge-agg{background:var(--badge-agg-bg);color:var(--badge-agg-fg);}
+  .chip{display:inline-flex;align-items:center;gap:.35rem;padding:.3rem .7rem;border-radius:999px;background:var(--bg-subtle);color:var(--text-muted);font-size:.72rem;font-weight:500;border:1px solid var(--border);transition:all .15s ease;cursor:pointer;}
+  .chip:hover{border-color:var(--border-2);color:var(--text);}
+  .chip[data-active="true"]{background:var(--accent);color:#fff;border-color:var(--accent);}
+  html.dark .chip[data-active="true"]{color:#1c1709;}
+  .modal-backdrop{background:var(--modal-bg);backdrop-filter:blur(6px);}
+  .care-icon{width:1rem;height:1rem;stroke-width:2;}
+  details>summary{list-style:none;cursor:pointer;}
+  details>summary::-webkit-details-marker{display:none;}
+  .scroll-thin::-webkit-scrollbar{height:8px;width:8px;}
+  .scroll-thin::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:10px;}
+  .fade-in{animation:fade .3s ease both;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  .stat-bar{height:6px;border-radius:999px;background:var(--bg-subtle);overflow:hidden;}
+  .stat-bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-2));border-radius:999px;}
+  input,select{font:inherit;color:var(--text);}
+  .field{background:var(--bg-subtle);border:1px solid var(--border);color:var(--text);}
+  .field::placeholder{color:var(--text-dim);}
+  input:focus,select:focus,button:focus-visible{outline:2px solid var(--ring);outline-offset:2px;border-color:var(--accent);}
+  .cmp-dot{width:10px;height:10px;border-radius:999px;background:var(--border-2);display:inline-block;}
+  .cmp-dot.on{background:var(--accent);}
+  .btn-primary{background:var(--accent);color:#fff;border:1px solid var(--accent);}
+  html.dark .btn-primary{color:#1c1709;}
+  .btn-primary:hover{background:var(--accent-2);border-color:var(--accent-2);}
+  .btn-ghost{background:var(--bg-subtle);color:var(--text);border:1px solid var(--border);}
+  .btn-ghost:hover{border-color:var(--border-2);}
+  .text-muted{color:var(--text-muted);}
+  .text-dim{color:var(--text-dim);}
+  .text-accent{color:var(--accent);}
+  .divider{border-color:var(--border);}
+  .img-ph{background:linear-gradient(135deg,var(--img-a),var(--img-b) 55%,var(--img-c));position:relative;overflow:hidden;}
+  .img-ph::after{content:"";position:absolute;inset:0;background:
+    radial-gradient(circle at 28% 28%,rgba(255,255,255,.35),transparent 42%),
+    radial-gradient(circle at 72% 65%,rgba(0,0,0,.22),transparent 55%);}
+  .img-ph span{position:absolute;inset:auto 0 10% 0;text-align:center;color:#fff;font-family:'Fraunces',serif;font-style:italic;font-size:.88rem;text-shadow:0 1px 3px rgba(0,0,0,.5);padding:0 .5rem;letter-spacing:.01em;}
+  /* theme toggle */
+  .theme-toggle{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--bg-elev);border:1px solid var(--border);color:var(--text);transition:all .2s ease;}
+  .theme-toggle:hover{border-color:var(--accent);color:var(--accent);}
+  html.dark .sun-icon{display:block;} html.dark .moon-icon{display:none;}
+  html:not(.dark) .sun-icon{display:none;} html:not(.dark) .moon-icon{display:block;}
+  /* tabs */
+  .tab-btn{color:var(--text-muted);transition:all .2s ease;}
+  .tab-btn[data-active="true"]{background:var(--bg-elev);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .tab-btn:hover:not([data-active="true"]){color:var(--text);}
+  /* step numbers */
+  .step-num{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-ink);font-weight:700;font-family:'Fraunces',serif;flex-shrink:0;}
+  dl dt{color:var(--text-muted);}
+  dl dd{color:var(--text);}
+  code{background:var(--bg-subtle);padding:0 .3em;border-radius:4px;color:var(--accent);}
+  /* bloom calendar */
+  .cal{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;}
+  .cal .mo{font-size:.6rem;text-align:center;color:var(--text-dim);padding-bottom:2px;}
+  .cal .bar{height:12px;border-radius:4px;background:var(--bg-subtle);}
+  .cal .bar.on{background:linear-gradient(90deg,var(--accent-2),var(--accent));}
+</style>
+</head>
+<body class="app-bg min-h-screen">
+
+<header class="max-w-7xl mx-auto px-5 pt-8 pb-5">
+  <div class="flex items-center justify-between gap-4 flex-wrap">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl grid place-items-center shadow-sm" style="background:var(--accent);color:#fff;">
+        <i data-lucide="flower-2" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="text-3xl md:text-4xl font-[800]" style="color:var(--text);">Golden<span style="color:var(--accent);">rods</span></h1>
+        <p class="text-sm text-muted">Native <em>Solidago</em> of the United States — region, bloom time, light &amp; water, and care</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="hidden md:flex items-center gap-2 text-xs text-muted">
+        <i data-lucide="info" class="w-4 h-4"></i>
+        <span>Click a card for leaf &amp; flower photos · use filters &amp; compare</span>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+        <i data-lucide="sun" class="w-4 h-4 sun-icon"></i>
+        <i data-lucide="moon" class="w-4 h-4 moon-icon"></i>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- STATS OVERVIEW -->
+<section class="max-w-7xl mx-auto px-5 grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" aria-label="Collection stats">
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Species</div>
+    <div class="text-3xl serif font-[800] text-accent" id="stat-total">—</div>
+    <div class="text-xs text-muted">U.S. native goldenrods</div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Garden manners</div>
+    <div id="stat-manners" class="mt-2 space-y-1.5"></div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Most-represented region</div>
+    <div class="text-xl serif font-[700] mt-1" style="color:var(--text);" id="stat-region">—</div>
+    <div class="text-xs text-muted" id="stat-region-sub">—</div>
+  </div>
+  <div class="panel p-4">
+    <div class="text-xs uppercase tracking-wider text-dim">Peak bloom</div>
+    <div class="text-3xl serif font-[800] text-accent">Aug–Sep</div>
+    <div class="text-xs text-muted">Full range Jul–Nov by region</div>
+  </div>
+</section>
+
+<!-- TAB NAV -->
+<nav class="max-w-7xl mx-auto px-5 mb-5" aria-label="Sections">
+  <div class="inline-flex p-1 rounded-xl" style="background:var(--bg-subtle);border:1px solid var(--border);">
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="catalog">Catalog</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="care">Care &amp; Planting</button>
+    <button class="tab-btn px-4 py-2 rounded-lg text-sm font-medium" data-tab="propagation">Propagation</button>
+  </div>
+</nav>
+
+<!-- CATALOG VIEW -->
+<div id="view-catalog">
+
+<!-- CONTROLS -->
+<section class="max-w-7xl mx-auto px-5 mb-5">
+  <div class="panel p-4 md:p-5">
+    <div class="flex flex-col md:flex-row md:items-center gap-3">
+      <div class="relative flex-1">
+        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-dim"></i>
+        <input id="search" type="search" placeholder="Search common or scientific name…" aria-label="Search goldenrods"
+          class="field w-full pl-9 pr-3 py-2 rounded-lg" />
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-muted">Sort</label>
+        <select id="sort" class="field px-2 py-2 rounded-lg text-sm">
+          <option value="rank">Featured</option>
+          <option value="name">Name A–Z</option>
+          <option value="height">Height</option>
+          <option value="bloom">Bloom time</option>
+          <option value="manners">Garden manners</option>
+        </select>
+      </div>
+      <button id="cmp-toggle" class="btn-primary px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
+        <i data-lucide="columns-3" class="w-4 h-4"></i><span>Compare</span>
+        <span id="cmp-count" class="ml-1 text-[10px] rounded-full px-1.5 py-0.5" style="background:rgba(255,255,255,.22);">0</span>
+      </button>
+    </div>
+
+    <!-- Filter groups -->
+    <div class="mt-4 grid gap-3 text-sm">
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Region</span>
+        <div id="f-region" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Light</span>
+        <div id="f-light" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Water</span>
+        <div id="f-water" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Height</span>
+        <div id="f-height" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Bloom</span>
+        <div id="f-bloom" class="flex flex-wrap gap-1.5"></div>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs uppercase tracking-wider text-dim w-24">Garden manners</span>
+        <div id="f-manners" class="flex flex-wrap gap-1.5"></div>
+        <button id="clear-filters" class="ml-auto text-xs text-accent underline decoration-dotted">Clear all</button>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <details class="mt-4">
+      <summary class="text-xs text-muted flex items-center gap-1"><i data-lucide="help-circle" class="w-3.5 h-3.5"></i>Reading the cards</summary>
+      <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted">
+        <div class="flex items-center gap-2"><i data-lucide="sun" class="w-4 h-4" style="color:#f59e0b;"></i>Light need</div>
+        <div class="flex items-center gap-2"><i data-lucide="droplets" class="w-4 h-4" style="color:#0ea5e9;"></i>Soil moisture</div>
+        <div class="flex items-center gap-2"><i data-lucide="ruler" class="w-4 h-4" style="color:var(--accent);"></i>Mature height</div>
+        <div class="flex items-center gap-2"><span class="badge badge-good">Clumping</span>well-behaved in beds</div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- COMPARE TRAY -->
+<section id="cmp-tray" class="max-w-7xl mx-auto px-5 mb-5 hidden">
+  <div class="panel p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="serif text-lg font-[700] text-accent">Compare (up to 3)</h2>
+      <button id="cmp-clear" class="text-xs text-accent underline decoration-dotted">Clear</button>
+    </div>
+    <div id="cmp-table" class="overflow-x-auto scroll-thin"></div>
+  </div>
+</section>
+
+<!-- RESULTS GRID -->
+<main class="max-w-7xl mx-auto px-5 pb-16">
+  <div class="flex items-center justify-between mb-3">
+    <div id="result-count" class="text-sm text-muted">—</div>
+  </div>
+  <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+  <div id="empty" class="hidden text-center py-16 text-muted">
+    <i data-lucide="search-x" class="w-8 h-8 mx-auto mb-2"></i>
+    <div>No goldenrods match those filters.</div>
+  </div>
+</main>
+
+</div><!-- /view-catalog -->
+
+<!-- CARE & PLANTING VIEW -->
+<div id="view-care" class="hidden">
+<section class="max-w-5xl mx-auto px-5 pb-16">
+
+  <!-- Intro -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-xl grid place-items-center shrink-0" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="sprout" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold" style="color:var(--text);">Growing Goldenrods</h2>
+        <p class="text-sm mt-1" style="color:var(--text-muted);">Goldenrods (<em>Solidago</em>) are tough, sun-loving North American perennials and among the most valuable plants you can grow for pollinators. They're drought-tolerant once established, deer- and rabbit-resistant, thrive in lean soil, and light up the late-season garden in gold. Pick a species that fits your light, moisture, and space — and whether you want a polite clump or a meadow colonizer.</p>
+      </div>
+    </div>
+    <div class="mt-4 p-3 rounded-lg text-sm flex gap-3" style="background:var(--accent-soft);color:var(--accent-ink);">
+      <i data-lucide="badge-check" class="w-5 h-5 shrink-0"></i>
+      <div><strong>The hay-fever myth:</strong> goldenrod does <em>not</em> cause hay fever. Its pollen is heavy and sticky — carried by insects, not wind. The real culprit is <strong>ragweed</strong>, which blooms at the same time with inconspicuous green flowers. Goldenrod just gets the blame for being showy.</div>
+    </div>
+  </div>
+
+  <!-- Care cards grid -->
+  <div class="grid md:grid-cols-2 gap-5 mb-6">
+
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+          <i data-lucide="sun" class="w-5 h-5"></i>
+        </div>
+        <h3 class="font-semibold" style="color:var(--text);">Light &amp; Site</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">Most goldenrods want <strong>full sun</strong> (6+ hours) and bloom best and stand straightest there. A handful are built for shade.</p>
+      <ul class="text-sm space-y-1" style="color:var(--text-muted);">
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Full sun → sturdy stems, maximum flowers</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> For shade, choose Bluestem, Zigzag or Elm-leaved goldenrod</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Too little light → floppy, leggy, few blooms</li>
+      </ul>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+          <i data-lucide="droplets" class="w-5 h-5"></i>
+        </div>
+        <h3 class="font-semibold" style="color:var(--text);">Soil &amp; Water</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">Goldenrods are famously unfussy. Match the species to your moisture and most need little once established.</p>
+      <ul class="text-sm space-y-1" style="color:var(--text-muted);">
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> <strong>Lean soil is a feature</strong> — rich soil makes them flop and run</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Dry-soil species: Gray, Showy, Sweet, Silverrod, Wright's</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Wet/rain-garden species: Ohio, Riddell's, Roughleaf, Giant</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Water the first season; after that, rainfall is usually enough</li>
+      </ul>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+          <i data-lucide="scissors" class="w-5 h-5"></i>
+        </div>
+        <h3 class="font-semibold" style="color:var(--text);">Feeding &amp; Keeping Tidy</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">The two most useful habits are counter-intuitive: <strong>don't fertilize</strong>, and pinch them back early.</p>
+      <ul class="text-sm space-y-1" style="color:var(--text-muted);">
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Skip fertilizer — it causes weak, floppy, over-aggressive growth</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> <strong>Chelsea chop:</strong> cut stems back by ⅓–½ in late spring/early summer for a shorter, bushier, self-supporting plant with more (slightly later) blooms</li>
+        <li class="flex gap-2"><span style="color:var(--accent);">&#10003;</span> Leave seed heads &amp; stems over winter for birds and overwintering insects; cut back in late winter</li>
+      </ul>
+    </div>
+
+    <div class="panel p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+          <i data-lucide="git-merge" class="w-5 h-5"></i>
+        </div>
+        <h3 class="font-semibold" style="color:var(--text);">Managing Spread</h3>
+      </div>
+      <p class="text-sm mb-2" style="color:var(--text-muted);">Some goldenrods clump politely; others run by underground rhizomes. Both are useful — in the right spot.</p>
+      <ul class="text-sm space-y-1" style="color:var(--text-muted);">
+        <li class="flex gap-2"><span class="badge badge-good shrink-0">Clumping</span> Stays put — best for beds &amp; borders (Showy, Stiff, Seaside, 'Fireworks')</li>
+        <li class="flex gap-2"><span class="badge badge-mid shrink-0">Moderate</span> Drifts slowly — fine with occasional division</li>
+        <li class="flex gap-2"><span class="badge badge-agg shrink-0">Aggressive</span> Colonizes — give it a meadow, or divide yearly &amp; edge it (Canada, Tall, Giant)</li>
+      </ul>
+    </div>
+
+  </div><!-- /care cards grid -->
+
+  <!-- Bloom across regions -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="calendar-days" class="w-5 h-5"></i>
+      </div>
+      <h3 class="font-semibold" style="color:var(--text);">When goldenrods bloom across the U.S.</h3>
+    </div>
+    <p class="text-sm mb-4" style="color:var(--text-muted);">Goldenrods are the signature flower of late summer and fall. Exact timing shifts with <strong>latitude and elevation</strong> — bloom arrives earlier in the warm South and at low elevation, and later as you move north or up into the mountains. Each species card lists its own bloom window and a regional note.</p>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);">
+        <div class="font-semibold mb-1 flex items-center gap-2" style="color:var(--text);"><i data-lucide="sun" class="w-4 h-4 text-accent"></i>South &amp; Lowlands</div>
+        <span style="color:var(--text-muted);">Earliest start (Jul–Aug) and the longest season — color can linger into November along the Gulf.</span>
+      </div>
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);">
+        <div class="font-semibold mb-1 flex items-center gap-2" style="color:var(--text);"><i data-lucide="snowflake" class="w-4 h-4 text-accent"></i>North &amp; Midwest</div>
+        <span style="color:var(--text-muted);">Peak Aug–Sep; finishing by mid-October ahead of the first hard frost.</span>
+      </div>
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);">
+        <div class="font-semibold mb-1 flex items-center gap-2" style="color:var(--text);"><i data-lucide="mountain" class="w-4 h-4 text-accent"></i>Mountain West</div>
+        <span style="color:var(--text-muted);">A compressed Jul–Sep window at high elevation — alpine species race the short summer.</span>
+      </div>
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);">
+        <div class="font-semibold mb-1 flex items-center gap-2" style="color:var(--text);"><i data-lucide="waves" class="w-4 h-4 text-accent"></i>Coasts</div>
+        <span style="color:var(--text-muted);">Latest of all — Seaside goldenrod peaks Sep–Nov, fueling monarchs migrating down the Atlantic.</span>
+      </div>
+    </div>
+    <div class="mt-4">
+      <div class="cal" aria-hidden="true">
+        <div class="mo">J</div><div class="mo">F</div><div class="mo">M</div><div class="mo">A</div><div class="mo">M</div><div class="mo">J</div><div class="mo">J</div><div class="mo">A</div><div class="mo">S</div><div class="mo">O</div><div class="mo">N</div><div class="mo">D</div>
+        <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar on"></div><div class="bar on"></div><div class="bar on"></div><div class="bar on"></div><div class="bar on"></div><div class="bar"></div>
+      </div>
+      <div class="text-[11px] text-dim mt-1">Typical U.S. goldenrod bloom window (Jul–Nov), pooled across species and regions.</div>
+    </div>
+  </div>
+
+  <!-- Planting steps -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="shovel" class="w-5 h-5"></i>
+      </div>
+      <h3 class="font-semibold" style="color:var(--text);">Planting a Goldenrod</h3>
+    </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="step-num mb-2">1</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">When</h4>
+        <p class="text-xs" style="color:var(--text-muted);">Plant in <strong>spring or early fall</strong> so roots establish before heat or hard frost. Container plants can go in anytime with watering.</p>
+      </div>
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="step-num mb-2">2</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Where &amp; spacing</h4>
+        <p class="text-xs" style="color:var(--text-muted);">Sun and lean soil for most. Space <strong>18–36"</strong> apart (tall species wider). Skip soil amendments — goldenrods like it poor.</p>
+      </div>
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="step-num mb-2">3</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Plant</h4>
+        <p class="text-xs" style="color:var(--text-muted);">Set at the same depth as the pot, backfill, and water in well. Mulch lightly to settle, keeping it off the crown.</p>
+      </div>
+      <div class="p-4 rounded-xl" style="background:var(--bg-subtle);">
+        <div class="step-num mb-2">4</div>
+        <h4 class="text-sm font-semibold mb-1" style="color:var(--text);">Companions</h4>
+        <p class="text-xs" style="color:var(--text-muted);">Stunning with purple fall asters, plus little bluestem, Joe-Pye weed, ironweed and switchgrass in a meadow or border.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pollinator value -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="bug" class="w-5 h-5"></i>
+      </div>
+      <h3 class="font-semibold" style="color:var(--text);">A Pollinator Powerhouse</h3>
+    </div>
+    <p class="text-sm mb-4" style="color:var(--text-muted);">Few native plants do more for wildlife. Blooming when little else does, goldenrods are a critical <strong>late-season fuel source</strong> heading into winter.</p>
+    <div class="grid sm:grid-cols-3 gap-3">
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);color:var(--text-muted);">
+        <strong style="color:var(--text);">Bees &amp; wasps</strong><br>Supports honey bees plus dozens of specialist native bees that depend on goldenrod pollen.
+      </div>
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);color:var(--text-muted);">
+        <strong style="color:var(--text);">Monarchs</strong><br>A vital nectar stop for monarchs and other butterflies fueling their fall migration.
+      </div>
+      <div class="p-3 rounded-lg text-sm" style="background:var(--bg-subtle);color:var(--text-muted);">
+        <strong style="color:var(--text);">Birds &amp; more</strong><br>Host to 100+ caterpillar species (great bird food); seeds and stems feed and shelter wildlife in winter.
+      </div>
+    </div>
+  </div>
+
+  <!-- Common Problems -->
+  <div class="panel p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-lg grid place-items-center" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="stethoscope" class="w-5 h-5"></i>
+      </div>
+      <h3 class="font-semibold" style="color:var(--text);">Common Problems &amp; Fixes</h3>
+    </div>
+    <div class="space-y-3">
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);">
+        <summary class="font-[600] flex items-center justify-between" style="color:var(--text);">Flopping / floppy stems <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary>
+        <p class="text-sm text-muted mt-2">Almost always too much shade, soil that's too rich, or fertilizer. Move to full sun, stop feeding, and do a Chelsea chop (cut back by a third) in early summer for a sturdy, self-supporting clump.</p>
+      </details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);">
+        <summary class="font-[600] flex items-center justify-between" style="color:var(--text);">It's taking over the bed <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary>
+        <p class="text-sm text-muted mt-2">You likely have a rhizomatous (spreading) species. Divide it every spring, sink a root barrier, or swap to a clumping type like Showy, Stiff or 'Fireworks'. In a meadow, just let it run.</p>
+      </details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);">
+        <summary class="font-[600] flex items-center justify-between" style="color:var(--text);">Powdery mildew (white film on leaves) <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary>
+        <p class="text-sm text-muted mt-2">Common late in the season, especially in crowding or dry shade. Improve airflow with wider spacing, water at the base (not overhead), and cut affected stems. It's cosmetic and rarely harms an established plant.</p>
+      </details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);">
+        <summary class="font-[600] flex items-center justify-between" style="color:var(--text);">Round swelling on the stem (galls) <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary>
+        <p class="text-sm text-muted mt-2">A harmless ball or bunch gall made by a tiny native fly or midge — part of the goldenrod food web (woodpeckers and chickadees eat the larvae). Leave it, or snip the stem if you prefer a tidy look.</p>
+      </details>
+      <details class="rounded-lg p-3" style="background:var(--bg-subtle);">
+        <summary class="font-[600] flex items-center justify-between" style="color:var(--text);">No flowers <i data-lucide="chevron-down" class="w-4 h-4 text-muted"></i></summary>
+        <p class="text-sm text-muted mt-2">Usually not enough sun, or it's blooming later than you expect — goldenrods are late-season plants. Give it full sun and be patient until late summer/fall.</p>
+      </details>
+    </div>
+  </div>
+
+</section>
+</div><!-- /view-care -->
+
+<!-- PROPAGATION VIEW -->
+<div id="view-propagation" class="hidden">
+<section class="max-w-5xl mx-auto px-5 pb-16">
+
+  <div class="panel p-6 md:p-8 mb-6">
+    <div class="flex items-start gap-4">
+      <div class="w-12 h-12 rounded-xl grid place-items-center shrink-0" style="background:var(--accent-soft);color:var(--accent-ink);">
+        <i data-lucide="copy-plus" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h2 class="serif text-2xl md:text-3xl font-[800]" style="color:var(--text);">How to Propagate <span class="text-accent">Goldenrods</span></h2>
+        <p class="text-sm text-muted mt-1">Goldenrods are among the easiest perennials to multiply. Division is nearly foolproof; seed gives you lots of plants for a meadow; cuttings are handy for cultivars.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Method cards -->
+  <div class="grid md:grid-cols-2 gap-4 mb-8">
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="git-merge" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Division</h3><span class="badge badge-good ml-auto">Easiest</span></div>
+      <p class="text-sm text-muted mb-3">The fastest, most reliable method — and it keeps cultivars true.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">Any established clump; essential for named cultivars like 'Fireworks' &amp; 'Golden Fleece'.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">When</div>
+      <p class="text-sm">Early spring or fall, every 2–3 years</p>
+    </div>
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="sprout" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Seed</h3><span class="badge badge-mid ml-auto">Needs cold</span></div>
+      <p class="text-sm text-muted mb-3">Cheap and abundant — ideal for meadows and restoration.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">Straight species (not cultivars, which don't come true from seed).</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">When</div>
+      <p class="text-sm">Sow fall or winter-sow; needs cold-moist stratification</p>
+    </div>
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="scissors" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Stem Cuttings</h3><span class="badge badge-mid ml-auto">Intermediate</span></div>
+      <p class="text-sm text-muted mb-3">Clone a favorite plant without disturbing the parent.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">Cultivars and choice plants you want more of.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">When</div>
+      <p class="text-sm">Late spring–early summer (soft, non-flowering shoots)</p>
+    </div>
+    <div class="panel p-5">
+      <div class="flex items-center gap-2 mb-2"><i data-lucide="network" class="w-4 h-4 text-accent"></i><h3 class="serif text-lg font-[700]" style="color:var(--text);">Rhizome Cuttings</h3><span class="badge badge-good ml-auto">Easy</span></div>
+      <p class="text-sm text-muted mb-3">Spreading types hand you ready-made plants at the edges.</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1">Best for</div>
+      <p class="text-sm">Rhizomatous species (Canada, Tall, Giant, Grass-leaved).</p>
+      <div class="text-xs uppercase tracking-wider text-dim mb-1 mt-3">When</div>
+      <p class="text-sm">Spring — slice rooted runners from the colony edge</p>
+    </div>
+  </div>
+
+  <!-- Step-by-step: Division -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <h3 class="serif text-xl font-[800] mb-1" style="color:var(--text);">Step-by-Step: Division</h3>
+    <p class="text-sm text-muted mb-5">The foolproof method for almost every goldenrod — and the only way to multiply cultivars true to type.</p>
+    <ol class="space-y-5">
+      <li class="flex gap-4"><div class="step-num">1</div><div>
+        <h4 class="font-[600] mb-1" style="color:var(--text);">Time it right</h4>
+        <p class="text-sm text-muted">Divide in <strong>early spring</strong> as new growth emerges, or in <strong>fall</strong> after blooming. Cooler, moist weather lets divisions root before stress. Avoid dividing in summer heat.</p>
+      </div></li>
+      <li class="flex gap-4"><div class="step-num">2</div><div>
+        <h4 class="font-[600] mb-1" style="color:var(--text);">Lift the clump</h4>
+        <p class="text-sm text-muted">Water the day before. Dig a generous circle around the plant and lever the whole rootball out with a spade or fork, keeping as many roots as you can.</p>
+      </div></li>
+      <li class="flex gap-4"><div class="step-num">3</div><div>
+        <h4 class="font-[600] mb-1" style="color:var(--text);">Split into sections</h4>
+        <p class="text-sm text-muted">Pull or cut the clump into chunks, each with <strong>several shoots/buds and a fist of roots</strong>. A sharp spade or two forks back-to-back works for tough crowns. Discard any dead woody center.</p>
+      </div></li>
+      <li class="flex gap-4"><div class="step-num">4</div><div>
+        <h4 class="font-[600] mb-1" style="color:var(--text);">Replant immediately</h4>
+        <p class="text-sm text-muted">Set divisions at their original depth, space per the plant's mature size, firm the soil, and water well. Pot up spares to share.</p>
+      </div></li>
+      <li class="flex gap-4"><div class="step-num">5</div><div>
+        <h4 class="font-[600] mb-1" style="color:var(--text);">Aftercare</h4>
+        <p class="text-sm text-muted">Keep evenly moist for 3–4 weeks while roots re-establish. No fertilizer needed. Spring divisions often bloom the same fall.</p>
+      </div></li>
+    </ol>
+  </div>
+
+  <!-- Step-by-step: Seed -->
+  <div class="panel p-6 md:p-8 mb-6">
+    <h3 class="serif text-xl font-[800] mb-1" style="color:var(--text);">Step-by-Step: From Seed</h3>
+    <p class="text-sm text-muted mb-5">Goldenrod seed needs a cold, moist period to break dormancy — easy to provide with nature or your fridge.</p>
+    <ol class="space-y-5">
+      <li class="flex gap-4"><div class="step-num">1</div><div>
+        <h4 class="font-[600] mb-1" style="color:var(--text);">Collect or buy fresh seed</h4>
+        <p class="text-sm text-muted">Gather fluffy seed heads in late fall once they're dry and tan. Fresh seed germinates best; store cool and dry until sowing.</p>
+      </div></li>
+      <li class="flex gap-4"><div class="step-num">2</div><div>
+        <h4 class="font-[600] mb-1" style="color:var(--text);">Cold-moist stratify (30–60 days)</h4>
+        <p class="text-sm text-muted">Mix seed with damp sand in a labeled bag in the fridge for 1–2 months — or simply <strong>winter-sow</strong> outdoors in fall/winter and let the cold do it for you.</p>
+      </div></li>
+      <li class="flex gap-4"><div class="step-num">3</div><div>
+        <h4 class="font-[600] mb-1" style="color:var(--text);">Surface-sow — light needed</h4>
+        <p class="text-sm text-muted">Press the tiny seeds onto the surface of moist mix and <strong>do not bury them</strong> — goldenrod seed needs light to germinate. Keep consistently damp.</p>
+      </div></li>
+      <li class="flex gap-4"><div class="step-num">4</div><div>
+        <h4 class="font-[600] mb-1" style="color:var(--text);">Warmth &amp; patience</h4>
+        <p class="text-sm text-muted">After stratification, germination comes in 1–3 weeks at room temperature in bright light. Pot up seedlings once they have a few true leaves.</p>
+      </div></li>
+      <li class="flex gap-4"><div class="step-num">5</div><div>
+        <h4 class="font-[600] mb-1" style="color:var(--text);">Grow on</h4>
+        <p class="text-sm text-muted">Most seed-grown goldenrods bloom in their <strong>second year</strong>. Harden off and plant out after frost, then enjoy years of gold.</p>
+      </div></li>
+    </ol>
+  </div>
+
+  <!-- Timing table -->
+  <div class="panel p-6 md:p-8">
+    <h3 class="serif text-xl font-[800] mb-4" style="color:var(--text);">Quick Timing Guide</h3>
+    <div class="overflow-x-auto scroll-thin">
+      <table class="w-full text-sm" style="color:var(--text-muted);">
+        <thead>
+          <tr style="color:var(--text);">
+            <th class="text-left font-semibold py-2 pr-4">Method</th>
+            <th class="text-left font-semibold py-2 pr-4">Best season</th>
+            <th class="text-left font-semibold py-2 pr-4">Difficulty</th>
+            <th class="text-left font-semibold py-2">First blooms</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-top:1px solid var(--border);"><td class="py-2 pr-4">Division</td><td class="py-2 pr-4">Early spring / fall</td><td class="py-2 pr-4"><span class="badge badge-good">Easiest</span></td><td class="py-2">Same year (spring) – next year</td></tr>
+          <tr style="border-top:1px solid var(--border);"><td class="py-2 pr-4">Rhizome cuttings</td><td class="py-2 pr-4">Spring</td><td class="py-2 pr-4"><span class="badge badge-good">Easy</span></td><td class="py-2">Same year – next year</td></tr>
+          <tr style="border-top:1px solid var(--border);"><td class="py-2 pr-4">Stem cuttings</td><td class="py-2 pr-4">Late spring–early summer</td><td class="py-2 pr-4"><span class="badge badge-mid">Intermediate</span></td><td class="py-2">Next year</td></tr>
+          <tr style="border-top:1px solid var(--border);"><td class="py-2 pr-4">Seed</td><td class="py-2 pr-4">Fall sow / winter-sow</td><td class="py-2 pr-4"><span class="badge badge-mid">Needs cold</span></td><td class="py-2">Second year</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+</div><!-- /view-propagation -->
+
+<!-- MODAL -->
+<div id="modal" class="hidden fixed inset-0 z-50 items-center justify-center p-4">
+  <div class="absolute inset-0 modal-backdrop" data-close></div>
+  <div class="panel relative w-full max-w-3xl max-h-[90vh] overflow-y-auto scroll-thin p-6 md:p-8 fade-in" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <button class="absolute top-4 right-4 theme-toggle" data-close aria-label="Close">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="max-w-7xl mx-auto px-5 pb-10 text-xs text-dim">
+  <div class="divider border-t pt-5 flex flex-col gap-1">
+    <div>Leaf &amp; flower photos from <a href="https://www.inaturalist.org" target="_blank" rel="noopener" class="underline text-accent">iNaturalist</a> community observers, used under their Creative Commons licenses. Click any card to view the source species.</div>
+    <div>Horticultural data compiled from public native-plant references (USDA PLANTS, Lady Bird Johnson Wildflower Center, Mt. Cuba Center goldenrod trials, and regional botanical gardens). For general guidance — always confirm a species is appropriate and non-invasive for your area before planting.</div>
+  </div>
+</footer>
+
+<script>
+/* =========================================================================
+   GOLDENROD DATA — U.S. native Solidago (+ Euthamia). Each record carries
+   region, bloom window + regional note, light/water/soil, garden manners,
+   wildlife value, propagation, and verified leaf + flower photo URLs.
+   ========================================================================= */
+const GOLDENRODS = [
+  {"sci": "Solidago canadensis", "rank": 1, "common": "Canada Goldenrod", "region": "Widespread", "range": "Across most of the U.S. & Canada; especially abundant in the East & Midwest", "zones": "3–9", "bloom": "Aug–Oct", "bloomNote": "Late Jul–Aug in the South; Sep–Oct in the North & at higher elevations", "light": "Full sun", "water": "Dry–medium", "height": "3–5 ft", "spread": "2–4 ft, spreads by rhizomes", "soil": "Average, well-drained; highly adaptable", "habitat": "Old fields, prairies, roadsides, meadows, forest edges", "manners": "Aggressive spreader", "bestFor": "Large meadows, naturalized areas, pollinator plantings", "wildlife": "A keystone species — supports 100+ insect species and feeds native bees and fall-migrating monarchs", "prop": "Division, seed, rhizome cuttings", "propNote": "Spreads readily; division is effortless", "fragrant": false, "fact": "One of the most widespread goldenrods and a pollinator keystone — few perennials feed more insects.", "taxonId": 67808, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/10517267/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/608434159/medium.jpg"},
+  {"sci": "Solidago rugosa", "rank": 2, "common": "Wrinkleleaf Goldenrod", "region": "Eastern US", "range": "Eastern North America, Newfoundland to Texas; common along the East Coast", "zones": "4–9", "bloom": "Aug–Oct", "bloomNote": "Aug–Sep in the mid-Atlantic; into Oct farther south", "light": "Sun–part shade", "water": "Medium–moist", "height": "3–5 ft", "spread": "Rhizomatous; cultivar 'Fireworks' stays clumped", "soil": "Average to moist; tolerates clay", "habitat": "Moist meadows, thickets, marsh edges, roadsides", "manners": "Moderate spreader", "bestFor": "Borders & rain gardens — 'Fireworks' is a top ornamental", "wildlife": "Excellent nectar and pollen for bees, wasps, butterflies and beneficial insects", "prop": "Division, cuttings, seed", "propNote": "Division of the cultivar keeps it true and tidy", "fragrant": false, "fact": "The cultivar 'Fireworks' sends out arching sprays that burst outward like a fireworks display.", "taxonId": 128551, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/57524928/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/50041397/medium.jpg"},
+  {"sci": "Solidago speciosa", "rank": 3, "common": "Showy Goldenrod", "region": "Midwest & Plains", "range": "Eastern & central U.S., New Hampshire to Minnesota, south to Georgia & Texas", "zones": "3–8", "bloom": "Sep–Oct", "bloomNote": "One of the later bloomers — Sep–Oct across most of its range", "light": "Sun–part shade", "water": "Dry–medium", "height": "2–4 ft", "spread": "Clumping — well-behaved", "soil": "Sandy, lean, well-drained", "habitat": "Prairies, savannas, open woods, dry slopes", "manners": "Clumping", "bestFor": "Borders & prairie gardens — one of the most garden-friendly goldenrods", "wildlife": "Dense pyramidal plumes are a magnet for late-season bees and migrating monarchs", "prop": "Seed, division", "propNote": "Clump-forming; slow and easy to divide", "fragrant": false, "fact": "Stout reddish stems hold showy, dense pyramidal flower clusters — and it stays put in a bed.", "taxonId": 130376, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/173927186/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/52411825/medium.jpg"},
+  {"sci": "Solidago rigida", "rank": 4, "common": "Stiff Goldenrod", "region": "Midwest & Plains", "range": "Central U.S. and the Great Plains, eastward to the Atlantic", "zones": "3–9", "bloom": "Aug–Oct", "bloomNote": "Aug–Sep across the prairie; slightly later east", "light": "Full sun", "water": "Dry–medium", "height": "3–5 ft", "spread": "Clumping", "soil": "Average to dry; tolerates clay", "habitat": "Prairies, plains, open ground", "manners": "Clumping", "bestFor": "Prairie gardens & borders; flat-topped flowers add structure", "wildlife": "A top pollinator performer — flat-topped clusters act as landing pads for bees and butterflies", "prop": "Seed, division", "propNote": "Slow clumper; easy from seed", "fragrant": false, "fact": "Its flat-topped flower clusters and stiff, sandpapery oval leaves set it apart from the usual plumes. Now sometimes placed in genus Oligoneuron.", "taxonId": 125721, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/710934/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/24387774/medium.jpg"},
+  {"sci": "Solidago sempervirens", "rank": 5, "common": "Seaside Goldenrod", "region": "Eastern US", "range": "Atlantic & Gulf coasts, Newfoundland to Texas; inland along salted highways", "zones": "4–9", "bloom": "Aug–Nov", "bloomNote": "Peaks Sep–Nov — one of the latest, fueling the monarch migration", "light": "Full sun", "water": "Dry–medium", "height": "2–6 ft", "spread": "Clumping", "soil": "Sandy, salty, poor; tolerates salt spray", "habitat": "Dunes, salt marshes, beaches, coastal bluffs", "manners": "Clumping", "bestFor": "Coastal & seaside gardens, sandy or salty sites, rain gardens", "wildlife": "A critical fall fuel stop for monarchs migrating down the Atlantic coast", "prop": "Seed, division", "propNote": "Easy from seed; thick taproot resents disturbance once established", "fragrant": false, "fact": "Thick, succulent, salt-resistant leaves let it thrive on open dunes — and its late bloom is vital for migrating monarchs.", "taxonId": 126888, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/108116857/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/17517063/medium.jpeg"},
+  {"sci": "Solidago odora", "rank": 6, "common": "Sweet Goldenrod", "region": "Southeastern US", "range": "Eastern U.S., especially the Southeast — New Hampshire to Florida & Texas", "zones": "4–9", "bloom": "Jul–Sep", "bloomNote": "Early — Jul–Sep, ahead of most goldenrods in the South", "light": "Sun–part shade", "water": "Dry–medium", "height": "2–4 ft", "spread": "Clumping", "soil": "Dry, sandy, well-drained", "habitat": "Dry open woods, clearings, sandy soils", "manners": "Clumping", "bestFor": "Borders and herb/tea gardens — the culinary goldenrod", "wildlife": "Excellent nectar; larval host for several moths", "prop": "Seed, division, cuttings", "propNote": "Clumping and easy to keep in bounds", "fragrant": true, "fact": "Crushed leaves smell of anise/licorice and brew a pleasant tea — it's Delaware's state herb and the one widely-used culinary goldenrod.", "taxonId": 131183, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/55805491/medium.jpg", "leafImg": "https://static.inaturalist.org/photos/9653980/medium.jpg"},
+  {"sci": "Solidago caesia", "rank": 7, "common": "Bluestem Goldenrod", "region": "Eastern US", "range": "Eastern North America", "zones": "4–8", "bloom": "Aug–Oct", "bloomNote": "Aug–Oct; a reliable shade bloomer through early fall", "light": "Part shade–shade", "water": "Medium", "height": "1–3 ft", "spread": "Clumping", "soil": "Rich, well-drained woodland soil", "habitat": "Open woods, shaded slopes, forest edges", "manners": "Clumping", "bestFor": "Shade & woodland gardens — one of the few goldenrods for shade", "wildlife": "A valuable late-season nectar source in shaded gardens that few plants provide", "prop": "Seed, division", "propNote": "Slow clumper; lift and divide in spring", "fragrant": false, "fact": "Arching purple-blue stems carry flowers tucked along the leaf axils like a wreath — and it thrives in shade where most goldenrods sulk.", "taxonId": 120005, "flowerImg": "https://static.inaturalist.org/photos/157945142/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/164199622/medium.jpg"},
+  {"sci": "Solidago nemoralis", "rank": 8, "common": "Gray Goldenrod", "region": "Widespread", "range": "Eastern & central North America", "zones": "3–9", "bloom": "Aug–Oct", "bloomNote": "Aug–Sep in the South; Sep–Oct northward", "light": "Full sun", "water": "Dry", "height": "1–2.5 ft", "spread": "Slowly clumping", "soil": "Dry, poor, sandy or rocky", "habitat": "Dry fields, prairies, rocky open ground", "manners": "Clumping", "bestFor": "Dry & lean soils, rock gardens, small spaces — compact", "wildlife": "A reliable nectar source on poor soils where little else blooms", "prop": "Seed, division", "propNote": "Compact and slow-spreading", "fragrant": false, "fact": "A short, drought-tough goldenrod with gray-downy leaves; its plumes often nod gracefully to one side.", "taxonId": 130377, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/4745737/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/2373648/medium.jpg"},
+  {"sci": "Solidago altissima", "rank": 9, "common": "Tall Goldenrod", "region": "Widespread", "range": "Most of the continental U.S.; the classic roadside goldenrod across the East, Midwest & South", "zones": "3–9", "bloom": "Aug–Oct", "bloomNote": "As early as Aug in the North; lingers into Nov in the Deep South", "light": "Full sun", "water": "Dry–medium", "height": "4–6 ft", "spread": "Rhizomatous; forms large colonies", "soil": "Adaptable, average to poor", "habitat": "Fields, prairies, roadsides, disturbed ground", "manners": "Aggressive spreader", "bestFor": "Meadows, restoration, naturalizing", "wildlife": "Major late-season nectar source; host to the goldenrod gall fly and dozens of specialist insects", "prop": "Division, seed", "propNote": "Vigorous; thin colonies by division", "fragrant": false, "fact": "Hosts the famous round 'ball gall.' Its leaves were brewed as 'Liberty Tea' after the Boston Tea Party.", "taxonId": 79148, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/5227674/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/228310937/medium.jpg"},
+  {"sci": "Solidago sphacelata", "rank": 10, "common": "Autumn Goldenrod", "region": "Southeastern US", "range": "Southeastern U.S. and the southern Appalachians", "zones": "4–8", "bloom": "Aug–Oct", "bloomNote": "Aug–Oct; the cultivar 'Golden Fleece' blooms reliably into fall", "light": "Sun–part shade", "water": "Dry–medium", "height": "1.5–3 ft", "spread": "Clumping", "soil": "Average, well-drained; adaptable, tolerates limestone", "habitat": "Woodland edges, slopes, limestone outcrops", "manners": "Clumping", "bestFor": "Front of border, edging, groundcover — the compact 'Golden Fleece'", "wildlife": "Long bloom feeds bees and butterflies well into autumn", "prop": "Division, seed", "propNote": "'Golden Fleece' is propagated by division to stay compact", "fragrant": false, "fact": "Heart-shaped basal leaves and a dwarf habit; the cultivar 'Golden Fleece' is a tidy, award-winning front-of-border goldenrod.", "taxonId": 169127, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/98971694/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/93280893/medium.jpeg"},
+  {"sci": "Solidago gigantea", "rank": 11, "common": "Giant Goldenrod", "region": "Widespread", "range": "Most of the U.S. and Canada", "zones": "3–9", "bloom": "Jul–Oct", "bloomNote": "Starts mid-summer (Jul) in the South; Aug–Oct in the North", "light": "Full sun", "water": "Medium–moist", "height": "3–6 ft", "spread": "Rhizomatous; colony-forming", "soil": "Moist, average to wet", "habitat": "Moist meadows, stream banks, ditches, thickets", "manners": "Aggressive spreader", "bestFor": "Moist meadows, rain gardens, naturalizing", "wildlife": "Abundant nectar and pollen; supports many specialist bees", "prop": "Division, seed", "propNote": "Vigorous rhizomes; give it room", "fragrant": false, "fact": "Smooth, often waxy blue-green ('glaucous') stems separate it from the hairy-stemmed Canada goldenrod. It's become an invasive weed in Europe.", "taxonId": 83073, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/9567301/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/51594321/medium.jpg"},
+  {"sci": "Solidago flexicaulis", "rank": 12, "common": "Zigzag Goldenrod", "region": "Eastern US", "range": "Eastern North America", "zones": "3–8", "bloom": "Aug–Oct", "bloomNote": "Aug–Oct; reliable color in the shade through fall", "light": "Part shade–shade", "water": "Medium–moist", "height": "1–3 ft", "spread": "Rhizomatous (slow); forms colonies", "soil": "Rich, moist woodland soil", "habitat": "Moist woods, ravines, shaded slopes", "manners": "Moderate spreader", "bestFor": "Shade & woodland gardens, groundcover under trees", "wildlife": "Late-season nectar for shade-garden pollinators", "prop": "Seed, division", "propNote": "Spreads gently into drifts by rhizome", "fragrant": false, "fact": "Named for its distinctive zigzag stem; broad oval leaves and axillary flowers make it a standout shade goldenrod.", "taxonId": 119154, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/96559823/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/98560/medium.jpg"},
+  {"sci": "Solidago ohioensis", "rank": 13, "common": "Ohio Goldenrod", "region": "Midwest & Plains", "range": "Great Lakes region and the upper Midwest", "zones": "3–7", "bloom": "Aug–Sep", "bloomNote": "Aug–Sep across the Great Lakes region", "light": "Full sun", "water": "Moist–wet", "height": "2–3.5 ft", "spread": "Clumping", "soil": "Wet to moist; tolerates alkaline/calcareous soils", "habitat": "Fens, wet prairies, marsh edges, lakeshores", "manners": "Clumping", "bestFor": "Rain gardens, pond edges, wet meadows", "wildlife": "Flat-topped clusters draw bees, butterflies and beneficial wasps", "prop": "Seed, division", "propNote": "Well-behaved clumper for wet sites", "fragrant": false, "fact": "Smooth foliage and flat-topped flower clusters on a tidy clump — an ideal goldenrod for rain gardens and pond edges.", "taxonId": 324524, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/291628151/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/2377123/medium.JPG"},
+  {"sci": "Solidago riddellii", "rank": 14, "common": "Riddell's Goldenrod", "region": "Midwest & Plains", "range": "Midwest and the eastern Great Plains", "zones": "3–7", "bloom": "Aug–Oct", "bloomNote": "Aug–Oct in the prairie region", "light": "Full sun", "water": "Moist–wet", "height": "2–4 ft", "spread": "Clumping", "soil": "Wet to moist; clay and calcareous tolerant", "habitat": "Wet prairies, fens, marshes", "manners": "Clumping", "bestFor": "Rain gardens and wet prairie plantings", "wildlife": "An outstanding pollinator plant; flat-topped heads are bee and butterfly magnets", "prop": "Seed, division", "propNote": "Clump-forming; divide in spring", "fragrant": false, "fact": "Distinctive folded, arching, grass-like leaves and flat-topped flower heads — a clumping wetland species beloved by pollinators.", "taxonId": 207608, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/520541/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/4271993/medium.jpg"},
+  {"sci": "Solidago bicolor", "rank": 15, "common": "Silverrod", "region": "Eastern US", "range": "Eastern North America", "zones": "3–8", "bloom": "Aug–Oct", "bloomNote": "Aug–Oct in dry woods and clearings", "light": "Sun–part shade", "water": "Dry", "height": "1–3 ft", "spread": "Clumping", "soil": "Dry, poor, sandy or rocky", "habitat": "Dry open woods, clearings, banks", "manners": "Clumping", "bestFor": "Dry shade and woodland edges; unique white color for contrast", "wildlife": "Nectar for bees and butterflies on dry, poor sites", "prop": "Seed, division", "propNote": "Slow clumper from seed", "fragrant": false, "fact": "The only goldenrod with creamy-white instead of yellow flowers — hence 'silverrod' — and it thrives in dry, poor soil.", "taxonId": 146717, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/52068313/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/327763954/medium.jpeg"},
+  {"sci": "Solidago juncea", "rank": 16, "common": "Early Goldenrod", "region": "Eastern US", "range": "Eastern North America", "zones": "3–8", "bloom": "Jul–Sep", "bloomNote": "The earliest goldenrod — often blooming by July, weeks ahead of the rest", "light": "Sun–part shade", "water": "Dry–medium", "height": "2–4 ft", "spread": "Moderately rhizomatous", "soil": "Dry, well-drained", "habitat": "Dry fields, clearings, roadsides", "manners": "Moderate spreader", "bestFor": "Meadows; prized for bridging the summer-to-fall nectar gap", "wildlife": "Important early nectar when few other goldenrods are open", "prop": "Seed, division", "propNote": "Spreads modestly by rhizomes", "fragrant": false, "fact": "Among the first goldenrods to bloom — sometimes in early July — with smooth foliage and gracefully arching plumes.", "taxonId": 135261, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/425157/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/9651955/medium.jpeg"},
+  {"sci": "Solidago missouriensis", "rank": 17, "common": "Missouri Goldenrod", "region": "Midwest & Plains", "range": "Great Plains and the western U.S., east into the Midwest", "zones": "3–9", "bloom": "Jul–Sep", "bloomNote": "Early — Jul–Sep, ahead of most prairie goldenrods", "light": "Full sun", "water": "Dry", "height": "1.5–3 ft", "spread": "Rhizomatous but restrained", "soil": "Dry, well-drained; poor soils", "habitat": "Dry prairies, plains, roadsides", "manners": "Moderate spreader", "bestFor": "Prairie and dry gardens, erosion control", "wildlife": "Early-fall nectar for prairie pollinators", "prop": "Seed, division", "propNote": "Modest rhizomes; easy from seed", "fragrant": false, "fact": "A tough, drought-resistant prairie goldenrod with smooth, red-tinged stems that blooms earlier than most.", "taxonId": 130378, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/10872638/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/404784800/medium.jpeg"},
+  {"sci": "Solidago multiradiata", "rank": 18, "common": "Alpine Goldenrod", "region": "Western US", "range": "Western mountains — Rockies, Sierra, Cascades — plus Alaska and the far Northeast", "zones": "2–7", "bloom": "Jul–Sep", "bloomNote": "Jul–Sep — a compressed bloom in the short alpine summer", "light": "Full sun", "water": "Dry–medium", "height": "4–16 in", "spread": "Clumping basal rosette", "soil": "Gritty, sharply drained, rocky", "habitat": "Alpine meadows, tundra, rocky slopes at high elevation", "manners": "Clumping", "bestFor": "Rock gardens and alpine or high-elevation plantings", "wildlife": "Key high-elevation nectar for mountain bees and butterflies", "prop": "Seed, division", "propNote": "Forms tidy rosettes; divide carefully", "fragrant": false, "fact": "A compact goldenrod of high mountains and the Arctic — it forms neat basal rosettes and rarely tops a foot tall.", "taxonId": 79153, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/23270225/medium.jpeg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/33480921/medium.jpeg"},
+  {"sci": "Solidago velutina", "rank": 19, "common": "Velvety Goldenrod", "region": "Western US", "range": "Western U.S. — California, the Southwest, Rockies and Great Basin (includes California goldenrod)", "zones": "4–9", "bloom": "Aug–Oct", "bloomNote": "Aug–Oct; can begin in late summer at lower elevations", "light": "Sun–part shade", "water": "Dry", "height": "1.5–3 ft", "spread": "Rhizomatous; can colonize", "soil": "Dry, well-drained; poor soils", "habitat": "Open woods, slopes, chaparral edges, dry meadows", "manners": "Moderate spreader", "bestFor": "Western native and drought-tolerant gardens", "wildlife": "A key western fall nectar source for native bees and butterflies", "prop": "Seed, division", "propNote": "Spreads modestly by rhizome", "fragrant": false, "fact": "The common goldenrod of the West and Southwest — California goldenrod is a subspecies — drought-tough with soft, velvety foliage.", "taxonId": 79155, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/88428498/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/47141377/medium.jpg"},
+  {"sci": "Solidago patula", "rank": 20, "common": "Roughleaf Goldenrod", "region": "Eastern US", "range": "Eastern U.S.", "zones": "3–8", "bloom": "Aug–Oct", "bloomNote": "Aug–Oct in wet woods and swamps", "light": "Sun–part shade", "water": "Moist–wet", "height": "2–5 ft", "spread": "Clumping", "soil": "Wet, mucky, rich", "habitat": "Swamps, wet woods, seeps, marshes", "manners": "Clumping", "bestFor": "Rain gardens, wet shade, bog and stream edges", "wildlife": "Nectar for late-season bees and butterflies in wetland gardens", "prop": "Seed, division", "propNote": "Clumps slowly in consistently moist soil", "fragrant": false, "fact": "Large basal leaves are sandpapery-rough enough to scratch — and it's one of the few goldenrods happy in wet shade.", "taxonId": 145721, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/151855026/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/45985294/medium.jpeg"},
+  {"sci": "Solidago ulmifolia", "rank": 21, "common": "Elm-leaved Goldenrod", "region": "Eastern US", "range": "Eastern & central U.S.", "zones": "3–8", "bloom": "Aug–Sep", "bloomNote": "Aug–Sep along woodland edges", "light": "Part shade", "water": "Dry–medium", "height": "2–4 ft", "spread": "Clumping", "soil": "Average, well-drained woodland soil", "habitat": "Open woods, edges, thickets", "manners": "Clumping", "bestFor": "Woodland edges and partly shaded borders", "wildlife": "Airy sprays of nectar-rich flowers for woodland pollinators", "prop": "Seed, division", "propNote": "Tidy clumper for shadier sites", "fragrant": false, "fact": "Elm-like, sharply toothed leaves and airy, arching one-sided flower sprays make this an elegant woodland-edge goldenrod.", "taxonId": 129599, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/127499/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/10101543/medium.jpg"},
+  {"sci": "Solidago puberula", "rank": 22, "common": "Downy Goldenrod", "region": "Eastern US", "range": "Eastern U.S., especially the coastal plain and Appalachians", "zones": "3–8", "bloom": "Aug–Oct", "bloomNote": "Aug–Oct on dry, sandy and rocky ground", "light": "Sun–part shade", "water": "Dry", "height": "1.5–3 ft", "spread": "Clumping", "soil": "Dry, sandy or rocky, acidic", "habitat": "Dry sandy or rocky open woods and barrens", "manners": "Clumping", "bestFor": "Dry sandy gardens; a slender vertical accent", "wildlife": "Nectar for late-season bees on lean, acidic soils", "prop": "Seed, division", "propNote": "Compact clumper", "fragrant": false, "fact": "Slender, wand-like flower spikes rise on reddish stems; it shrugs off dry, acidic, sandy soils that defeat other goldenrods.", "taxonId": 126658, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/242561328/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/67756974/medium.jpeg"},
+  {"sci": "Euthamia graminifolia", "rank": 23, "common": "Grass-leaved Goldenrod", "region": "Widespread", "range": "Most of North America, especially the East and Midwest", "zones": "3–9", "bloom": "Aug–Sep", "bloomNote": "Aug–Sep across its broad range", "light": "Full sun", "water": "Medium–moist", "height": "2–4 ft", "spread": "Rhizomatous; colony-forming", "soil": "Average to moist; adaptable", "habitat": "Moist fields, shores, ditches, disturbed ground", "manners": "Aggressive spreader", "bestFor": "Moist meadows and naturalizing — not small beds", "wildlife": "Flat-topped clusters are a major late-season nectar source for many insects", "prop": "Seed, division", "propNote": "Spreads freely; best where it can roam", "fragrant": false, "fact": "Now placed in genus Euthamia, not Solidago — narrow grass-like leaves and flat-topped flower clusters set it apart from true goldenrods.", "taxonId": 130989, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/10148349/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/20772449/medium.jpg"},
+  {"sci": "Solidago wrightii", "rank": 24, "common": "Wright's Goldenrod", "region": "Southwestern US", "range": "The Southwest — Arizona, New Mexico, Texas, Colorado — into northern Mexico", "zones": "4–8", "bloom": "Aug–Oct", "bloomNote": "Aug–Oct, after summer monsoon rains in the Southwest", "light": "Full sun", "water": "Dry", "height": "1–3 ft", "spread": "Clumping", "soil": "Rocky, gravelly, sharply drained", "habitat": "Rocky slopes, pinyon-juniper woodland, high-desert grasslands", "manners": "Clumping", "bestFor": "Southwestern xeric & rock gardens", "wildlife": "An important fall nectar source in the arid Southwest", "prop": "Seed, division", "propNote": "Drought-hardy clumper", "fragrant": false, "fact": "A drought-hardy goldenrod of the desert Southwest's rocky uplands and pinyon-juniper country.", "taxonId": 169135, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/76951628/medium.jpg", "leafImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/2438407/medium.JPG"},
+  {"sci": "Solidago shortii", "rank": 25, "common": "Short's Goldenrod", "region": "Eastern US", "range": "Endemic to a tiny area of Kentucky & Indiana — federally protected", "zones": "5–8", "bloom": "Aug–Oct", "bloomNote": "Aug–Oct in its native cedar glades", "light": "Sun–part shade", "water": "Dry–medium", "height": "2–4 ft", "spread": "Rhizomatous", "soil": "Rocky, calcareous, well-drained", "habitat": "Cedar glades, rocky openings, oak barrens", "manners": "Moderate spreader", "bestFor": "Conservation & native-plant collections; the cultivar 'Solar Cascade'", "wildlife": "Nectar for bees and butterflies; part of rare-plant conservation plantings", "prop": "Seed, division", "propNote": "Nursery-propagated to help conserve the species", "fragrant": false, "fact": "A rare, federally endangered goldenrod once known from a single Kentucky site; the cultivar 'Solar Cascade' helps keep it in cultivation.", "taxonId": 169125, "flowerImg": "https://inaturalist-open-data.s3.amazonaws.com/photos/24790636/medium.jpg", "leafImg": "https://static.inaturalist.org/photos/230438549/medium.jpg"}
+];
+
+/* ---------- UI state ---------- */
+const state = {
+  search:"",
+  sort:"rank",
+  filters:{region:new Set(),light:new Set(),water:new Set(),height:new Set(),bloom:new Set(),manners:new Set()},
+  compare:new Set(),
+  compareMode:false
+};
+
+/* ---------- Helpers ---------- */
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>Array.from(el.querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const italicSci = sci => `<em>${esc(sci)}</em>`;
+
+const MONTHS = {Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12};
+function bloomMonths(o){
+  const m = o.bloom.match(/[A-Z][a-z]{2}/g) || [];
+  return m.map(x=>MONTHS[x]).filter(Boolean);
+}
+function bloomBucket(o){
+  const mm = bloomMonths(o);
+  const start = mm[0]||8, end = mm[mm.length-1]||9;
+  if(start<=7) return "Mid-summer";
+  if(start>=9 || end>=11) return "Autumn";
+  return "Late summer";
+}
+const BLOOM_ORDER = {"Mid-summer":1,"Late summer":2,"Autumn":3};
+
+// mature height in feet (handles "in" units)
+function heightMaxFt(o){
+  const inInches = /in\b/.test(o.height);
+  const nums = (o.height.match(/[\d.]+/g)||[]).map(Number);
+  if(!nums.length) return 0;
+  let v = Math.max(...nums);
+  return inInches ? v/12 : v;
+}
+function heightBucket(o){
+  const f = heightMaxFt(o);
+  if(f < 3) return "Short (under 3 ft)";
+  if(f <= 5) return "Medium (3–5 ft)";
+  return "Tall (over 5 ft)";
+}
+const HEIGHT_ORDER = {"Short (under 3 ft)":1,"Medium (3–5 ft)":2,"Tall (over 5 ft)":3};
+const MANNERS_ORDER = {"Clumping":1,"Moderate spreader":2,"Aggressive spreader":3};
+
+const mannersBadge = m => {
+  const cls = m==="Clumping"?"badge-good":m==="Moderate spreader"?"badge-mid":"badge-agg";
+  const short = m==="Clumping"?"Clumping":m==="Moderate spreader"?"Moderate":"Spreads";
+  return `<span class="badge ${cls}" title="${esc(m)}">${short}</span>`;
+};
+
+const careIcons = o => `
+  <span class="inline-flex items-center gap-1 text-[11px] text-muted" title="Light: ${esc(o.light)}"><i data-lucide="sun" class="care-icon" style="color:#f59e0b;"></i>${esc(o.light)}</span>
+  <span class="inline-flex items-center gap-1 text-[11px] text-muted" title="Water: ${esc(o.water)}"><i data-lucide="droplets" class="care-icon" style="color:#0ea5e9;"></i>${esc(o.water)}</span>
+  <span class="inline-flex items-center gap-1 text-[11px] text-muted" title="Height: ${esc(o.height)}"><i data-lucide="ruler" class="care-icon" style="color:var(--accent);"></i>${esc(o.height)}</span>
+`;
+
+function imgTile(url, label, sci){
+  if(url && url.startsWith("http")){
+    return `<div class="relative w-full aspect-[4/3] overflow-hidden" style="background:var(--bg-subtle);">
+      <img src="${esc(url)}" alt="${esc(label)} of ${esc(sci)}" loading="lazy" class="w-full h-full object-cover"
+        onerror="this.style.display='none';this.parentElement.classList.add('img-ph');this.parentElement.insertAdjacentHTML('beforeend','<span>'+this.alt+'</span>')" />
+      <span class="absolute left-0 bottom-0 text-[10px] font-medium px-2 py-0.5" style="background:rgba(0,0,0,.55);color:#fff;">${esc(label)}</span>
+    </div>`;
+  }
+  return `<div class="img-ph w-full aspect-[4/3]" role="img" aria-label="${esc(label)} of ${esc(sci)}"><span>${esc(label)}</span></div>`;
+}
+
+/* ---------- Filter option builders ---------- */
+function uniq(arr){return [...new Set(arr)];}
+function buildFilters(){
+  const region = uniq(GOLDENRODS.map(o=>o.region)).sort();
+  const light = uniq(GOLDENRODS.map(o=>o.light)).sort((a,b)=>a.length-b.length||a.localeCompare(b));
+  const water = ["Dry","Dry–medium","Medium","Medium–moist","Moist–wet"].filter(v=>GOLDENRODS.some(o=>o.water===v));
+  const height = ["Short (under 3 ft)","Medium (3–5 ft)","Tall (over 5 ft)"];
+  const bloom = ["Mid-summer","Late summer","Autumn"];
+  const manners = ["Clumping","Moderate spreader","Aggressive spreader"];
+  renderChipGroup("#f-region","region",region);
+  renderChipGroup("#f-light","light",light);
+  renderChipGroup("#f-water","water",water);
+  renderChipGroup("#f-height","height",height);
+  renderChipGroup("#f-bloom","bloom",bloom);
+  renderChipGroup("#f-manners","manners",manners);
+}
+function renderChipGroup(sel,key,vals){
+  const host=$(sel);host.innerHTML="";
+  vals.forEach(v=>{
+    const b=document.createElement("button");
+    b.className="chip";b.type="button";b.dataset.key=key;b.dataset.val=v;
+    b.setAttribute("aria-pressed","false");
+    b.textContent = key==="manners" ? v.replace(" spreader","") : v;
+    b.addEventListener("click",()=>{
+      const set=state.filters[key];
+      if(set.has(v))set.delete(v);else set.add(v);
+      b.dataset.active=set.has(v);
+      b.setAttribute("aria-pressed",set.has(v));
+      render();
+    });
+    host.appendChild(b);
+  });
+}
+
+/* ---------- Filter + sort pipeline ---------- */
+function filtered(){
+  const q=state.search.trim().toLowerCase();
+  let list = GOLDENRODS.filter(o=>{
+    if(q){
+      const hay=(o.sci+" "+o.common).toLowerCase();
+      if(!hay.includes(q)){
+        let i=0;for(const c of q){i=hay.indexOf(c,i);if(i===-1)return false;i++;}
+      }
+    }
+    const f=state.filters;
+    if(f.region.size && !f.region.has(o.region))return false;
+    if(f.light.size && !f.light.has(o.light))return false;
+    if(f.water.size && !f.water.has(o.water))return false;
+    if(f.height.size && !f.height.has(heightBucket(o)))return false;
+    if(f.bloom.size && !f.bloom.has(bloomBucket(o)))return false;
+    if(f.manners.size && !f.manners.has(o.manners))return false;
+    return true;
+  });
+  const s=state.sort;
+  list.sort((a,b)=>{
+    if(s==="name")return a.common.localeCompare(b.common);
+    if(s==="height")return heightMaxFt(b)-heightMaxFt(a);
+    if(s==="bloom"){const d=(bloomMonths(a)[0]||12)-(bloomMonths(b)[0]||12);return d||a.rank-b.rank;}
+    if(s==="manners")return MANNERS_ORDER[a.manners]-MANNERS_ORDER[b.manners]||a.rank-b.rank;
+    return a.rank-b.rank;
+  });
+  return list;
+}
+
+/* ---------- Render grid ---------- */
+function render(){
+  const list=filtered();
+  const grid=$("#grid");grid.innerHTML="";
+  $("#empty").classList.toggle("hidden",list.length>0);
+  $("#result-count").textContent=`Showing ${list.length} of ${GOLDENRODS.length} goldenrods`;
+  const frag=document.createDocumentFragment();
+  list.forEach(o=>{
+    const selected=state.compare.has(o.rank);
+    const card=document.createElement("article");
+    card.className="card rounded-xl overflow-hidden flex flex-col fade-in";
+    card.tabIndex=0;
+    card.setAttribute("role","button");
+    card.setAttribute("aria-label",`${o.common} — ${o.sci}. ${o.region}. Press to open details.`);
+    card.innerHTML=`
+      <div class="rounded-t-xl overflow-hidden">${imgTile(o.flowerImg,"Flowers",o.sci)}</div>
+      <div class="p-3 flex-1 flex flex-col gap-2">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <div class="serif text-[15px] font-[700] leading-tight" style="color:var(--text);">${esc(o.common)}</div>
+            <div class="text-[12px] text-muted truncate">${italicSci(o.sci)}</div>
+          </div>
+          ${mannersBadge(o.manners)}
+        </div>
+        <div class="flex flex-wrap gap-x-3 gap-y-1">${careIcons(o)}</div>
+        <div class="flex items-center justify-between pt-1">
+          <span class="text-[11px] text-dim inline-flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i>${esc(o.region)}</span>
+          ${state.compareMode
+            ? `<button class="cmp-btn text-[11px] inline-flex items-center gap-1 ${selected?"text-accent font-semibold":"text-muted"}" data-rank="${o.rank}" aria-pressed="${selected}">
+                 <span class="cmp-dot ${selected?"on":""}"></span>${selected?"Selected":"Compare"}
+               </button>`
+            : `<span class="text-[11px] text-accent inline-flex items-center gap-1"><i data-lucide="flower" class="w-3 h-3"></i>${esc(o.bloom)} →</span>`}
+        </div>
+      </div>`;
+    card.addEventListener("click",e=>{
+      if(e.target.closest(".cmp-btn"))return;
+      openModal(o);
+    });
+    card.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();openModal(o);}});
+    frag.appendChild(card);
+  });
+  grid.appendChild(frag);
+  grid.querySelectorAll(".cmp-btn").forEach(b=>b.addEventListener("click",e=>{
+    e.stopPropagation();
+    const r=+b.dataset.rank;
+    if(state.compare.has(r))state.compare.delete(r);
+    else if(state.compare.size<3)state.compare.add(r);
+    updateCompareUI();render();
+  }));
+  lucide.createIcons();
+  renderStats();
+}
+
+function renderStats(){
+  $("#stat-total").textContent=GOLDENRODS.length;
+  const d={"Clumping":0,"Moderate spreader":0,"Aggressive spreader":0};
+  GOLDENRODS.forEach(o=>d[o.manners]++);
+  const labels={"Clumping":"Clumping","Moderate spreader":"Moderate","Aggressive spreader":"Spreads"};
+  $("#stat-manners").innerHTML=Object.entries(d).map(([k,v])=>{
+    const pct=Math.round(v/GOLDENRODS.length*100);
+    return `<div>
+      <div class="flex justify-between text-[11px]"><span style="color:var(--text);">${labels[k]}</span><span class="text-dim">${v}</span></div>
+      <div class="stat-bar"><span style="width:${pct}%"></span></div>
+    </div>`;
+  }).join("");
+  const r={};
+  GOLDENRODS.forEach(o=>r[o.region]=(r[o.region]||0)+1);
+  const top=Object.entries(r).sort((a,b)=>b[1]-a[1])[0];
+  $("#stat-region").textContent=top[0];
+  $("#stat-region-sub").textContent=`${top[1]} species`;
+}
+
+/* ---------- Modal ---------- */
+function openModal(o){
+  const modal=$("#modal");
+  $("#modal-body").innerHTML=`
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);">${imgTile(o.flowerImg,"Flowers",o.sci)}</div>
+          <div class="rounded-xl overflow-hidden" style="border:1px solid var(--border);">${imgTile(o.leafImg,"Leaves",o.sci)}</div>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2">
+          ${mannersBadge(o.manners)}
+          <span class="chip"><i data-lucide="map-pin" class="w-3 h-3"></i>${esc(o.region)}</span>
+          ${o.fragrant?'<span class="chip"><i data-lucide="wind" class="w-3 h-3"></i>Fragrant</span>':""}
+          <span class="chip">Zones ${esc(o.zones)}</span>
+        </div>
+        <a href="https://www.inaturalist.org/taxa/${o.taxonId}" target="_blank" rel="noopener" class="mt-3 inline-flex items-center gap-1 text-[11px] text-accent underline decoration-dotted">
+          <i data-lucide="external-link" class="w-3 h-3"></i>More photos &amp; range map on iNaturalist
+        </a>
+      </div>
+      <div>
+        <h2 id="modal-title" class="serif text-2xl font-[800] leading-tight" style="color:var(--text);">${esc(o.common)}</h2>
+        <div class="text-muted text-sm mb-3">${italicSci(o.sci)}</div>
+        <p class="text-sm text-muted italic mb-4">${esc(o.fact)}</p>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-3">Where it grows</h3>
+        <dl class="text-sm grid grid-cols-[120px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Region</dt><dd>${esc(o.region)}</dd>
+          <dt>Native range</dt><dd>${esc(o.range)}</dd>
+          <dt>Habitat</dt><dd>${esc(o.habitat)}</dd>
+          <dt>USDA zones</dt><dd>${esc(o.zones)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">Bloom</h3>
+        <dl class="text-sm grid grid-cols-[120px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Window</dt><dd>${esc(o.bloom)}</dd>
+          <dt>By region</dt><dd>${esc(o.bloomNote)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">Growing conditions</h3>
+        <dl class="text-sm grid grid-cols-[120px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Light</dt><dd>${esc(o.light)}</dd>
+          <dt>Water</dt><dd>${esc(o.water)}</dd>
+          <dt>Soil</dt><dd>${esc(o.soil)}</dd>
+          <dt>Height</dt><dd>${esc(o.height)}</dd>
+          <dt>Spread</dt><dd>${esc(o.spread)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">In the garden</h3>
+        <dl class="text-sm grid grid-cols-[120px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Manners</dt><dd>${esc(o.manners)}</dd>
+          <dt>Best for</dt><dd>${esc(o.bestFor)}</dd>
+          <dt>Wildlife</dt><dd>${esc(o.wildlife)}</dd>
+        </dl>
+
+        <h3 class="serif text-[13px] uppercase tracking-wider text-accent mt-4">Propagation</h3>
+        <dl class="text-sm grid grid-cols-[120px_1fr] gap-y-1 gap-x-3 mt-1">
+          <dt>Methods</dt><dd>${esc(o.prop)}</dd>
+          <dt>Notes</dt><dd>${esc(o.propNote)}</dd>
+        </dl>
+      </div>
+    </div>`;
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+  lucide.createIcons();
+  modal.querySelector("[data-close]").focus();
+}
+function closeModal(){const m=$("#modal");m.classList.add("hidden");m.classList.remove("flex");}
+
+/* ---------- Compare ---------- */
+function updateCompareUI(){
+  $("#cmp-count").textContent=state.compare.size;
+  const tray=$("#cmp-tray");
+  if(state.compareMode && state.compare.size>0){
+    tray.classList.remove("hidden");
+    renderCompareTable();
+  } else {
+    tray.classList.add("hidden");
+  }
+}
+function renderCompareTable(){
+  const items=[...state.compare].map(r=>GOLDENRODS.find(o=>o.rank===r));
+  const rows=[
+    ["Photo",o=>`<div class="w-24 rounded-lg overflow-hidden" style="border:1px solid var(--border);">${imgTile(o.flowerImg,"Flowers",o.sci)}</div>`],
+    ["Common",o=>esc(o.common)],
+    ["Scientific",o=>italicSci(o.sci)],
+    ["Region",o=>esc(o.region)],
+    ["Zones",o=>esc(o.zones)],
+    ["Bloom",o=>esc(o.bloom)],
+    ["Light",o=>esc(o.light)],
+    ["Water",o=>esc(o.water)],
+    ["Height",o=>esc(o.height)],
+    ["Soil",o=>esc(o.soil)],
+    ["Manners",o=>mannersBadge(o.manners)+" "+esc(o.manners)],
+    ["Best for",o=>esc(o.bestFor)],
+    ["Propagation",o=>esc(o.prop)],
+  ];
+  let html=`<table class="w-full text-sm border-collapse"><thead><tr><th class="text-left p-2 text-xs uppercase tracking-wider text-dim"></th>${items.map(o=>`<th class="text-left p-2 serif text-[15px]" style="color:var(--text);">${esc(o.common)}</th>`).join("")}</tr></thead><tbody>`;
+  rows.forEach(([label,fn])=>{
+    html+=`<tr style="border-top:1px solid var(--border);"><td class="p-2 text-xs uppercase tracking-wider text-dim align-top">${label}</td>${items.map(o=>`<td class="p-2 align-top" style="color:var(--text-muted);">${fn(o)}</td>`).join("")}</tr>`;
+  });
+  html+="</tbody></table>";
+  $("#cmp-table").innerHTML=html;
+  lucide.createIcons();
+}
+
+/* ---------- Tabs ---------- */
+function setTab(tab){
+  $$(".tab-btn").forEach(b=>b.dataset.active=(b.dataset.tab===tab));
+  $("#view-catalog").classList.toggle("hidden",tab!=="catalog");
+  $("#view-care").classList.toggle("hidden",tab!=="care");
+  $("#view-propagation").classList.toggle("hidden",tab!=="propagation");
+  if(tab!=="catalog") window.scrollTo({top:0,behavior:"smooth"});
+  lucide.createIcons();
+}
+
+/* ---------- Wire up ---------- */
+function init(){
+  buildFilters();
+  render();
+  updateCompareUI();
+  setTab("catalog");
+
+  $("#search").addEventListener("input",e=>{state.search=e.target.value;render();});
+  $("#sort").addEventListener("change",e=>{state.sort=e.target.value;render();});
+  $("#clear-filters").addEventListener("click",()=>{
+    Object.values(state.filters).forEach(s=>s.clear());
+    $$(".chip").forEach(c=>{c.dataset.active="false";c.setAttribute("aria-pressed","false");});
+    render();
+  });
+  $("#cmp-toggle").addEventListener("click",()=>{
+    state.compareMode=!state.compareMode;
+    $("#cmp-toggle").classList.toggle("btn-ghost",!state.compareMode);
+    $("#cmp-toggle").classList.toggle("btn-primary",state.compareMode);
+    updateCompareUI();render();
+  });
+  $("#cmp-clear").addEventListener("click",()=>{state.compare.clear();updateCompareUI();render();});
+
+  $$(".tab-btn").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
+
+  $$("#modal [data-close]").forEach(el=>el.addEventListener("click",closeModal));
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal();});
+
+  $("#theme-toggle").addEventListener("click",()=>{
+    const dark=document.documentElement.classList.toggle("dark");
+    localStorage.setItem("goldenrod-theme",dark?"dark":"light");
+  });
+
+  lucide.createIcons();
+}
+init();
+</script>
+</body>
+</html>

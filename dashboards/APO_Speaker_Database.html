@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APO Conference Speaker Database 1997-2024</title>
+<style>
+  :root {
+    --bg: #0f0f1a; --bg-card: #1a1a2e; --bg-hover: #252545;
+    --accent: #6c63ff; --accent2: #ff6b6b; --accent3: #4ecdc4; --accent4: #ffd93d;
+    --text: #e0e0f0; --text-dim: #8888aa; --border: #2a2a4a;
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f5fa; --bg-card: #fff; --bg-hover: #eeeef5;
+    --text: #1a1a2e; --text-dim: #666688; --border: #d0d0e0;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f0f1a; --bg-card: #1a1a2e; --bg-hover: #252545;
+    --text: #e0e0f0; --text-dim: #8888aa; --border: #2a2a4a;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+      --bg: #f5f5fa; --bg-card: #fff; --bg-hover: #eeeef5;
+      --text: #1a1a2e; --text-dim: #666688; --border: #d0d0e0;
+    }
+  }
+  body, .section, .stat-box, .tab-btn, .search-input, select, th, .filter-banner, .pill, .badge, .trend-note {
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+  }
+  .theme-toggle {
+    position: fixed; top: 18px; right: 18px; z-index: 100;
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--text); cursor: pointer;
+    font-size: 18px; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .theme-toggle:hover { transform: scale(1.1); background: var(--bg-hover); box-shadow: 0 4px 12px rgba(108,99,255,0.3); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    background: var(--bg); color: var(--text);
+    padding: 24px 20px; max-width: 1200px; margin: 0 auto;
+  }
+  h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--text-dim); font-size: 13px; margin: 6px 0 20px; }
+  .stats-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-box {
+    display: flex; flex-direction: column; align-items: center; padding: 16px;
+    background: var(--bg-hover); border-radius: 10px; min-width: 90px;
+  }
+  .stat-num { font-size: 28px; font-weight: 800; color: var(--accent); }
+  .stat-num.red { color: var(--accent2); }
+  .stat-num.teal { color: var(--accent3); }
+  .stat-label { font-size: 11px; color: var(--text-dim); margin-top: 4px; text-align: center; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 8px 16px; border: 1px solid var(--border); background: transparent;
+    color: var(--text); cursor: pointer; font-size: 12px; font-family: inherit;
+    transition: all 0.2s; border-radius: 6px; white-space: nowrap; font-weight: 600;
+  }
+  .tab-btn:hover { background: var(--bg-hover); color: var(--accent); }
+  .tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .search-input {
+    flex: 1; min-width: 200px; padding: 10px 14px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg-card);
+    color: var(--text); font-size: 13px; font-family: inherit; outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  select {
+    padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--text); font-size: 13px; font-family: inherit;
+  }
+  .section {
+    background: var(--bg-card); border-radius: 12px;
+    padding: 20px 24px; margin-bottom: 16px; overflow: auto; max-height: 72vh;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--text-dim); border-bottom: 1px solid var(--border);
+    cursor: pointer; user-select: none; white-space: nowrap; position: sticky; top: 0;
+    background: var(--bg-card); z-index: 1;
+  }
+  th:hover { color: var(--accent); }
+  td {
+    padding: 10px 12px; font-size: 13px;
+    border-bottom: 1px solid rgba(42,42,74,0.3); vertical-align: top;
+  }
+  tr:hover td { background: var(--bg-hover); }
+  .badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 28px; height: 28px; border-radius: 14px; font-weight: 700; font-size: 13px;
+  }
+  .badge.high { background: rgba(255,107,107,0.2); color: var(--accent2); }
+  .badge.mid { background: rgba(108,99,255,0.2); color: var(--accent); }
+  .badge.low { background: rgba(78,205,196,0.2); color: var(--accent3); }
+  .badge.none { background: var(--bg-hover); color: var(--text-dim); }
+  .badge-link { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+  .badge-link:hover { transform: scale(1.15); box-shadow: 0 0 0 3px rgba(108,99,255,0.3); }
+  .pill {
+    display: inline-block; padding: 2px 8px; margin: 1px 2px; border-radius: 10px;
+    font-size: 11px; background: var(--bg-hover); color: var(--text-dim);
+  }
+  .pill.recent { background: rgba(108,99,255,0.25); color: var(--accent); }
+  .bar {
+    height: 20px; border-radius: 3px; min-width: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent3));
+  }
+  .dim { color: var(--text-dim); }
+  .bold { font-weight: 600; }
+  .small { font-size: 12px; }
+  .teal { color: var(--accent3); }
+  .right { text-align: right; }
+  .center { text-align: center; }
+  .trend-cell {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  }
+  .trend-note {
+    margin-top: 20px; padding: 16px; background: var(--bg-hover); border-radius: 8px;
+  }
+  .trend-note-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--accent3); }
+  .trend-note-body { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 4px; margin-right: 6px; }
+  .footer { color: var(--text-dim); font-size: 11px; margin-top: 12px; text-align: right; }
+  #content { min-height: 200px; }
+  .link {
+    color: var(--accent); cursor: pointer; text-decoration: none; border-bottom: 1px dashed rgba(108,99,255,0.4);
+  }
+  .link:hover { color: var(--accent3); border-bottom-color: var(--accent3); }
+  .filter-banner {
+    display: flex; align-items: center; gap: 10px; padding: 10px 16px; margin-bottom: 12px;
+    background: rgba(108,99,255,0.1); border: 1px solid rgba(108,99,255,0.25);
+    border-radius: 8px; font-size: 12px;
+  }
+  .filter-banner .label { color: var(--text-dim); }
+  .filter-banner .value { color: var(--accent); font-weight: 700; }
+  .clear-btn {
+    margin-left: auto; padding: 6px 16px; border-radius: 6px; border: none;
+    background: #e0a030; color: #1a1a2e; cursor: pointer; font-family: inherit;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .clear-btn:hover { background: #f0b840; transform: scale(1.05); }
+  .trend-cell.clickable { cursor: pointer; }
+  .trend-cell.clickable:hover { outline: 2px solid var(--accent); }
+  .cat-link { cursor: pointer; }
+  .cat-link:hover { color: var(--accent); }
+  .pill.clickable { cursor: pointer; transition: background 0.15s, color 0.15s, transform 0.15s; }
+  .pill.clickable:hover { background: var(--accent); color: white; transform: scale(1.08); }
+  .name-link { cursor: pointer; transition: color 0.15s; }
+  .name-link:hover { color: var(--accent); }
+  .aff-link { cursor: pointer; transition: color 0.15s; }
+  .aff-link:hover { color: var(--accent); }
+</style>
+<script>
+  (function() {
+    const saved = localStorage.getItem("apo-theme");
+    const theme = saved || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle dark/light mode" aria-label="Toggle theme"></button>
+
+<h1><span>APO</span> Conference Speaker Database</h1>
+<p class="subtitle" id="subtitle"></p>
+
+<div class="stats-row" id="stats-row"></div>
+<div class="tabs" id="main-tabs"></div>
+<div id="controls"></div>
+<div id="content"></div>
+
+<script>
+const speakers = [
+  // 1997
+  {name:"J.J. O'Malley",affiliation:"Exxon Corporation",topic:"Catalysis",year:1997,role:"speaker"},
+  {name:"Maurice Brookhart",affiliation:"University of North Carolina",topic:"Olefin Polymerizations Using Ni(II)- and Pd(II)-Based Catalysts",year:1997,role:"speaker"},
+  {name:"Fran Mirabella",affiliation:"Quantum Chemical",topic:"Characterization",year:1997,role:"speaker"},
+  {name:"Roger Porter",affiliation:"University of Massachusetts",topic:"Mechanical Behavior",year:1997,role:"speaker"},
+  {name:"John Bercaw",affiliation:"Caltech",topic:"Mechanisms of Stereocontrol in Isospecific and Syndiospecific Polymerizations of Propylene",year:1997,role:"speaker"},
+  {name:"Robert Waymouth",affiliation:"Stanford University",topic:"Catalysis",year:1997,role:"speaker"},
+  {name:"John C. Chadwick",affiliation:"Montell Polyolefins",topic:"Effects of Stereospecificity and Regiospecificity in Propene Polymerization",year:1997,role:"speaker"},
+  {name:"Brian Goodall",affiliation:"BFGoodrich",topic:"Catalysis",year:1997,role:"speaker"},
+  {name:"Peter Nickias",affiliation:"Dow Chemical",topic:"INSITE Catalyst Structure/Property Relationships",year:1997,role:"speaker"},
+  {name:"S.J. McLain",affiliation:"DuPont Central R&D",topic:"Poly(cyclopentene) from Nickel and Palladium Catalysts",year:1997,role:"speaker"},
+  {name:"Roland Hingmann",affiliation:"BASF",topic:"Propylene Polymerization Catalysis: Ziegler-Natta vs Metallocene",year:1997,role:"speaker"},
+  {name:"Garth Wilkes",affiliation:"Virginia Tech",topic:"Processing/Structure/Property Studies of HDPE Tubular Films",year:1997,role:"speaker"},
+  {name:"Jay Janzen",affiliation:"Phillips Petroleum",topic:"Polyethylene Elastic Constants and Density",year:1997,role:"speaker"},
+  {name:"Ray Seltzer",affiliation:"CIBA-Geigy",topic:"New Developments in Stabilizers for Polyolefins",year:1997,role:"speaker"},
+  {name:"Elizabeth Meehan",affiliation:"Polymer Labs",topic:"High Temperature SEC Systems for Polyolefins",year:1997,role:"speaker"},
+  {name:"Lido Porri",affiliation:"Milan Polytechnic",topic:"Metallocene Catalysts for 1,3-Diene Polymerization",year:1997,role:"speaker"},
+  {name:"Kevin Cann",affiliation:"Union Carbide",topic:"EPDM Production by Gas Phase Processes",year:1997,role:"speaker"},
+  {name:"Walter Bradley",affiliation:"Texas A&M University",topic:"Fracture Resistance and Durability in PE Film and Pipe",year:1997,role:"speaker"},
+
+  // 1999
+  {name:"Pat Brant",affiliation:"Exxon Chemical",topic:"Single Site Catalysts Drive Advances in Polyolefin Science",year:1999,role:"speaker"},
+  {name:"Maurice Brookhart",affiliation:"University of North Carolina",topic:"Olefin Polymerizations Using Late Transition Metal Catalysts",year:1999,role:"speaker"},
+  {name:"John Chadwick",affiliation:"Montell Europe",topic:"Micro- and Macro Structural Control in Propene Polymerizations",year:1999,role:"speaker"},
+  {name:"Martin Guest",affiliation:"Dow Chemical",topic:"The Technology of Ethylene/Styrene Interpolymers",year:1999,role:"speaker"},
+  {name:"Rufina Alamo",affiliation:"Florida State University",topic:"Co-Crystallization Behavior of iPP and Propylene-Ethylene Copolymers",year:1999,role:"speaker"},
+  {name:"Brian Goodall",affiliation:"BFGoodrich",topic:"New Cyclic Olefin Copolymers Made Using Group VIII Catalysts",year:1999,role:"speaker"},
+  {name:"Vernon Gibson",affiliation:"Imperial College London",topic:"Iron and Cobalt Ethylene Polymerization Catalysts",year:1999,role:"speaker"},
+  {name:"Pierre Lutz",affiliation:"Institut Charles Sadron/CNRS",topic:"Polymerization of Olefins with Macromonomers Using Pd Catalysts",year:1999,role:"speaker"},
+  {name:"Christopher Killian",affiliation:"Eastman Chemical",topic:"Ni(II)- and Pd(II)-Based Catalysts for Olefin Polymerization",year:1999,role:"speaker"},
+  {name:"Humberto Lovisi",affiliation:"IMA-UFRJ Brazil",topic:"Propylene Copolymerization with Metallocene Catalysts",year:1999,role:"speaker"},
+  {name:"Marek Urban",affiliation:"North Dakota State University",topic:"Multi-Dimensional Stratification in Polyolefin Films",year:1999,role:"speaker"},
+  {name:"Minoru Terano",affiliation:"JAIST",topic:"Olefin Polymerizations with MgCl2-Supported Ziegler Catalysts",year:1999,role:"speaker"},
+  {name:"John Bercaw",affiliation:"Caltech",topic:"Mechanisms of Stereocontrol in Metallocene-Catalyzed Polymerizations",year:1999,role:"speaker"},
+  {name:"Tobin Marks",affiliation:"Northwestern University",topic:"Structure-Stability-Polymerization Reactivity in Metallocenium Ion Pairs",year:1999,role:"speaker"},
+  {name:"Meinolf Kersting",affiliation:"Targor GmbH",topic:"Stirred Bed Gas Phase Polymerization of Propylene",year:1999,role:"speaker"},
+  {name:"Ioan Tincul",affiliation:"Sasol Technology",topic:"Terpolymers of Ethylene, 1-Pentene and Alpha Olefin",year:1999,role:"speaker"},
+  {name:"Peter Mackenzie",affiliation:"Eastman Chemical",topic:"New Nickel and Palladium Catalysts for Olefin Polymerization",year:1999,role:"speaker"},
+  {name:"Donald Baird",affiliation:"Virginia Tech",topic:"Effect of Branching on Non-Linear Rheological Properties",year:1999,role:"speaker"},
+  {name:"Jim Randall",affiliation:"Exxon Chemical",topic:"Statistical Treatments of Sequence Distribution in sPP",year:1999,role:"speaker"},
+  {name:"Leo Mandelkern",affiliation:"Florida State University",topic:"Properties of Isotactic Polypropylene",year:1999,role:"speaker"},
+  {name:"Herve Marand",affiliation:"Virginia Tech",topic:"Physical Aging of Semicrystalline Polymers Above Tg",year:1999,role:"speaker"},
+  {name:"Vincent Mathot",affiliation:"DSM Research",topic:"Homogeneous Ethylene-Based Copolymers in Metastable States",year:1999,role:"speaker"},
+  {name:"Michael Malanga",affiliation:"Dow Chemical",topic:"Syndiotactic Polystyrene",year:1999,role:"speaker"},
+  {name:"Peter Koelle",affiliation:"BASF",topic:"Gasphase Polymerization of Ethylene with Chromium Catalysts",year:1999,role:"speaker"},
+  {name:"Nancy Eilerts",affiliation:"Phillips Petroleum",topic:"Ethylene Polymerization and Oligomerization Using Nickel Catalysts",year:1999,role:"speaker"},
+  {name:"Kevin Cann",affiliation:"Union Carbide",topic:"Vanadium Catalysts for Gas Phase EPDM Production",year:1999,role:"speaker"},
+  {name:"Elizabeth Meehan",affiliation:"Polymer Labs",topic:"Characterization of Polyolefins by High Temperature GPC",year:1999,role:"speaker"},
+  {name:"Fran Mirabella",affiliation:"Equistar Chemicals",topic:"Crystallization and Melting of PE: Implications for TREF",year:1999,role:"speaker"},
+  {name:"Brian Grant",affiliation:"Albemarle Corporation",topic:"Advances in Organoboron Cocatalysts",year:1999,role:"speaker"},
+  {name:"Walter Bradley",affiliation:"Texas A&M University",topic:"Resistance to Crack Growth in Polyolefin Film and Pipe",year:1999,role:"speaker"},
+  {name:"Rick King",affiliation:"Ciba Specialty Chemicals",topic:"Advances in Polyolefins Stabilization",year:1999,role:"speaker"},
+  {name:"T.C. Mike Chung",affiliation:"Penn State University",topic:"Long Chain Branching PE/PP and Rheological Properties",year:1999,role:"speaker"},
+  {name:"Lilia Minkova",affiliation:"Bulgarian Academy of Sciences",topic:"Compatibilization of Polyolefin/LCP Blends",year:1999,role:"speaker"},
+
+  // 2001
+  {name:"Pat Brant",affiliation:"Exxon Chemical",topic:"An Overview of Some Recent Developments",year:2001,role:"speaker"},
+  {name:"Walter Kaminsky",affiliation:"University of Hamburg",topic:"Tailored Polypropylenes and Copolymers by Metallocene Catalysts",year:2001,role:"speaker"},
+  {name:"Bernhard Wunderlich",affiliation:"University of Tennessee",topic:"Temperature-modulated DSC of Crystallization/Melting in Paraffins and PE",year:2001,role:"speaker"},
+  {name:"Jim Randall",affiliation:"ExxonMobil (retired)",topic:"End Group Characterization in Metallocene Polypropylenes",year:2001,role:"speaker"},
+  {name:"Martin Guest",affiliation:"Dow Chemical",topic:"Advances in Copolymers based on Ethylene and Styrene",year:2001,role:"speaker"},
+  {name:"Vernon Gibson",affiliation:"Imperial College London",topic:"Recent Advances in Molecular Catalysts for Olefin Polymerization",year:2001,role:"speaker"},
+  {name:"Tobin Marks",affiliation:"Northwestern University",topic:"Catalyst-Cocatalyst Interactions and Nuclearity Effects",year:2001,role:"speaker"},
+  {name:"John Bercaw",affiliation:"Caltech",topic:"Mechanistic Aspects of Stereocontrol for Metallocene-Catalyzed Polymerizations",year:2001,role:"speaker"},
+  {name:"Takuzo Aida",affiliation:"University of Tokyo",topic:"Polymerization of Olefins with Porous Nanoreactors",year:2001,role:"speaker"},
+  {name:"Pierre Lutz",affiliation:"Institut Charles Sadron",topic:"Copolymerization of Olefins with Macromonomers",year:2001,role:"speaker"},
+  {name:"Peter Nickias",affiliation:"Dow Chemical",topic:"INSITE Technology: New Catalysts for Polyolefins",year:2001,role:"speaker"},
+  {name:"Richard Jordan",affiliation:"University of Chicago",topic:"Single-Site Olefin Polymerization Catalysts with Polar Monomers",year:2001,role:"speaker"},
+  {name:"Roderic Quirk",affiliation:"University of Akron",topic:"Syndiospecific Polymerization of Para-alkyl-Substituted Styrenes",year:2001,role:"speaker"},
+  {name:"Elizabeth Meehan",affiliation:"Polymer Labs",topic:"GPC and Hyphenated Techniques for Polyolefins",year:2001,role:"speaker"},
+  {name:"Hans Thomann",affiliation:"ExxonMobil",topic:"Metallocene Electronic Structure Characterization",year:2001,role:"speaker"},
+  {name:"Wolfgang Muller",affiliation:"Basell Polyolefine",topic:"Spherilene Gasphase Technology",year:2001,role:"speaker"},
+  {name:"Robert Waymouth",affiliation:"Stanford University",topic:"Kinetic Control of Polymer Architecture",year:2001,role:"speaker"},
+  {name:"Brian Goodall",affiliation:"Albemarle",topic:"The Quest for the Perfect Activator: Aluminoxane Chemistry",year:2001,role:"speaker"},
+  {name:"Rick King",affiliation:"Ciba Specialty Chemicals",topic:"Additives for Polyolefins: Chemistry vs. Effect",year:2001,role:"speaker"},
+  {name:"Ashish Sukhadia",affiliation:"Phillips-Chevron",topic:"Haze from LLDPE Blown and Melt Cast Films",year:2001,role:"speaker"},
+  {name:"Darryl Harrison",affiliation:"Nova Chemicals",topic:"Evolution of NOVA Chemicals PE Technology: Catalyst Advances",year:2001,role:"speaker"},
+  {name:"Minoru Terano",affiliation:"JAIST",topic:"Roles and Effects of Donors on MgCl2-Supported Ziegler Catalysts",year:2001,role:"speaker"},
+  {name:"Fran Mirabella",affiliation:"Equistar Chemicals",topic:"Crystallization of PE Copolymers and TREF",year:2001,role:"speaker"},
+  {name:"Rufina Alamo",affiliation:"Florida State University",topic:"Crystallization and Melting Kinetics of Polypropylenes",year:2001,role:"speaker"},
+  {name:"Pal Arjunan",affiliation:"ExxonMobil",topic:"Ethylene/Norbornene Copolymers and Blends for Blown Film",year:2001,role:"speaker"},
+  {name:"Ioan Tincul",affiliation:"Sasol",topic:"Propylene/Pentene-1 Random Copolymers",year:2001,role:"speaker"},
+  {name:"Akihiro Yano",affiliation:"TOSOH Corporation",topic:"Homo- and Copolymerization of Ethylene with Cp/Flu Catalysts",year:2001,role:"speaker"},
+
+  // 2003
+  {name:"Kenneth Sinclair",affiliation:"Consultant",topic:"Polyolefins: Current and Future Prospects",year:2003,role:"speaker"},
+  {name:"Steven Ittel",affiliation:"DuPont Central Research",topic:"DuPont's Versipol Late Metal Polymerization Catalysts",year:2003,role:"speaker"},
+  {name:"Tobin Marks",affiliation:"Northwestern University",topic:"Nuclearity Effects in Single- and Multi-Site Polymerization Catalysts",year:2003,role:"speaker"},
+  {name:"Walter Kaminsky",affiliation:"University of Hamburg",topic:"Highly Syndiotactic Polypropylenes by Metallocene Catalysis",year:2003,role:"speaker"},
+  {name:"Maurice Brookhart",affiliation:"University of North Carolina",topic:"TBA",year:2003,role:"speaker"},
+  {name:"Vernon Gibson",affiliation:"Imperial College London",topic:"Advances in Catalyst Design for Olefin Polymerization",year:2003,role:"speaker"},
+  {name:"Duncan Wass",affiliation:"BP-Chemicals",topic:"Phosphine Ligands for Ethylene Polymerization and Trimerization",year:2003,role:"speaker"},
+  {name:"Robert Waymouth",affiliation:"Stanford University",topic:"TBA",year:2003,role:"speaker"},
+  {name:"Gary Diamond",affiliation:"Symyx Technologies",topic:"Recent Polyolefin Catalyst Advances through High-Throughput",year:2003,role:"speaker"},
+  {name:"Pat Brant",affiliation:"ExxonMobil",topic:"Olefin Polymerization Catalysis on Supports",year:2003,role:"speaker"},
+  {name:"Minoru Terano",affiliation:"JAIST",topic:"Transformation of Active Sites on Ziegler and Phillips Catalysts",year:2003,role:"speaker"},
+  {name:"T.C. Mike Chung",affiliation:"Penn State University",topic:"Chain End Functionalized i-PP and Diblock Copolymers",year:2003,role:"speaker"},
+  {name:"E. Bryan Coughlin",affiliation:"University of Massachusetts",topic:"Polyolefin Nanocomposites: Synthesis, Processing and Properties",year:2003,role:"speaker"},
+  {name:"Pierre Lutz",affiliation:"University of Strasbourg/CNRS",topic:"Macromonomers and Coordination Polymerization",year:2003,role:"speaker"},
+  {name:"Richard Jordan",affiliation:"University of Chicago",topic:"Studies Directed to Insertion Polymerization of Polar Vinyl Monomers",year:2003,role:"speaker"},
+  {name:"Hans Thomann",affiliation:"ExxonMobil",topic:"Insights on Metallocene Catalysts From Magnetic Resonance",year:2003,role:"speaker"},
+  {name:"Saleem Al-Ahmad",affiliation:"Lubrizol",topic:"Nickel Polymerization Catalysts with Mixed Bidentate Ligands",year:2003,role:"speaker"},
+  {name:"Ken Wagener",affiliation:"University of Florida",topic:"Modeling Branching and Functionalization In Polyethylene",year:2003,role:"speaker"},
+  {name:"Elizabeth Meehan",affiliation:"Polymer Labs",topic:"Polyolefin Characterization by GPC and Associated Methods",year:2003,role:"speaker"},
+  {name:"Wenbing Hu",affiliation:"FOM-Institute, Netherlands",topic:"Sequence Distribution of Statistical Copolymers Affects Phase Transition",year:2003,role:"speaker"},
+  {name:"Eric Baer",affiliation:"Case Western Reserve University",topic:"Crystallization of Polyolefins Confined in Nanolayers",year:2003,role:"speaker"},
+  {name:"Bernhard Wunderlich",affiliation:"University of Tennessee",topic:"Nanophase Structure of Semicrystalline Polymers",year:2003,role:"speaker"},
+  {name:"Vince Mathot",affiliation:"DSM",topic:"Crystallization and Morphology of Ethylene Copolymers",year:2003,role:"speaker"},
+  {name:"Anne Hiltner",affiliation:"Case Western Reserve University",topic:"Aspects of Phase Separation in Polyolefins",year:2003,role:"speaker"},
+  {name:"Fran Mirabella",affiliation:"Equistar Chemicals",topic:"Structure/Property Relationships in New Generation Polyolefins",year:2003,role:"speaker"},
+  {name:"Garth Wilkes",affiliation:"Virginia Tech",topic:"Processing-Structure-Property of Blown HDPE Films",year:2003,role:"speaker"},
+  {name:"Pete Pierini",affiliation:"Dow Chemical",topic:"Advances in PP Material Science at Dow",year:2003,role:"speaker"},
+  {name:"Pal Arjunan",affiliation:"ExxonMobil",topic:"Novel Polypropylene Copolymers for Radiation Resistance",year:2003,role:"speaker"},
+  {name:"Zhibin Guan",affiliation:"University of California, Irvine",topic:"Chain Walking to Control Polyolefin Branching Topology",year:2003,role:"speaker"},
+  {name:"Rick King",affiliation:"Ciba-Geigy",topic:"Additives for Polyolefins: Chemistry and Effects",year:2003,role:"speaker"},
+  {name:"Donald Baird",affiliation:"Virginia Tech",topic:"Identifying Branching Architecture in Metallocene Catalyzed Polyolefins",year:2003,role:"speaker"},
+  {name:"Jim Randall",affiliation:"ExxonMobil (retired)",topic:"Compositional Distribution, Catalyst Behavior and Spherulitic Growth",year:2003,role:"speaker"},
+  {name:"Ioan Tincul",affiliation:"Sasol",topic:"Multiple Polymerization with Fischer Tropsch Olefins",year:2003,role:"speaker"},
+
+  // 2007
+  {name:"Balaji Singh",affiliation:"CMR/Innovante",topic:"Global Polyolefins Market Trends",year:2007,role:"speaker"},
+  {name:"Kurt Swogger",affiliation:"Dow Chemical",topic:"Emerging Challenges/Opportunities in Polyolefins",year:2007,role:"speaker"},
+  {name:"Peter Hanik",affiliation:"Pretium Consulting",topic:"Innovation Model Applicable to Polyolefins Industry R/D",year:2007,role:"speaker"},
+  {name:"Abbas Razavi",affiliation:"Total-Fina Petrochemical Research",topic:"Single Site Catalyzed Polyolefins - Academic and Industrial Challenges",year:2007,role:"speaker"},
+  {name:"Tobin Marks",affiliation:"Northwestern University",topic:"Novel Polyolefins via Rational Homogeneous and Heterogeneous Catalyst Design",year:2007,role:"speaker"},
+  {name:"Brian Goodall",affiliation:"Rohm-Haas",topic:"Novel Catalysts for Controlled Copolymerization of Olefins and Acrylates",year:2007,role:"speaker"},
+  {name:"Robert Waymouth",affiliation:"Stanford University",topic:"Catalysts for Novel Styrene / Ethylene Copolymers",year:2007,role:"speaker"},
+  {name:"Sarah Martin",affiliation:"Dow Chemical",topic:"INFUSE Olefin Block Copolymers: From Molecular Design to Market",year:2007,role:"speaker"},
+  {name:"Manfred Bochmann",affiliation:"University of East Anglia",topic:"Highly Unsaturated Isobutene Polymers Via Zinc-Based Initiators",year:2007,role:"speaker"},
+  {name:"Armenag Dekmezian",affiliation:"ExxonMobil",topic:"Design of Propylene-based Olefin Block Copolymers",year:2007,role:"speaker"},
+  {name:"Benjamin Monrabal",affiliation:"Polymer Char",topic:"Microstructure Characterization of Polyolefins",year:2007,role:"speaker"},
+  {name:"Donald Winesett",affiliation:"ExxonMobil",topic:"Chemical Imaging Techniques For Polyolefin Blends",year:2007,role:"speaker"},
+  {name:"Anne Hiltner",affiliation:"Case Western Reserve University",topic:"Properties and Solid State Structure of New Olefinic Block Copolymers",year:2007,role:"speaker"},
+  {name:"Walter Ramirez",affiliation:"Innovante/CID-DESC",topic:"High Throughput Tools for Polyolefins R/D",year:2007,role:"speaker"},
+  {name:"Jun-ichi Imuta",affiliation:"Mitsui Chemicals",topic:"Growth of Functional Olefin Polymers by Single Site Catalysts",year:2007,role:"speaker"},
+  {name:"Ralph Colby",affiliation:"Penn State University",topic:"Rheological Characterization of Novel PP Copolymers",year:2007,role:"speaker"},
+  {name:"Kazushi Mashima",affiliation:"Osaka University",topic:"Half-metallocene Complexes of Group 4 and 5 Metals",year:2007,role:"speaker"},
+  {name:"Lloyd Robeson",affiliation:"Air Products",topic:"Polyolefins Blend Technology: Review/Recent Advances",year:2007,role:"speaker"},
+  {name:"Walter Kaminsky",affiliation:"University of Hamburg",topic:"Polyolefine-Nanocomposites by In-situ Polymerization",year:2007,role:"speaker"},
+  {name:"Don Paul",affiliation:"University of Texas, Austin",topic:"Polyolefin Nanocomposites: Structure and Properties",year:2007,role:"speaker"},
+  {name:"Steve Chum",affiliation:"Dow Chemical",topic:"Applications of Olefin Block Copolymer",year:2007,role:"speaker"},
+  {name:"Pat Brant",affiliation:"ExxonMobil",topic:"Polyolefin Separators for Lithium Ion Battery",year:2007,role:"speaker"},
+  {name:"Bernhard Wunderlich",affiliation:"University of Tennessee",topic:"Advances in Thermal Analysis",year:2007,role:"speaker"},
+  {name:"Vernon Gibson",affiliation:"Imperial College London",topic:"Bio-inspired Ligands for Polyolefin Catalysis",year:2007,role:"speaker"},
+  {name:"Steve Miller",affiliation:"Texas A&M University",topic:"Sterically Expanded Transition Metal Catalysts",year:2007,role:"speaker"},
+  {name:"T.C. Mike Chung",affiliation:"Penn State University",topic:"Long Chain Branched PP and PP Thin Films for Capacitors",year:2007,role:"speaker"},
+  {name:"João Soares",affiliation:"University of Waterloo",topic:"Monte Carlo Simulation of MWD Evolution in Stopped-Flow Polymerization",year:2007,role:"speaker"},
+  {name:"Pierre Lutz",affiliation:"ICS/CNRS Strasbourg",topic:"Complex Macromolecular Architectures via Coordination Polymerization",year:2007,role:"speaker"},
+  {name:"Donald Baird",affiliation:"Virginia Tech",topic:"Extensional Rheology for Identifying Long Chain Branching in PE",year:2007,role:"speaker"},
+  {name:"Siripon Anantawaraskul",affiliation:"Kasetsart University",topic:"Quantitative Understanding of Polyolefin Chain Microstructure",year:2007,role:"speaker"},
+  {name:"Ion Tincul",affiliation:"Stellenbosch University",topic:"Propylene Copolymers with Fischer Tropsch Derived Olefins",year:2007,role:"speaker"},
+  {name:"Pal Arjunan",affiliation:"CMR/Innovante",topic:"Global Trends in Polyolefins Processes and Catalysts",year:2007,role:"speaker"},
+  {name:"Brian Kneale",affiliation:"Albemarle Corporation",topic:"Developments in Activation of Single Site Complexes",year:2007,role:"speaker"},
+  {name:"Moris Eisen",affiliation:"Technion",topic:"Effect of Cocatalysts in Propylene Polymerization",year:2007,role:"speaker"},
+  {name:"Greg Saunders",affiliation:"Polymer Labs",topic:"Size Exclusion Chromatography for Polyolefin Characterization",year:2007,role:"speaker"},
+  {name:"Rufina Alamo",affiliation:"Florida State University",topic:"Crystallization Kinetics of Random Propylene Copolymers",year:2007,role:"speaker"},
+  {name:"Wallace Yau",affiliation:"Dow Chemical",topic:"Polyolefin Characterization Using Hybrid 3-D GPC-TREF",year:2007,role:"speaker"},
+  {name:"Minoru Terano",affiliation:"JAIST",topic:"Molecular States of Surface Ti Species on MgCl2 Catalysts",year:2007,role:"speaker"},
+  {name:"Boping Liu",affiliation:"East China University",topic:"Computational Modeling on Phillips Cr Catalyst",year:2007,role:"speaker"},
+  {name:"Kevin Cann",affiliation:"Univation Technologies",topic:"Advanced Chromium Catalysts for Improved HDPE",year:2007,role:"speaker"},
+  {name:"Rick King",affiliation:"Ciba Specialty Chemicals",topic:"Advances in Polyolefin Stabilization",year:2007,role:"speaker"},
+  {name:"Herve Marand",affiliation:"Virginia Tech",topic:"Kinetic and Thermodynamic Defects on Polyolefin Secondary Crystallization",year:2007,role:"speaker"},
+  {name:"Toru Arai",affiliation:"Denka Chemical",topic:"Macromer Containing Divinylbenzene Unit for Topologically Controlled Copolymers",year:2007,role:"speaker"},
+  {name:"Leonardo Simon",affiliation:"University of Waterloo",topic:"Gas Phase Ethylene Polymerization Using Metallocene/Clays",year:2007,role:"speaker"},
+
+  // 2009
+  {name:"John Nichols",affiliation:"Albemarle Corporation",topic:"Strategies to Serve the Dynamic Global Polyolefins Industry",year:2009,role:"speaker"},
+  {name:"Hans VanBrackle",affiliation:"ExxonMobil",topic:"Energy Outlook and Sustainability Challenge",year:2009,role:"speaker"},
+  {name:"Gary Marchand",affiliation:"Dow Chemical",topic:"Directions in Specialty Polyolefins Research",year:2009,role:"speaker"},
+  {name:"Gary Diamond",affiliation:"Symyx Technologies",topic:"Industrial High-Throughput Catalyst Discovery",year:2009,role:"speaker"},
+  {name:"Anand Kumar",affiliation:"Indian Oil Corporation",topic:"Indian Polymer (Polyolefin) Industry",year:2009,role:"speaker"},
+  {name:"David Lohse",affiliation:"ExxonMobil",topic:"Tuning Polyolefin Performance by Controlling Chemical Architecture",year:2009,role:"speaker"},
+  {name:"Richard Jordan",affiliation:"University of Chicago",topic:"Metal Catalyzed Copolymerization of Olefins with Polar Vinyl Monomers",year:2009,role:"speaker"},
+  {name:"Margarete Leclerc",affiliation:"Symyx Technologies",topic:"High Throughput Catalyst Discovery for Industrial Application",year:2009,role:"speaker"},
+  {name:"Pat Brant",affiliation:"ExxonMobil",topic:"Advances in Separator Film Design for Lithium Ion Batteries",year:2009,role:"speaker"},
+  {name:"Colin Li Pi Shan",affiliation:"Dow Chemical",topic:"Designer Olefin Elastomers for Controlling Oil Solution Properties",year:2009,role:"speaker"},
+  {name:"Zhibin Guan",affiliation:"University of California, Irvine",topic:"Late Transition Metal Polymerization Catalysis",year:2009,role:"speaker"},
+  {name:"João Soares",affiliation:"University of Waterloo",topic:"Production of Ethylene/α-Olefin/1,9-Decadiene Copolymers",year:2009,role:"speaker"},
+  {name:"Paul DesLauriers",affiliation:"Chevron Phillips",topic:"Estimating Polyolefin Densities from MW and SCB Distributions",year:2009,role:"speaker"},
+  {name:"Minoru Terano",affiliation:"JAIST",topic:"Structure-Oriented Active Site Designs",year:2009,role:"speaker"},
+  {name:"Lawrence Sita",affiliation:"University of Maryland",topic:"Precision Polyolefins via Living Coordinative Chain-Transfer",year:2009,role:"speaker"},
+  {name:"Franck D'Agosto",affiliation:"Université de Lyon",topic:"Polyethylene Building Blocks for New Polymer Architectures",year:2009,role:"speaker"},
+  {name:"Robert Brüll",affiliation:"GIP Darmstadt",topic:"High Temperature Adsorption Chromatography of Polyolefins",year:2009,role:"speaker"},
+  {name:"Leonardo Simon",affiliation:"University of Waterloo",topic:"Glass Fiber-PP Composites for Automotive Applications",year:2009,role:"speaker"},
+  {name:"Robert Waymouth",affiliation:"Stanford University",topic:"Novel PP Catalysts: Synthesis and Applications",year:2009,role:"speaker"},
+  {name:"Lubin Luo",affiliation:"Albemarle Corporation",topic:"New Insights into MAO Activation",year:2009,role:"speaker"},
+  {name:"Stephen Miller",affiliation:"University of Florida",topic:"Future Thermoplastics from Single Site Catalysts",year:2009,role:"speaker"},
+  {name:"Anne Hiltner",affiliation:"Case Western Reserve University",topic:"Adhesion of Elastomeric Olefin Copolymers",year:2009,role:"speaker"},
+  {name:"T.C. Mike Chung",affiliation:"Penn State University",topic:"Thermally Cross-linkable PP for High Energy Density Capacitors",year:2009,role:"speaker"},
+  {name:"Massimiliano Delferro",affiliation:"Northwestern University",topic:"Nuclearity Effects in Olefin Polymerization Catalysis",year:2009,role:"speaker"},
+  {name:"Rick King",affiliation:"Ciba/BASF",topic:"Stabilization of Polyolefins: Overview of Chemistry and Effects",year:2009,role:"speaker"},
+  {name:"G. Alan Vaughan",affiliation:"ExxonMobil",topic:"Polyolefins - Their Role in Sustainable Development",year:2009,role:"speaker"},
+  {name:"Charles C. Han",affiliation:"Chinese Academy of Sciences",topic:"Structure and Morphology of In-Reactor Alloy iPP/PEOc",year:2009,role:"speaker"},
+  {name:"Gregory Beaucage",affiliation:"University of Cincinnati",topic:"Branch Content of Metallocene Polyethylene",year:2009,role:"speaker"},
+  {name:"Takeshi Shiono",affiliation:"Hiroshima University",topic:"Precise Synthesis of Cycloolefins Copolymers",year:2009,role:"speaker"},
+  {name:"Christophe Boisson",affiliation:"Université de Lyon",topic:"(Cyclo)Copolymerization of Ethylene and Butadiene",year:2009,role:"speaker"},
+  {name:"Jozef Rychlý",affiliation:"Slovak Academy of Sciences",topic:"Chemiluminescence from Oxidized Polyolefins",year:2009,role:"speaker"},
+  {name:"Suracha Udomsak",affiliation:"SCG Chemicals",topic:"TBD",year:2009,role:"speaker"},
+  {name:"Pal Arjunan",affiliation:"Albemarle Corporation",topic:"Global Trends in Polyolefins Products, Processes, and Catalysts",year:2009,role:"speaker"},
+  {name:"Edwin IJpeij",affiliation:"DSM Elastomers",topic:"New Generation Polymerization Catalysts: Keltan ACE",year:2009,role:"speaker"},
+  {name:"Donald Baird",affiliation:"Virginia Tech",topic:"Identifying Branching Structure in Metallocene PE using Molecular Rheology",year:2009,role:"speaker"},
+  {name:"Toshiaki Taniike",affiliation:"JAIST",topic:"Theoretical Elucidation of Donors in Ziegler-Natta Propylene Polymerization",year:2009,role:"speaker"},
+  {name:"Wen-Hua Sun",affiliation:"Chinese Academy of Sciences",topic:"Late-transition Metal (Fe and Co) Catalysts in Ethylene Polymerization",year:2009,role:"speaker"},
+  {name:"Piyasarn Prasertdam",affiliation:"Chulalongkorn University",topic:"External Electron Donor Effects on Catalyst Activity",year:2009,role:"speaker"},
+
+  // 2011
+  {name:"Amy Motto",affiliation:"Albemarle Corporation",topic:"Catalyst Developments Meeting Global Polyolefin Industry Trends",year:2011,role:"speaker"},
+  {name:"Srivatsan Iyer",affiliation:"Braskem-USA",topic:"N. America Polyolefins: Incremental Change or Transformation",year:2011,role:"speaker"},
+  {name:"Shashikant Sharma",affiliation:"IOCL India",topic:"Indian Polyolefins Industry Status",year:2011,role:"speaker"},
+  {name:"Edmund Carnahan",affiliation:"Dow Chemical",topic:"Performance Polyolefins by Molecular Design",year:2011,role:"speaker"},
+  {name:"Jeffrey Yoder",affiliation:"Freeslate",topic:"High Throughput Research for Polyolefin Catalyst Development",year:2011,role:"speaker"},
+  {name:"Howard Rappaport",affiliation:"CMAI",topic:"Global Overview of the Polyolefins Business",year:2011,role:"speaker"},
+  {name:"Rolf Gueller",affiliation:"Chemspeed Technologies",topic:"Paradigm Shift in Polyolefin R&D and Quality Control",year:2011,role:"speaker"},
+  {name:"Lawrence Sita",affiliation:"University of Maryland",topic:"Advances in Coordinative Chain Transfer Olefin Polymerization",year:2011,role:"speaker"},
+  {name:"David Weisinger",affiliation:"ExxonMobil",topic:"Novel Propylene-based Elastomers",year:2011,role:"speaker"},
+  {name:"Minoru Terano",affiliation:"JAIST",topic:"Molecular & Particle Level Approaches for New Olefin Polymerization Catalysts",year:2011,role:"speaker"},
+  {name:"Steve Wilkinson",affiliation:"DuPont",topic:"Recent Advances in DuPont Ethylene Copolymers",year:2011,role:"speaker"},
+  {name:"T.C. Mike Chung",affiliation:"Penn State University",topic:"Ion-Conductive Membranes and Oil-SAP for Oil Spill Recovery",year:2011,role:"speaker"},
+  {name:"Tobin Marks",affiliation:"Northwestern University",topic:"Nuclearity and Electronic Effects in Olefin Polymerization Catalysis",year:2011,role:"speaker"},
+  {name:"A. Willem deGroot",affiliation:"Dow Chemical",topic:"Statistical Modeling and Chromatography for Branching in Polyolefins",year:2011,role:"speaker"},
+  {name:"Franck D'Agosto",affiliation:"Université de Lyon",topic:"Polyethylenes Bearing Functional Chain End",year:2011,role:"speaker"},
+  {name:"Eric Baer",affiliation:"Case Western Reserve University",topic:"Adhesion Between Polyolefins",year:2011,role:"speaker"},
+  {name:"Paul DesLauriers",affiliation:"Chevron Phillips",topic:"Structural Effects on Slow Crack Growth Resistance",year:2011,role:"speaker"},
+  {name:"Moris Eisen",affiliation:"Technion",topic:"Polymerization via SEC-MALS and Rheology",year:2011,role:"speaker"},
+  {name:"Stephen Miller",affiliation:"University of Florida",topic:"Complex Polyolefins from Complex Catalysts and Simple Monomers",year:2011,role:"speaker"},
+  {name:"G.S. Kapur",affiliation:"Indian Oil Corporation",topic:"Structure-Property-Performance of HDPE in Large Blow Molding",year:2011,role:"speaker"},
+  {name:"Lubin Luo",affiliation:"Albemarle Corporation",topic:"New Insights into MAO Activation Part II",year:2011,role:"speaker"},
+  {name:"Moshe Kol",affiliation:"Tel Aviv University",topic:"Salalen Titanium Complexes for Isospecific Polymerization",year:2011,role:"speaker"},
+  {name:"Ken Wagener",affiliation:"University of Florida",topic:"Precision Polyolefins with Organic Acid and Ionic Liquid Functional Groups",year:2011,role:"speaker"},
+  {name:"Benjamin Monrabal",affiliation:"Polymer Char",topic:"New Tools in Characterization of Polyolefin Microstructure",year:2011,role:"speaker"},
+  {name:"Rick King",affiliation:"Ciba/BASF",topic:"Stabilization of Polyolefins: Overview of Chemistry & Effects",year:2011,role:"speaker"},
+  {name:"João Soares",affiliation:"University of Waterloo",topic:"Ethylene Polymerization in Semi-Batch Solution Reactor",year:2011,role:"speaker"},
+  {name:"Brian Kolthammer",affiliation:"Dow Chemical",topic:"Terpolymerization Kinetics in Ethylene and Styrene",year:2011,role:"speaker"},
+  {name:"Gerard van Doremaele",affiliation:"Lanxess Elastomers",topic:"Keltan ACE: New Generation Catalysts for EPDM Production",year:2011,role:"speaker"},
+  {name:"John McCoy",affiliation:"University of Cape Town",topic:"Simulation of Unsteady-State Modes in Slurry Phase HDPE",year:2011,role:"speaker"},
+  {name:"Leonardo Simon",affiliation:"University of Waterloo",topic:"Polypropylene Modified-Cellulose",year:2011,role:"speaker"},
+  {name:"Pal Arjunan",affiliation:"Albemarle Corporation",topic:"Novel ZN-PE Catalysts for LLDPE via Solution Process",year:2011,role:"speaker"},
+  {name:"David Lohse",affiliation:"ExxonMobil",topic:"Structure-Property Relations for Polyolefin Block and Graft Copolymers",year:2011,role:"speaker"},
+  {name:"Abhishek Roy",affiliation:"Dow Chemical",topic:"Comprehensive 2D High Temperature LC/GPC for Polyolefins",year:2011,role:"speaker"},
+  {name:"Toru Arai",affiliation:"Denka Corporation",topic:"Segregated Star Type Block Copolymer from Ethylene and Styrene",year:2011,role:"speaker"},
+  {name:"Wen-Hua Sun",affiliation:"Chinese Academy of Sciences",topic:"Late-transition Metals Catalysts in Ethylene Polymerization",year:2011,role:"speaker"},
+  {name:"Donald Baird",affiliation:"Virginia Tech",topic:"Predicting Rheology of Long Glass Fiber Reinforced PP Melts",year:2011,role:"speaker"},
+  {name:"Dean Lee",affiliation:"Dow Chemical",topic:"Chemical Composition Heterogeneity and MW in Polyolefin Copolymers",year:2011,role:"speaker"},
+
+  // 2013
+  {name:"Robert Grubbs",affiliation:"Caltech",topic:"Synthesis of Polymers with Controlled Stereochemistry Using Olefin Metathesis",year:2013,role:"speaker"},
+  {name:"Srivatsan Iyer",affiliation:"Braskem-USA",topic:"N. America Energy Transformation and Impact on Petrochemicals",year:2013,role:"speaker"},
+  {name:"Pat Brant",affiliation:"ExxonMobil",topic:"Overview of Drivers and Responses in Polyolefins",year:2013,role:"speaker"},
+  {name:"Raphael Crawford",affiliation:"Albemarle Corporation",topic:"Innovative Catalytic Solutions for Polyolefin Resin Industry",year:2013,role:"speaker"},
+  {name:"Edmund Carnahan",affiliation:"Dow Chemical",topic:"Advances in Olefin Block Copolymers",year:2013,role:"speaker"},
+  {name:"Tobin Marks",affiliation:"Northwestern University",topic:"Bridging Homogeneous and Heterogeneous Polymerization Catalysis",year:2013,role:"speaker"},
+  {name:"Lawrence Sita",affiliation:"University of Maryland",topic:"Polyolefin Origami - Structure and Function Using Limited Toolset",year:2013,role:"speaker"},
+  {name:"T.C. Mike Chung",affiliation:"Penn State University",topic:"Functional Polyolefins for Energy Applications",year:2013,role:"speaker"},
+  {name:"Joe Edson",affiliation:"Freeslate",topic:"Automation of Ziegler-Natta Catalyst Synthesis",year:2013,role:"speaker"},
+  {name:"Miran Milosevic",affiliation:"SABIC",topic:"Kinetic Modeling from Lab-Batch to Full-Scale Commercial Model",year:2013,role:"speaker"},
+  {name:"Scott Milner",affiliation:"Penn State University",topic:"Rheology of POs - An Update",year:2013,role:"speaker"},
+  {name:"Franck D'Agosto",affiliation:"Université de Lyon",topic:"Telechelic Polyethylenes by Catalyzed Chain Growth",year:2013,role:"speaker"},
+  {name:"Christophe Boisson",affiliation:"Université de Lyon",topic:"Borate and MAO Free Activating Supports for Olefin Polymerization",year:2013,role:"speaker"},
+  {name:"Paul DesLauriers",affiliation:"Chevron Phillips",topic:"Correlating MWD to Capillary Rheology Using Chemometrics",year:2013,role:"speaker"},
+  {name:"Yves Ramjoie",affiliation:"INEOS Technologies",topic:"Novel Polyolefin Technology Solutions",year:2013,role:"speaker"},
+  {name:"David Bergbreiter",affiliation:"Texas A&M University",topic:"Polyolefin Oligomers as Solvents, Ligands, and Additives",year:2013,role:"speaker"},
+  {name:"Moshe Kol",affiliation:"Tel Aviv University",topic:"Salans to Salalens: Active AND Isospecific Polymerization Catalysts",year:2013,role:"speaker"},
+  {name:"Matthew Thorn",affiliation:"Albemarle Corporation",topic:"Improving Activation Efficiency of Metallocenes",year:2013,role:"speaker"},
+  {name:"Pat Brant",affiliation:"ExxonMobil",topic:"Fundamentals of Stretch Cling Film",year:2013,role:"speaker"},
+  {name:"Ken Wagener",affiliation:"University of Florida",topic:"Precision Polyolefins Containing Pendant Acid Groups",year:2013,role:"speaker"},
+  {name:"Benny Freeman",affiliation:"University of Texas, Austin",topic:"Polyimides for Olefin/Paraffin Separations",year:2013,role:"speaker"},
+  {name:"Rick King",affiliation:"BASF",topic:"Stabilization of Polyolefins: Overview of Chemistry & Effects",year:2013,role:"speaker"},
+  {name:"João Soares",affiliation:"University of Alberta",topic:"Detailed Ethylene/α-Olefin Polymerization Kinetics with Metallocenes",year:2013,role:"speaker"},
+  {name:"Timothy McKenna",affiliation:"Université de Lyon/CNRS",topic:"Effect of N-Hexane as ICA in Gas Phase Ethylene Polymerization",year:2013,role:"speaker"},
+  {name:"A. Willem deGroot",affiliation:"Dow Chemical",topic:"Modern Toolbox for Polyolefins Molecular Structure Determination",year:2013,role:"speaker"},
+  {name:"Tad Kog",affiliation:"Stony Brook University",topic:"Structures of Polyolefins Confined at Nanometer Scale",year:2013,role:"speaker"},
+  {name:"Eric Baer",affiliation:"Case Western Reserve University",topic:"Polyolefin Based Multilayer Films via Forced Assembly",year:2013,role:"speaker"},
+  {name:"Rufina Alamo",affiliation:"Florida State University",topic:"Crystalline Properties of Late Generation Polyolefins",year:2013,role:"speaker"},
+  {name:"Kathleen Havelka",affiliation:"Elevance Renewable Sciences",topic:"Transforming Renewable Olefinic Building Blocks into Lubricants",year:2013,role:"speaker"},
+  {name:"James McGrath",affiliation:"Virginia Tech",topic:"Opportunities for Polymer Blends of Ethylene Copolymers",year:2013,role:"speaker"},
+  {name:"Josef Jancar",affiliation:"Brno University of Technology",topic:"Multiple Extrusion on Impact Fracture of PP Impact Copolymers",year:2013,role:"speaker"},
+  {name:"Robert Brüll",affiliation:"Fraunhofer Institute",topic:"Frontiers of Liquid Chromatography for Polyolefins",year:2013,role:"speaker"},
+
+  // 2015
+  {name:"Richard Schrock",affiliation:"MIT",topic:"Stereospecific ROMP of Cyclic Olefins with Mo and W Initiators",year:2015,role:"speaker"},
+  {name:"Bob Maughon",affiliation:"Dow Chemical",topic:"Sustainability and Plastics: Innovation at Dow",year:2015,role:"speaker"},
+  {name:"Hans VanBrackle",affiliation:"ExxonMobil",topic:"TBA",year:2015,role:"speaker"},
+  {name:"Srivatsan Iyer",affiliation:"Braskem Europe",topic:"Energy Market Dynamics",year:2015,role:"speaker"},
+  {name:"Hamid Almegren",affiliation:"KACST Saudi Arabia",topic:"Polyolefins Marketing in GCC Countries",year:2015,role:"speaker"},
+  {name:"Raj Krishnaswamy",affiliation:"Braskem Americas",topic:"Innovation Strategy for the Polymers Industry",year:2015,role:"speaker"},
+  {name:"John Bercaw",affiliation:"Caltech",topic:"Alpha-Olefin Trimerization and Copolymerization of Trimers with Ethylene",year:2015,role:"speaker"},
+  {name:"T.C. Mike Chung",affiliation:"Penn State University",topic:"Functionalization of Polyolefin for Green Energy Applications",year:2015,role:"speaker"},
+  {name:"Raphael Crawford",affiliation:"Albemarle Corporation",topic:"Global Polyolefin Catalysts Markets Overview",year:2015,role:"speaker"},
+  {name:"Clark Landis",affiliation:"University of Wisconsin",topic:"Active Site Counting and Catalytic Polymerization Kinetics",year:2015,role:"speaker"},
+  {name:"Jerzy Klosin",affiliation:"Dow Chemical",topic:"Tuning Ethylene/α-Olefin Selectivity with Molecular Catalysts",year:2015,role:"speaker"},
+  {name:"Donald Baird",affiliation:"Virginia Tech",topic:"Simulation of Semi-flexible Fiber Orientation during Molding",year:2015,role:"speaker"},
+  {name:"Paul DesLauriers",affiliation:"Chevron Phillips",topic:"Predicting Polyolefin Resin Tensile Properties",year:2015,role:"speaker"},
+  {name:"Robert Brüll",affiliation:"Fraunhofer Institute",topic:"Multidimensional Liquid Chromatography of Polyolefins",year:2015,role:"speaker"},
+  {name:"Gregory Arzoumanidis",affiliation:"Oakwood Consulting",topic:"Novel Single-Site Ziegler-Natta Catalyst Development",year:2015,role:"speaker"},
+  {name:"Kotohiro Nomura",affiliation:"Tokyo Metropolitan University",topic:"Synthesis of Cyclic Olefin (Co)Polymers by Olefin Insertion/Metathesis",year:2015,role:"speaker"},
+  {name:"David Bergbreiter",affiliation:"Texas A&M University",topic:"Polyolefin Oligomers as Solvents and Phase Anchors",year:2015,role:"speaker"},
+  {name:"Pat Brant",affiliation:"ExxonMobil",topic:"Synthesis of Polyolefin Vinyl Terminated Macromonomers",year:2015,role:"speaker"},
+  {name:"Matthew Thorn",affiliation:"Albemarle Corporation",topic:"Understanding and Improving Activation Efficiency of Metallocenes",year:2015,role:"speaker"},
+  {name:"Rufina Alamo",affiliation:"Florida State University",topic:"Melt Memory of Crystallization and Melt Structure of LLDPEs",year:2015,role:"speaker"},
+  {name:"Sebastian Babik",affiliation:"Evonik",topic:"Novel Amorphous Poly Alpha Olefins (APAOs)",year:2015,role:"speaker"},
+  {name:"Ken Wagener",affiliation:"University of Florida",topic:"Sulfur? An Enemy for Metathesis Made Polyolefins?",year:2015,role:"speaker"},
+  {name:"Christopher Kay",affiliation:"University of Warwick",topic:"Novel Functionalized Polyolefins",year:2015,role:"speaker"},
+  {name:"Rick King",affiliation:"BASF",topic:"Polyolefin Stabilization: Overview of Chemistry & Effects",year:2015,role:"speaker"},
+  {name:"João Soares",affiliation:"University of Alberta",topic:"Mapping Structure-Property Space of Bimodal PE",year:2015,role:"speaker"},
+  {name:"Timothy McKenna",affiliation:"Université de Lyon/CNRS",topic:"Impact of Condensable Compounds on Gas Phase Ethylene Polymerization",year:2015,role:"speaker"},
+  {name:"Jeffery Brinen",affiliation:"ExxonMobil",topic:"Metallocene-Ethylene/1-hexene Copolymers",year:2015,role:"speaker"},
+  {name:"Jan Kalfus",affiliation:"ExxonMobil",topic:"Harnessing Metallocene Catalysis for PP/EPR Blends",year:2015,role:"speaker"},
+  {name:"Eric Baer",affiliation:"Case Western Reserve University",topic:"New Layered and Fibrillar Polyolefin Systems",year:2015,role:"speaker"},
+  {name:"Joel Carr",affiliation:"Braskem Americas",topic:"PP Impact Copolymer Melt Rheology and Tiger-Marking",year:2015,role:"speaker"},
+  {name:"Geoff Coates",affiliation:"Cornell University",topic:"New Catalysts for Controlling Sequence and Tacticity",year:2015,role:"speaker"},
+  {name:"Christophe Boisson",affiliation:"CNRS Lyon",topic:"Deciphering Mechanism of Coordinative Chain Transfer Polymerization",year:2015,role:"speaker"},
+  {name:"G.S. Kapur",affiliation:"Indian Oil Corporation",topic:"High Performance Ziegler-Natta Catalyst for PP",year:2015,role:"speaker"},
+  {name:"Christophe Coperet",affiliation:"ETH Zürich",topic:"Cr(III) Silicates in Ethylene Polymerization",year:2015,role:"speaker"},
+  {name:"Josef Jancar",affiliation:"Brno University of Technology",topic:"In-situ Core-shell Inclusions in PP Impact Fracture",year:2015,role:"speaker"},
+  {name:"Vasileios Kanellopoulos",affiliation:"Borealis",topic:"Polymer Reaction Engineering Tools in Industrial Processes",year:2015,role:"speaker"},
+
+  // 2017
+  {name:"Robert Grubbs",affiliation:"Caltech",topic:"Synthesis of Polymers with Designed Structures",year:2017,role:"speaker"},
+  {name:"Julia Kornfield",affiliation:"Caltech",topic:"Oriented Precursors During Processing Flows",year:2017,role:"speaker"},
+  {name:"Robert Waymouth",affiliation:"Stanford University",topic:"Catalytic Monomer and Polymer Synthesis",year:2017,role:"speaker"},
+  {name:"Frank Bates",affiliation:"University of Minnesota",topic:"Thermodynamics and Properties of Polyolefin Blends",year:2017,role:"speaker"},
+  {name:"Anusha Kothandraman",affiliation:"Braskem Americas",topic:"Trends in North American Polyolefin Markets",year:2017,role:"speaker"},
+  {name:"Tobin Marks",affiliation:"Northwestern University",topic:"Symbiosis and Cooperativity in Single-Site Olefin Polymerization Catalysis",year:2017,role:"speaker"},
+  {name:"Susannah Scott",affiliation:"UC Santa Barbara",topic:"Self-Activating Heterogeneous Catalysts for Olefin Polymerization",year:2017,role:"speaker"},
+  {name:"Rick King",affiliation:"BASF",topic:"Polyolefin Stabilization: Update on Activities, Trends, and Sustainability",year:2017,role:"speaker"},
+  {name:"T.C. Mike Chung",affiliation:"Penn State University",topic:"PP with Cross-linkable Antioxidant for Thermal/Oxidative Stability",year:2017,role:"speaker"},
+  {name:"Eric Baer",affiliation:"Case Western Reserve University",topic:"Co-Extrusion of Polyolefins for Enhanced Performance",year:2017,role:"speaker"},
+  {name:"Ken Wagener",affiliation:"University of Florida",topic:"High Temperature Metathesis Chemistry for Precision Polyolefins",year:2017,role:"speaker"},
+  {name:"Chip Few",affiliation:"Braskem Americas",topic:"New PP Compositions for Automotive & Packaging",year:2017,role:"speaker"},
+  {name:"Stefan Mecking",affiliation:"University of Konstanz",topic:"Unconventional Polyolefin Architectures from Functional Group Tolerant Catalysis",year:2017,role:"speaker"},
+  {name:"John Severn",affiliation:"DSM",topic:"Pulling the Strings of World's Strongest Fiber",year:2017,role:"speaker"},
+  {name:"Clark Landis",affiliation:"University of Wisconsin",topic:"Kinetic Modeling of Catalytic Alkene Polymerization",year:2017,role:"speaker"},
+  {name:"Roger Kuhlman",affiliation:"Univation Technologies",topic:"Complex Polyethylene Compositions from Molecular Catalysts",year:2017,role:"speaker"},
+  {name:"Glenn Fredrickson",affiliation:"UC Santa Barbara",topic:"Extreme Morphologies in Polymer Alloys by Molecular Design",year:2017,role:"speaker"},
+  {name:"Rufina Alamo",affiliation:"Florida State University",topic:"Peculiar Homogeneous Nucleation of Crystalline Polyolefins",year:2017,role:"speaker"},
+  {name:"Antonio Vittoria",affiliation:"University of Naples",topic:"Mechanistic HTE Approach to Olefin Chain Shuttling",year:2017,role:"speaker"},
+  {name:"Takeshi Shiono",affiliation:"Hiroshima University",topic:"Novel Cycloolefin Copolymers with Pendant Functional Groups",year:2017,role:"speaker"},
+  {name:"Lawrence Sita",affiliation:"University of Maryland",topic:"Nanostructured Polyolefin Block Copolymers",year:2017,role:"speaker"},
+  {name:"Nikos Hadjichristidis",affiliation:"KAUST",topic:"Polyethylene-Based Complex Macromolecular Architectures",year:2017,role:"speaker"},
+  {name:"Maxence Valla",affiliation:"ARLANXEO",topic:"Keltan ACE: QSAR for EP(D)M Catalyst Design",year:2017,role:"speaker"},
+  {name:"Taylor Vozniak",affiliation:"The Catalyst Group Resources",topic:"Polyolefin Catalysts and Processes: Commercial Impacts 2015-2025",year:2017,role:"speaker"},
+  {name:"Timothy McKenna",affiliation:"Université de Lyon/CNRS",topic:"Better Understanding of Condensed Mode Cooling",year:2017,role:"speaker"},
+  {name:"Mirian Diop",affiliation:"ExxonMobil",topic:"Gas Phase Scale-Up Fundamentals",year:2017,role:"speaker"},
+  {name:"João Soares",affiliation:"University of Alberta",topic:"Monte Carlo Simulation for Multi-Reactor Polyolefins",year:2017,role:"speaker"},
+  {name:"Enrique Saldívar-Guerra",affiliation:"CIQA Mexico",topic:"Mechanistic Understanding of High Pressure LDPE Process",year:2017,role:"speaker"},
+  {name:"Gail Blakley",affiliation:"Albemarle Corporation",topic:"Metallocene Catalyst Activation: Aspects and New Insights",year:2017,role:"speaker"},
+  {name:"Richard Register",affiliation:"Princeton University",topic:"Melt Miscibility of PE with Hydrogenated ROMP Poly(norbornene)s",year:2017,role:"speaker"},
+  {name:"Kazuo Takaoki",affiliation:"Sumitomo Chemical",topic:"C8 Ring Bridged ansa-[OSSO] Catalysts",year:2017,role:"speaker"},
+  {name:"Donald Baird",affiliation:"Virginia Tech",topic:"Novel PP Composite Filaments for 3D Printing",year:2017,role:"speaker"},
+  {name:"Fumihiko Shimizu",affiliation:"Mitsubishi Chemical",topic:"New Approach toward Functional Polyolefins",year:2017,role:"speaker"},
+  {name:"Colin Li Pi Shan",affiliation:"Dow Chemical",topic:"Generational Development of Olefin Block Copolymers",year:2017,role:"speaker"},
+  {name:"Josef Jancar",affiliation:"Brno University of Technology",topic:"Gradient Impact Resistant ICP/HNT Nano-Composite Foams",year:2017,role:"speaker"},
+  {name:"Virendra Gupta",affiliation:"Reliance Industries",topic:"Specialty Polyolefins Using Relcat Catalyst Technology",year:2017,role:"speaker"},
+  {name:"Jerzy Klosin",affiliation:"Dow Chemical",topic:"Chromium-Catalyzed Ethylene Selective Oligomerization",year:2017,role:"speaker"},
+  {name:"Christian Paulik",affiliation:"Johannes Kepler University",topic:"Ziegler-Natta Catalyst Alterations on Kinetics and Comonomer Incorporation",year:2017,role:"speaker"},
+  {name:"Gurmeet Singh",affiliation:"Indian Oil Corporation",topic:"Transforming Magnesium Metal to High Performance PP Catalysts",year:2017,role:"speaker"},
+  {name:"Christian Hilty",affiliation:"Texas A&M University",topic:"Hyperpolarized NMR for Polymerization Kinetics",year:2017,role:"speaker"},
+  {name:"Robert Brüll",affiliation:"LBF Germany",topic:"Liquid Chromatography – Unravelling Molecular Heterogeneities",year:2017,role:"speaker"},
+  {name:"Adam Veige",affiliation:"University of Florida",topic:"Synthesis of Cyclic Polyolefins",year:2017,role:"speaker"},
+  {name:"Vasileios Touloupidis",affiliation:"Borealis",topic:"Polymer Reaction Engineering and Kinetic Parameters Estimation",year:2017,role:"speaker"},
+  {name:"Steve Davis",affiliation:"LyondellBasell",topic:"Megatrends Impacting Polyolefin Industry",year:2017,role:"speaker"},
+
+  // 2019
+  {name:"John Bercaw",affiliation:"Caltech",topic:"McGrath Lecture: Olefin Trimerization and Polymerization Catalysts",year:2019,role:"speaker"},
+  {name:"Vinicius Grassi",affiliation:"Braskem",topic:"Circular Economy and Recycling of Polymers",year:2019,role:"speaker"},
+  {name:"Kyoko Nozaki",affiliation:"Tokyo University",topic:"Copolymerization of Olefins with Polar Monomers by Group 10 Catalysts",year:2019,role:"speaker"},
+  {name:"Peter Callais",affiliation:"Townsend Solutions",topic:"Polyolefin Markets",year:2019,role:"speaker"},
+  {name:"Greg Rutledge",affiliation:"MIT",topic:"Modeling of Polyolefin Crystallization",year:2019,role:"speaker"},
+  {name:"Jill Martin",affiliation:"Dow",topic:"Polyolefin Sustainability from Producer Perspective",year:2019,role:"speaker"},
+  {name:"John Layman",affiliation:"P&G",topic:"Polyolefin Recycling at P&G and Beyond",year:2019,role:"speaker"},
+  {name:"Jeff Fodor",affiliation:"Chevron Phillips",topic:"Relating PE Microstructure to Resin Properties",year:2019,role:"speaker"},
+  {name:"Brad Rogers",affiliation:"PepsiCo",topic:"Flexible Packaging Sustainability Journey",year:2019,role:"speaker"},
+  {name:"Karen Winey",affiliation:"University of Pennsylvania",topic:"Precise PE that Control Nanoscale Morphologies & Properties",year:2019,role:"speaker"},
+  {name:"Bun Yeoul Lee",affiliation:"Ajou University",topic:"Syntheses of Polyolefin-based Triblock Copolymers",year:2019,role:"speaker"},
+  {name:"Daniel Read",affiliation:"University of Leeds",topic:"Molecular Rheology and Flow-induced Crystallisation",year:2019,role:"speaker"},
+  {name:"Sudhin Datta",affiliation:"ExxonMobil",topic:"Polyolefin Thermoplastic Elastomers with Propylene Crystallinity",year:2019,role:"speaker"},
+  {name:"Vincenzo Busico",affiliation:"University of Naples",topic:"HTE-Aided QSAR Modeling of Olefin Polymerization Catalysts",year:2019,role:"speaker"},
+  {name:"Gabriele Mei",affiliation:"LyondellBasell",topic:"Developments in Polyolefin Catalysts, Hyperzone PE, and Recycling",year:2019,role:"speaker"},
+  {name:"Rhett Kempe",affiliation:"University of Bayreuth",topic:"Efficient Catalytic Synthesis of Functionalized Hydrocarbons from Ethylene",year:2019,role:"speaker"},
+  {name:"Rongjuan Cong",affiliation:"Dow",topic:"Journey Towards Ideal Tools to Characterize Polyolefin Structure",year:2019,role:"speaker"},
+  {name:"Geoff Coates",affiliation:"Cornell University",topic:"Synthesis of New Polyolefin Architectures",year:2019,role:"speaker"},
+  {name:"Dongmei Cui",affiliation:"Changchun Institute",topic:"Styrene-based Polyolefins with Precisely Controlled Composition",year:2019,role:"speaker"},
+  {name:"Nathan Mehl",affiliation:"Milliken",topic:"Enhancing Optical Performance of Extrusion Blow Molded PP",year:2019,role:"speaker"},
+  {name:"Francisco Perez",affiliation:"SABIC",topic:"Structure/Properties Modelling in PE Polymerization",year:2019,role:"speaker"},
+  {name:"Megan Robertson",affiliation:"University of Houston",topic:"Thermodynamics of Polyolefin/Polydiene Blends",year:2019,role:"speaker"},
+  {name:"Justin Kennemur",affiliation:"Florida State University",topic:"Performance Elastomers from ROMP of Low-strain Cycloalkenes",year:2019,role:"speaker"},
+  {name:"Andreas Albrecht",affiliation:"Borealis",topic:"Analytical Strategies for Chemical Heterogeneity of PP",year:2019,role:"speaker"},
+  {name:"Sohel Shaikh",affiliation:"Saudi Aramco",topic:"Anti-fouling Additive Technology for Butene-1 Production",year:2019,role:"speaker"},
+  {name:"Brian Long",affiliation:"University of Tennessee",topic:"Modulating Polyolefin Microstructure via Redox-Active Ni(II) Catalysts",year:2019,role:"speaker"},
+  {name:"Markus Busch",affiliation:"TU Darmstadt",topic:"Process to Properties: Control of Microstructure in World-Scale Processes",year:2019,role:"speaker"},
+  {name:"Juraj Kosek",affiliation:"University of Prague",topic:"Electrostatic Charging of Polyolefin Powders",year:2019,role:"speaker"},
+  {name:"Bodo Richter",affiliation:"Evonik",topic:"Catylen S 300 Spherical Mg-Ethanolate Support for Z-N Catalysts",year:2019,role:"speaker"},
+  {name:"David Fiscus",affiliation:"ExxonMobil",topic:"Structure-Process-Property Relationships via Multivariate Analysis",year:2019,role:"speaker"},
+  {name:"Gerard van Doremaele",affiliation:"Arlanxeo",topic:"Catalyst and Process Technology for EPDM Rubbers",year:2019,role:"speaker"},
+  {name:"Michelle Sing",affiliation:"Braskem",topic:"Polyolefins in Additive Manufacturing",year:2019,role:"speaker"},
+  {name:"Markus Klapper",affiliation:"Max Planck Institute",topic:"Morphology Control in Olefin Polymerization by Supporting Procedures",year:2019,role:"speaker"},
+  {name:"Scott Milner",affiliation:"Penn State University",topic:"Chi Parameters from MD Simulations",year:2019,role:"speaker"},
+  {name:"Massimiliano Delferro",affiliation:"Argonne National Lab",topic:"Catalytic Recycling and Upcycling of Polyolefins",year:2019,role:"speaker"},
+  {name:"Brad Carrow",affiliation:"Princeton University",topic:"Non-Traditional Monomers in Insertion Polymerization by Catalyst Design",year:2019,role:"speaker"},
+
+  // 2022
+  {name:"Tobin Marks",affiliation:"Northwestern University",topic:"McGrath Lecture: Catalysts for Creating New Polyolefins and Deconstructing Old Ones",year:2022,role:"speaker"},
+  {name:"Kim Ragaert",affiliation:"Maastricht University",topic:"Predicting Quality of Cross-contaminated Recycled Polyolefins",year:2022,role:"speaker"},
+  {name:"Paul Chirik",affiliation:"Princeton University",topic:"Chemically Recyclable Polyolefins",year:2022,role:"speaker"},
+  {name:"Bob Maughon",affiliation:"SABIC",topic:"Delivering on Sustainable Future for Plastics",year:2022,role:"speaker"},
+  {name:"Carlos López-Barrón",affiliation:"ExxonMobil",topic:"Polyolefin Ionomers: Synthesis, Rheology, and Crystallization",year:2022,role:"speaker"},
+  {name:"Ken-ichi Seno",affiliation:"Sumitomo Chemical",topic:"Vision for Polyolefin Sustainability at Sumitomo",year:2022,role:"speaker"},
+  {name:"Eugene Chen",affiliation:"Colorado State University",topic:"Functionalized Polyolefins with Closed-loop Recycling",year:2022,role:"speaker"},
+  {name:"Rufina Alamo",affiliation:"Florida State University",topic:"Peculiar Crystallization of Sustainable PE-Like Materials",year:2022,role:"speaker"},
+  {name:"Christian Paulik",affiliation:"University of Linz",topic:"Sustainability in Mechanical Recycling of Polymers",year:2022,role:"speaker"},
+  {name:"Scott McIndoe",affiliation:"University of Victoria",topic:"Mass Spectrometric Analysis of MAO Chemistry",year:2022,role:"speaker"},
+  {name:"Ken Kearns",affiliation:"Dow",topic:"Flow-Enhanced Nucleation in PE Using Fast-Scanning Calorimetry",year:2022,role:"speaker"},
+  {name:"Christophe Boisson",affiliation:"CNRS",topic:"Olefin Block Copolymers from Coordinative Chain Transfer",year:2022,role:"speaker"},
+  {name:"Susannah Scott",affiliation:"UC Santa Barbara",topic:"Valorization of Polyolefins via Catalytic Upcycling",year:2022,role:"speaker"},
+  {name:"Jay Reimers",affiliation:"ExxonMobil",topic:"Scale-Up Fundamentals for New Reactor Designs",year:2022,role:"speaker"},
+  {name:"Phil Fontaine",affiliation:"Dow",topic:"Advanced Molecular Polyolefin Catalysis: Growth and Sustainability",year:2022,role:"speaker"},
+  {name:"Gail Blakley",affiliation:"Grace",topic:"More Sustainable Supported Single Site Catalysts",year:2022,role:"speaker"},
+  {name:"Kalman Migler",affiliation:"NIST",topic:"Cascading Crystallization in Mixed Polyolefins for Mechanical Recycling",year:2022,role:"speaker"},
+  {name:"Alberto Ortin",affiliation:"Polymer Char",topic:"Enhanced Control of Polyolefin Production through Separation Techniques",year:2022,role:"speaker"},
+  {name:"Damien Guironnet",affiliation:"University of Illinois",topic:"Design-to-Synthesis in Polyolefin Chemistry",year:2022,role:"speaker"},
+  {name:"Marcia Pires",affiliation:"Nova Chemicals",topic:"PE Structure-Property Relationships for Sustainable Packaging",year:2022,role:"speaker"},
+  {name:"Alceo Macchioni",affiliation:"University of Perugia",topic:"Structure-Activity Relationships in Olefin Polymerization Catalysts",year:2022,role:"speaker"},
+  {name:"Alejandro Müller",affiliation:"University of the Basque Country",topic:"Surface Nucleation of PE Droplets in PP Matrices",year:2022,role:"speaker"},
+  {name:"Julia Pribyl",affiliation:"US Naval Academy",topic:"Creating Degradable Polyolefins from New Dioxepenes",year:2022,role:"speaker"},
+  {name:"Aaron Sadow",affiliation:"Iowa State University",topic:"Upcycling Polyolefins via Selective Catalytic Conversions",year:2022,role:"speaker"},
+  {name:"Maria Soliman",affiliation:"SABIC",topic:"Circularity of Plastics for Packaging and Pressure Pipes",year:2022,role:"speaker"},
+  {name:"Michelle Sing",affiliation:"Braskem",topic:"3D Printing Engineering Polyolefins for Functional Applications",year:2022,role:"speaker"},
+  {name:"Roland Schmidt",affiliation:"Arlanxeo",topic:"Polyolefin Nitrile Rubber - Challenges of High-Performance Polar Rubber",year:2022,role:"speaker"},
+  {name:"Finizia Auriemma",affiliation:"University of Naples",topic:"Olefin-based Statistical Multi-block Copolymers",year:2022,role:"speaker"},
+  {name:"Theo Tervoort",affiliation:"ETH Zürich",topic:"Ultra-fast Entangling Across UHMWPE Interfaces",year:2022,role:"speaker"},
+  {name:"Hadi Mohammadi",affiliation:"Braskem",topic:"New Ethylene-based Terpolymer with Improved Elastomeric Performance",year:2022,role:"speaker"},
+  {name:"Clark Landis",affiliation:"University of Wisconsin",topic:"Mechanistic Aspects of Catalytic Alkene Polymerization",year:2022,role:"speaker"},
+
+  // 2024
+  {name:"Geoff Coates",affiliation:"Cornell University",topic:"McGrath Lecture: Improving the Sustainability of Polyolefins",year:2024,role:"speaker"},
+  {name:"LaShanda Korley",affiliation:"University of Delaware",topic:"Polyolefin Catalytic Recycling through a Macromolecular Lens",year:2024,role:"speaker"},
+  {name:"Ron Larson",affiliation:"University of Michigan",topic:"PE Branching, Rheology, Processing, and Crystallization",year:2024,role:"speaker"},
+  {name:"Dave Parrillo",affiliation:"Dow",topic:"Advancing the Polyolefin Industry Through Innovation",year:2024,role:"speaker"},
+  {name:"Frank Leibfarth",affiliation:"University of North Carolina",topic:"C-H Functionalization of Polyolefins as Route to Advanced Materials",year:2024,role:"speaker"},
+  {name:"Sharon Elyashiv-Barad",affiliation:"FDA",topic:"U.S. FDA Regulation of Polyolefin Food Contact Materials",year:2024,role:"speaker"},
+  {name:"Dongmei Cui",affiliation:"Changchun Institute",topic:"Synthesis of New Polymer Materials from Common Monomers",year:2024,role:"speaker"},
+  {name:"Sarah Mattler",affiliation:"ExxonMobil",topic:"NMR Characterization of Polyolefins",year:2024,role:"speaker"},
+  {name:"Kotohiro Nomura",affiliation:"Tokyo Metropolitan University",topic:"New Polyolefins by Olefin Insertion/Metathesis Using Molecular Catalysts",year:2024,role:"speaker"},
+  {name:"Sanjay Rastogi",affiliation:"KAUST",topic:"Single Crystals from Polymerization: Physical and Mechanical Properties",year:2024,role:"speaker"},
+  {name:"Zhibin Zhang",affiliation:"LyondellBasell",topic:"Chromatographic Techniques for PCR Plastics Analysis",year:2024,role:"speaker"},
+  {name:"Amanda Brandão",affiliation:"PUC",topic:"Automating IR Spectra Interpretation for Microplastic Analysis",year:2024,role:"speaker"},
+  {name:"Sean Ewart",affiliation:"Dow",topic:"Process Chemistry in an Industrial Polyolefin Company",year:2024,role:"speaker"},
+  {name:"Olivier Lhost",affiliation:"TotalEnergies",topic:"Structure-Properties Relationships for Polyolefin Developments",year:2024,role:"speaker"},
+  {name:"Kimberly McLoughlin",affiliation:"Braskem",topic:"Dynamic Crosslinking to Enable EVA Recycling",year:2024,role:"speaker"},
+  {name:"Adam Veige",affiliation:"University of Florida",topic:"Cyclic Polyolefins: Properties, Applications, and Catalysts",year:2024,role:"speaker"},
+  {name:"Kenji Michiue",affiliation:"Mitsui Chemicals",topic:"Recent Research in Single-Site Olefin Polymerization Catalysts at Mitsui",year:2024,role:"speaker"},
+  {name:"Margaret Sobkowicz",affiliation:"UMass Lowell",topic:"Reactive and Field-Assisted Extrusion for Circular Polyolefins",year:2024,role:"speaker"},
+  {name:"Jen Hanna",affiliation:"Quantum",topic:"High Modulus PP with Unique Fiber Structure",year:2024,role:"speaker"},
+  {name:"Bernhard von Vacano",affiliation:"BASF",topic:"Mechanistic Insights for Polyolefin Recycling Stabilization",year:2024,role:"speaker"},
+  {name:"Francisco Perez Valencia",affiliation:"SABIC",topic:"Online Prediction of Quality Control Properties in Multimodal HDPE Plants",year:2024,role:"speaker"},
+  {name:"Simone Weber",affiliation:"Evonik",topic:"Ziegler-Natta Catalysts with Well-Defined Pore Structure",year:2024,role:"speaker"},
+  {name:"Vasileios Touloupidis",affiliation:"Borealis",topic:"What Industrial Plants Tell Us About Reaction Kinetics",year:2024,role:"speaker"},
+  {name:"Umang Agarwal",affiliation:"Shell",topic:"Structure-Property Relationships of HDPE for Municipal Applications",year:2024,role:"speaker"},
+  {name:"Lina Prada",affiliation:"SABIC",topic:"Polyolefin Applications for Energy Transition",year:2024,role:"speaker"},
+  {name:"Sara Orski",affiliation:"NIST",topic:"Polyolefin Structure-Property for Measurement Accuracy in Circular Materials",year:2024,role:"speaker"},
+  {name:"Markus Gahleitner",affiliation:"Borealis",topic:"Multiple Approaches to Enhancing Polyolefin Circularity",year:2024,role:"speaker"},
+  {name:"Graham Lief",affiliation:"CPChem",topic:"Probing Active Olefin Polymerization Sites on Solid Supports",year:2024,role:"speaker"},
+  {name:"Michael Shaver",affiliation:"University of Manchester",topic:"One Bin To Rule Them All: Quantity and Quality in Polyolefin Recycling",year:2024,role:"speaker"},
+  {name:"Timothy McKenna",affiliation:"CNRS Lyon",topic:"Sorption of Vapor Phase Components: Impact on PE in Gas Phase",year:2024,role:"speaker"},
+];
+
+const allYears = [1997,1999,2001,2003,2007,2009,2011,2013,2015,2017,2019,2022,2024];
+const TABS = ["By Speaker","By Year","By Affiliation","By Topic Trends"];
+
+function updateThemeIcon() {
+  const t = document.documentElement.getAttribute("data-theme");
+  const btn = document.getElementById("themeToggle");
+  if (btn) btn.textContent = t === "light" ? "🌙" : "☀️";
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute("data-theme") || "dark";
+  const next = cur === "light" ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", next);
+  localStorage.setItem("apo-theme", next);
+  updateThemeIcon();
+}
+updateThemeIcon();
+
+function normalizeName(n) {
+  return n.replace(/^(Dr\.?\s+|Prof\.?\s+)/i,"").replace(/\s+/g," ").trim();
+}
+
+function buildStats() {
+  const map = new Map();
+  speakers.forEach(s => {
+    const key = normalizeName(s.name);
+    if (!map.has(key)) map.set(key, {name:s.name, affiliations:new Set(), years:[], topics:[], appearances:0});
+    const e = map.get(key);
+    e.affiliations.add(s.affiliation);
+    e.years.push(s.year);
+    e.topics.push({year:s.year, topic:s.topic});
+    e.appearances++;
+    if (s.year >= Math.max(...e.years.slice(0,-1),0)) e.name = s.name;
+  });
+  return [...map.values()].map(e => ({
+    ...e, affiliations:[...e.affiliations],
+    years:[...new Set(e.years)].sort(),
+    lastYear: Math.max(...e.years), firstYear: Math.min(...e.years),
+  }));
+}
+
+const stats = buildStats();
+
+function normalizeAff(a) {
+  const rules = [
+    [/Dow Chemical.*|The Dow Chemical.*|^Dow$/i,"Dow"],
+    [/Exxon.*Mobil.*|Exxon Chemical|Exxon Corporation/i,"ExxonMobil"],
+    [/Penn State.*|Pennsylvania State.*/i,"Penn State University"],
+    [/Florida State.*/i,"Florida State University"],
+    [/Case Western.*/i,"Case Western Reserve University"],
+    [/Virginia Tech.*/i,"Virginia Tech"],
+    [/University of Waterloo.*/i,"University of Waterloo"],
+    [/Universit[eé] de Lyon.*|CNRS Lyon/i,"Université de Lyon/CNRS"],
+    [/Stanford.*/i,"Stanford University"],
+    [/Northwestern.*/i,"Northwestern University"],
+    [/University of Florida.*/i,"University of Florida"],
+    [/University of Chicago.*/i,"University of Chicago"],
+    [/Caltech|California Institute of Technology/i,"Caltech"],
+    [/Cornell.*/i,"Cornell University"],
+    [/Albemarle.*/i,"Albemarle"],
+    [/JAIST.*/i,"JAIST"],
+    [/Braskem.*/i,"Braskem"],
+    [/Chevron Phillips.*/i,"Chevron Phillips"],
+    [/Imperial College.*/i,"Imperial College London"],
+    [/Polymer Labs.*|Polymer Char.*/i,"Polymer Labs/Char"],
+    [/Fraunhofer.*|LBF Germany|GIP Darmstadt/i,"Fraunhofer Institute"],
+    [/BASF.*|Ciba.*|Ciba-Geigy/i,"BASF/Ciba"],
+    [/Borealis.*/i,"Borealis"],
+    [/University of Maryland.*/i,"University of Maryland"],
+    [/University of Wisconsin.*/i,"University of Wisconsin"],
+    [/University of Texas.*/i,"University of Texas"],
+    [/Texas A&M.*/i,"Texas A&M University"],
+    [/University of North Carolina.*/i,"UNC Chapel Hill"],
+    [/Univation Technologies.*/i,"Univation Technologies"],
+    [/Union Carbide.*/i,"Union Carbide/Univation"],
+    [/Indian Oil.*|IOCL.*/i,"Indian Oil Corporation"],
+    [/SABIC.*/i,"SABIC"],
+    [/Mitsui.*/i,"Mitsui Chemicals"],
+    [/Evonik.*/i,"Evonik"],
+    [/Sumitomo.*/i,"Sumitomo Chemical"],
+    [/LyondellBasell.*|Equistar.*/i,"LyondellBasell"],
+    [/KAUST.*/i,"KAUST"],
+    [/Hiroshima.*/i,"Hiroshima University"],
+    [/Tokyo Metropolitan.*/i,"Tokyo Metropolitan University"],
+    [/UC Santa Barbara.*/i,"UC Santa Barbara"],
+    [/University of California, Irvine.*/i,"UC Irvine"],
+    [/DSM.*/i,"DSM"],
+    [/Arlanxeo|ARLANXEO|Lanxess.*/i,"Arlanxeo/Lanxess"],
+    [/Sasol.*/i,"Sasol"],
+    [/University of Hamburg.*/i,"University of Hamburg"],
+    [/BFGoodrich.*/i,"BFGoodrich/Albemarle"],
+    [/Rohm-Haas.*/i,"Rohm-Haas"],
+    [/Tel Aviv.*/i,"Tel Aviv University"],
+    [/Brno.*/i,"Brno University of Technology"],
+    [/University of Tennessee.*/i,"University of Tennessee"],
+    [/Changchun.*/i,"Changchun Institute"],
+    [/University of Naples.*/i,"University of Naples"],
+    [/Quantum.*/i,"Quantum Chemical"],
+    [/Phillips.*Chevron|Phillips Petroleum|CPChem/i,"Chevron Phillips"],
+  ];
+  for (const [re,repl] of rules) if (re.test(a)) return repl;
+  return a;
+}
+
+const topicCats = {
+  "Catalysis & Mechanisms":["catalyst","catalysis","catalytic","metallocene","ziegler","natta","single-site","activation","cocatalyst","MAO","coordinative","insertion","chromium","phillips","ligand","olefin polymer","metathesis","ROMP"],
+  "Sustainability & Recycling":["recycl","sustain","circular","upcycl","degradable","renewable","bio","green","deconstr"],
+  "Characterization & Analytics":["characteriz","chromatograph","NMR","spectro","GPC","TREF","SEC","rheolog","imaging","thermal analysis","calorimetr","mass spectrom"],
+  "New Materials & Architecture":["block copolymer","architecture","precision","nanostructur","functional","elastomer","blend","composite","nanocomposit","multiblock","star type","graft","cyclic poly","cycloolefin"],
+  "Process Engineering":["reactor","process","scale-up","gas phase","slurry","condensed mode","industrial","plant","extrusion","3D print","additive manufactur"],
+  "Structure-Property":["structure-property","crystalliz","morpholog","mechanical","melt","processing","film","pipe","adhesion","nucleation","melting"],
+  "Market & Business":["market","trend","business","industry","innovation strategy","energy","overview","prospect"],
+  "Stabilization & Additives":["stabiliz","additive","antioxidant","fouling"],
+};
+
+function categorizeTopic(t) {
+  const lo = t.toLowerCase();
+  const cats = [];
+  for (const [cat,kws] of Object.entries(topicCats)) if (kws.some(k=>lo.includes(k))) cats.push(cat);
+  return cats.length ? cats : ["Other"];
+}
+
+const catColors = {
+  "Catalysis & Mechanisms":"#6c63ff","Sustainability & Recycling":"#4ecdc4",
+  "Characterization & Analytics":"#ffd93d","New Materials & Architecture":"#ff6b6b",
+  "Process Engineering":"#a78bfa","Structure-Property":"#f97316",
+  "Market & Business":"#06b6d4","Stabilization & Additives":"#84cc16",
+};
+
+const affLookup = new Map();
+speakers.forEach(s => {
+  const norm = normalizeAff(s.affiliation);
+  if (!affLookup.has(norm)) affLookup.set(norm, new Set());
+  affLookup.get(norm).add(s.affiliation);
+});
+
+// State
+let currentTab = 0, search = "", sortBy = "appearances", sortDir = "desc",
+    selectedYear = 2024, minAppearances = 2;
+let filterAff = null, filterAffYear = null, filterCat = null, filterCatYear = null, filterSpeaker = null;
+
+document.getElementById("subtitle").textContent =
+  `Advances in Polyolefins · 1997–2024 · ${speakers.length} presentations · ${stats.length} unique speakers · Planning tool for 2027`;
+
+const sr = document.getElementById("stats-row");
+sr.innerHTML = [
+  ["", allYears.length, "Conferences"],
+  ["", stats.length, "Unique Speakers"],
+  ["", speakers.length, "Total Talks"],
+  ["red", stats.filter(s=>s.appearances>=3).length, "3+ Times"],
+  ["teal", stats.filter(s=>s.appearances>=5).length, "5+ Times"],
+].map(([cls,n,l]) => `<div class="stat-box"><div class="stat-num ${cls}">${n}</div><div class="stat-label">${l}</div></div>`).join("");
+
+function renderTabs() {
+  document.getElementById("main-tabs").innerHTML = TABS.map((t,i) =>
+    `<button class="tab-btn ${currentTab===i?'active':''}" onclick="setTab(${i})">${t}</button>`
+  ).join("");
+}
+
+function setTab(i) {
+  currentTab = i;
+  if (i !== 0) { filterAff = null; filterAffYear = null; filterCat = null; filterCatYear = null; filterSpeaker = null; }
+  render();
+}
+function setSearch(v) { search = v; filterAff = null; filterAffYear = null; filterCat = null; filterCatYear = null; filterSpeaker = null; render(); refocusSearch(); }
+function setMinApp(v) { minAppearances = +v; render(); }
+function refocusSearch() {
+  const box = document.getElementById("searchBox");
+  if (box) { box.focus(); box.selectionStart = box.selectionEnd = box.value.length; }
+}
+function setSelYear(y) { selectedYear = y; render(); }
+function doSort(col) {
+  if (sortBy === col) sortDir = sortDir === "asc" ? "desc" : "asc";
+  else { sortBy = col; sortDir = "desc"; }
+  render();
+}
+
+function drillAff(normName, year) {
+  filterAff = normName; filterAffYear = year || null;
+  filterCat = null; filterCatYear = null; filterSpeaker = null; search = "";
+  currentTab = 0; render();
+  window.scrollTo({top: document.getElementById("content").offsetTop - 80, behavior: "smooth"});
+}
+function drillYear(year) {
+  selectedYear = year; currentTab = 1;
+  filterAff = null; filterAffYear = null; filterCat = null; filterCatYear = null; filterSpeaker = null; search = "";
+  render();
+  window.scrollTo({top: document.getElementById("content").offsetTop - 80, behavior: "smooth"});
+}
+function drillCat(catName, year) {
+  filterCat = catName; filterCatYear = year || null; filterAff = null; filterAffYear = null; filterSpeaker = null; search = "";
+  currentTab = 0; render();
+  window.scrollTo({top: document.getElementById("content").offsetTop - 80, behavior: "smooth"});
+}
+function drillSpeaker(name) {
+  filterSpeaker = name; filterAff = null; filterAffYear = null; filterCat = null; filterCatYear = null; search = "";
+  currentTab = 0; render();
+  window.scrollTo({top: document.getElementById("content").offsetTop - 80, behavior: "smooth"});
+}
+function clearFilter() {
+  filterAff = null; filterAffYear = null; filterCat = null; filterCatYear = null; filterSpeaker = null; search = "";
+  render();
+}
+
+function badgeClass(n) { return n>=7?"high":n>=5?"mid":n>=3?"low":"none"; }
+function pillClass(y) { return y>=2019?"pill recent":"pill"; }
+function arrow(col) { return sortBy===col?(sortDir==="desc"?" ▼":" ▲"):""; }
+
+function speakerMatchesAff(entry, normAff, year) {
+  const rawAffs = affLookup.get(normAff);
+  if (!rawAffs) return false;
+  if (!year) return entry.affiliations.some(a => rawAffs.has(a));
+  return speakers.some(s =>
+    normalizeName(s.name) === normalizeName(entry.name) &&
+    s.year === year && rawAffs.has(s.affiliation));
+}
+function speakerMatchesCat(entry, catName, year) {
+  return entry.topics.some(t => {
+    if (year && t.year !== year) return false;
+    return categorizeTopic(t.topic).includes(catName);
+  });
+}
+
+function getFiltered() {
+  let list = stats;
+  if (filterSpeaker) {
+    const nk = normalizeName(filterSpeaker);
+    list = list.filter(x => normalizeName(x.name) === nk);
+  } else if (filterAff) {
+    list = list.filter(x => speakerMatchesAff(x, filterAff, filterAffYear));
+  } else if (filterCat) {
+    list = list.filter(x => speakerMatchesCat(x, filterCat, filterCatYear));
+  } else if (search) {
+    const s = search.toLowerCase();
+    list = list.filter(x => x.name.toLowerCase().includes(s) ||
+      x.affiliations.some(a=>a.toLowerCase().includes(s)) ||
+      x.topics.some(t=>t.topic.toLowerCase().includes(s)));
+  }
+  list = [...list].sort((a,b) => {
+    let va = a[sortBy], vb = b[sortBy];
+    if (typeof va==="string") return sortDir==="asc"?va.localeCompare(vb):vb.localeCompare(va);
+    return sortDir==="asc"?va-vb:vb-va;
+  });
+  return list;
+}
+
+function esc(s) { return s.replace(/'/g, "\\'").replace(/"/g, "&quot;"); }
+
+function renderSpeakerTable(list, showTopicCol, showAllTopics, showAffTopics) {
+  let extraHeader = '';
+  if (showTopicCol) extraHeader = '<th>Matching Topic</th>';
+  else if (showAllTopics) extraHeader = '<th>All APO Talks</th>';
+  else if (showAffTopics) extraHeader = `<th>${filterAffYear ? filterAffYear + ' Talk' : 'Talks at ' + filterAff}</th>`;
+  let rows = list.map(s => {
+    let extraCell = '';
+    if (showTopicCol && filterCat) {
+      const matching = s.topics.filter(t => {
+        if (filterCatYear && t.year !== filterCatYear) return false;
+        return categorizeTopic(t.topic).includes(filterCat);
+      });
+      extraCell = `<td class="small dim">${matching.map(t => `<div style="margin-bottom:4px"><span class="pill clickable" onclick="drillYear(${t.year})" title="See ${t.year} program">${t.year}</span> ${t.topic}</div>`).join("")}</td>`;
+    } else if (showAllTopics) {
+      extraCell = `<td class="small dim">${s.topics.map(t => `<div style="margin-bottom:4px"><span class="pill clickable" onclick="drillYear(${t.year})" title="See ${t.year} program">${t.year}</span> ${t.topic}</div>`).join("")}</td>`;
+    } else if (showAffTopics) {
+      const rawAffs = affLookup.get(filterAff) || new Set();
+      const matching = speakers.filter(sp =>
+        normalizeName(sp.name) === normalizeName(s.name) &&
+        rawAffs.has(sp.affiliation) &&
+        (!filterAffYear || sp.year === filterAffYear));
+      extraCell = `<td class="small dim">${matching.map(t => `<div style="margin-bottom:4px"><span class="pill clickable" onclick="drillYear(${t.year})" title="See ${t.year} program">${t.year}</span> ${t.topic}</div>`).join("")}</td>`;
+    }
+    const yearPills = s.years.map(y=>`<span class="${pillClass(y)} clickable" onclick="drillYear(${y})" title="See ${y} program">${y}</span>`).join("");
+    const affHtml = s.affiliations.map(a => {
+      const norm = normalizeAff(a);
+      return `<span class="aff-link" onclick="drillAff('${esc(norm)}')" title="See all from ${norm}">${a}</span>`;
+    }).join(" → ");
+    return `<tr>
+      <td><span class="badge ${badgeClass(s.appearances)} badge-link" onclick="drillSpeaker('${esc(s.name)}')" title="See full history">${s.appearances}</span></td>
+      <td class="bold name-link" onclick="drillSpeaker('${esc(s.name)}')" title="See full history">${s.name}</td>
+      <td class="dim small">${affHtml}</td>
+      <td class="dim"><span class="pill clickable" onclick="drillYear(${s.firstYear})" title="See ${s.firstYear} program">${s.firstYear}</span></td>
+      <td><span class="pill clickable ${s.lastYear>=2022?'recent':''}" onclick="drillYear(${s.lastYear})" title="See ${s.lastYear} program" ${s.lastYear>=2022?'style="color:var(--accent3)"':''}>${s.lastYear}</span></td>
+      <td>${yearPills}</td>
+      ${extraCell}
+    </tr>`;
+  }).join("");
+  return `<table>
+    <thead><tr>
+      <th style="width:60" onclick="doSort('appearances')"># ${arrow('appearances')}</th>
+      <th onclick="doSort('name')">Speaker ${arrow('name')}</th>
+      <th>Affiliation(s)</th>
+      <th style="width:60" onclick="doSort('firstYear')">First ${arrow('firstYear')}</th>
+      <th style="width:60" onclick="doSort('lastYear')">Last ${arrow('lastYear')}</th>
+      <th>Years</th>
+      ${extraHeader}
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">${list.length} speaker${list.length!==1?'s':''} shown</div>`;
+}
+
+function render() {
+  renderTabs();
+  const ctrl = document.getElementById("controls");
+  const cont = document.getElementById("content");
+
+  const hasFilter = filterAff || filterCat || filterSpeaker;
+  let bannerHtml = '';
+  if (currentTab === 0 && hasFilter) {
+    let label = '';
+    if (filterSpeaker) label = `Speaker: <span class="value">${filterSpeaker}</span> — full conference history`;
+    else if (filterAff) label = `Institution: <span class="value">${filterAff}</span>${filterAffYear ? ` <span class="pill recent">${filterAffYear}</span>` : ' (all years)'}`;
+    else if (filterCat) label = `Topic: <span class="value">${filterCat}</span>${filterCatYear ? ` <span class="pill recent">${filterCatYear}</span>` : ' (all years)'}`;
+    bannerHtml = `<div class="filter-banner">
+      <span class="label">Filtered by</span> ${label}
+      <button class="clear-btn" onclick="clearFilter()">✕ Clear Filter</button>
+    </div>`;
+  }
+
+  if (currentTab === 0) {
+    ctrl.innerHTML = `<div class="controls">
+      <input class="search-input" id="searchBox" value="${search}" oninput="setSearch(this.value)"
+        placeholder="Search speaker, affiliation, or topic...">
+    </div>`;
+  } else if (currentTab === 1) {
+    ctrl.innerHTML = `<div class="tabs">${allYears.map(y =>
+      `<button class="tab-btn ${selectedYear===y?'active':''}" onclick="setSelYear(${y})" style="font-size:12px;padding:6px 12px">${y}</button>`
+    ).join("")}</div>`;
+  } else { ctrl.innerHTML = ""; }
+
+  if (currentTab === 0) {
+    const list = getFiltered();
+    const showTopicCol = !!filterCat;
+    const showAllTopics = !!filterSpeaker;
+    const showAffTopics = !!filterAff;
+    cont.innerHTML = `${bannerHtml}<div class="section">${renderSpeakerTable(list, showTopicCol, showAllTopics, showAffTopics)}</div>`;
+
+  } else if (currentTab === 1) {
+    const ys = speakers.filter(s => s.year === selectedYear);
+    cont.innerHTML = `<div class="section">
+      <div class="dim small" style="margin-bottom:12px">${ys.length} presentations in ${selectedYear}</div>
+      <table><thead><tr>
+        <th style="width:30">#</th><th>Speaker</th><th>Affiliation</th><th>Topic</th><th style="width:70">APO Total</th>
+      </tr></thead><tbody>${ys.map((s,i) => {
+        const st = stats.find(x => normalizeName(x.name)===normalizeName(s.name));
+        const n = st ? st.appearances : 1;
+        const clickable = n > 1;
+        const normA = normalizeAff(s.affiliation);
+        return `<tr>
+          <td class="dim">${i+1}</td>
+          <td class="bold name-link" onclick="drillSpeaker('${esc(s.name)}')" title="See full APO history">${s.name}</td>
+          <td class="dim small aff-link" onclick="drillAff('${esc(normA)}')" title="See all from ${normA}">${s.affiliation}</td>
+          <td class="small">${s.topic}</td>
+          <td class="center">
+            <span class="badge ${n>=3?'mid':n>=2?'low':'none'} ${clickable?'badge-link':''}"
+              ${clickable?`onclick="drillSpeaker('${esc(s.name)}')" title="Click to see all ${n} APO appearances"`:''}
+              style="font-size:12px; ${clickable?'cursor:pointer':''}">
+              ${n}
+            </span>
+          </td>
+        </tr>`;
+      }).join("")}</tbody></table></div>`;
+
+  } else if (currentTab === 2) {
+    const aMap = new Map();
+    speakers.forEach(s => {
+      const a = normalizeAff(s.affiliation);
+      if (!aMap.has(a)) aMap.set(a, {name:a, years:new Set(), spk:new Set(), count:0});
+      const e = aMap.get(a); e.years.add(s.year); e.spk.add(s.name); e.count++;
+    });
+    const aList = [...aMap.values()].sort((a,b)=>b.count-a.count).filter(a=>a.count>=2);
+    const maxC = aList[0]?.count||1;
+    cont.innerHTML = `<div class="section"><table><thead><tr>
+      <th>Organization</th><th style="width:80">Talks</th><th style="width:80">Speakers</th><th>Active Years</th>
+    </tr></thead><tbody>${aList.map(a => `<tr>
+      <td class="bold small"><span class="link" onclick="drillAff('${esc(a.name)}')">${a.name}</span></td>
+      <td><div style="display:flex;align-items:center;gap:8px">
+        <div class="bar" style="width:${Math.max(4,a.count/maxC*120)}px"></div>
+        <span class="small">${a.count}</span></div></td>
+      <td class="dim">${a.spk.size}</td>
+      <td>${[...a.years].sort().map(y=>`<span class="${pillClass(y)} clickable" onclick="drillAff('${esc(a.name)}',${y})" title="See ${a.name} speakers from ${y}">${y}</span>`).join("")}</td>
+    </tr>`).join("")}</tbody></table></div>`;
+
+  } else if (currentTab === 3) {
+    const byYear = {};
+    allYears.forEach(y => { byYear[y] = {}; Object.keys(topicCats).forEach(c => byYear[y][c]=0); });
+    speakers.forEach(s => categorizeTopic(s.topic).forEach(c => { if (byYear[s.year]?.[c]!==undefined) byYear[s.year][c]++; }));
+    cont.innerHTML = `<div class="section">
+      <div class="dim small" style="margin-bottom:16px">Talks per thematic category. Click a category name to see all its speakers, or click a cell to filter by category + year.</div>
+      <div style="overflow-x:auto"><table><thead><tr>
+        <th style="min-width:180">Category</th>
+        ${allYears.map(y=>`<th class="center" style="font-size:10px;padding:6px 4px">'${String(y).slice(2)}</th>`).join("")}
+        <th class="center">Total</th>
+      </tr></thead><tbody>
+      ${Object.keys(topicCats).map(cat => {
+        const total = allYears.reduce((s,y)=>s+(byYear[y][cat]||0),0);
+        const mx = Math.max(...allYears.map(y=>byYear[y][cat]||0),1);
+        const col = catColors[cat]||"#888";
+        return `<tr>
+          <td class="bold small cat-link" style="white-space:nowrap" onclick="drillCat('${esc(cat)}')">
+            <span class="dot" style="background:${col}"></span>${cat}
+          </td>
+          ${allYears.map(y => {
+            const v = byYear[y][cat]||0;
+            const op = v ? 0.2+0.8*(v/mx) : 0;
+            return `<td class="center" style="padding:4px 2px">${v>0?
+              `<span class="trend-cell clickable" onclick="drillCat('${esc(cat)}',${y})" title="Click to see ${v} talks"
+                style="background:rgba(108,99,255,${op});color:${op>0.5?'white':'var(--text-dim)'}">${v}</span>`:''}</td>`;
+          }).join("")}
+          <td class="center bold" style="color:${col}">
+            <span class="link" onclick="drillCat('${esc(cat)}')">${total}</span>
+          </td>
+        </tr>`;
+      }).join("")}
+      </tbody></table></div>
+      <div class="trend-note">
+        <div class="trend-note-title">Key trend for 2027 planning:</div>
+        <div class="trend-note-body">
+          Sustainability & recycling talks went from near-zero before 2019 to dominating 2022 and 2024 programs.
+          Catalysis remains the backbone of the conference. Characterization and structure-property topics appear consistently.
+          Consider ensuring 2027 balances the sustainability momentum with continued catalyst innovation and emerging areas like AI/ML in polymer design.
+        </div>
+      </div>
+    </div>`;
+  }
+}
+
+render();
+</script>
+</body>
+</html>
